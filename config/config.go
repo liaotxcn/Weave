@@ -21,7 +21,7 @@ var Config struct {
 
 	// 服务器配置
 	Server struct {
-		Port int
+		Port       int
 		InstanceID string // 实例标识，用于多实例部署
 	}
 
@@ -83,6 +83,15 @@ var Config struct {
 		EnableGoMetrics   bool
 		EnableHTTPMetrics bool
 	}
+
+	// 邮件服务配置
+	Email struct {
+		SMTPServer string
+		SMTPPort   int
+		Username   string
+		Password   string
+		From       string
+	}
 }
 
 // 重置默认配置到初始值
@@ -142,6 +151,13 @@ func resetDefaults() {
 	Config.Prometheus.MetricsPath = "/metrics"
 	Config.Prometheus.EnableGoMetrics = true
 	Config.Prometheus.EnableHTTPMetrics = true
+
+	// 邮件服务配置默认值
+	Config.Email.SMTPServer = "smtp.qq.com"
+	Config.Email.SMTPPort = 587
+	Config.Email.Username = ""
+	Config.Email.Password = ""
+	Config.Email.From = ""
 }
 
 func init() {
@@ -745,6 +761,29 @@ func LoadConfig() error {
 		if b, err := strconv.ParseBool(enableHTTPMetrics); err == nil {
 			Config.Prometheus.EnableHTTPMetrics = b
 		}
+	}
+
+	// 邮件服务配置 - 从环境变量加载
+	if smtpServer := os.Getenv("EMAIL_SMTP_SERVER"); smtpServer != "" {
+		Config.Email.SMTPServer = smtpServer
+	}
+
+	if smtpPort := os.Getenv("EMAIL_SMTP_PORT"); smtpPort != "" {
+		if port, err := strconv.Atoi(smtpPort); err == nil {
+			Config.Email.SMTPPort = port
+		}
+	}
+
+	if emailUsername := os.Getenv("EMAIL_USERNAME"); emailUsername != "" {
+		Config.Email.Username = emailUsername
+	}
+
+	if emailPassword := os.Getenv("EMAIL_PASSWORD"); emailPassword != "" {
+		Config.Email.Password = emailPassword
+	}
+
+	if emailFrom := os.Getenv("EMAIL_FROM"); emailFrom != "" {
+		Config.Email.From = emailFrom
 	}
 
 	// 验证配置有效性
