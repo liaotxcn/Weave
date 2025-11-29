@@ -180,6 +180,29 @@ export const authService = {
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('userInfo')
     sessionStorage.removeItem('csrf_token')
+  },
+  
+  // 发送邮箱验证码
+  sendVerificationCode: async (data) => {
+    try {
+      await ensureCsrf()
+      const response = await api.post('/auth/send-verification-code', data)
+      return response
+    } catch (error) {
+      // 针对CSRF或第一次缺Cookie的情况重试一次
+      if (error?.response?.status === 403) {
+        try {
+          await ensureCsrf()
+          const response = await api.post('/auth/send-verification-code', data)
+          return response
+        } catch (e2) {
+          console.error('发送验证码失败(重试后):', e2)
+          throw e2
+        }
+      }
+      console.error('发送验证码失败:', error)
+      throw error
+    }
   }
 }
 

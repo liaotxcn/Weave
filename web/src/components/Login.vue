@@ -1,19 +1,22 @@
 <template>
   <div class="login-container">
     <h2 class="form-title">登录</h2>
+    
     <form class="auth-form" @submit.prevent="handleLogin">
+      <!-- 用户名输入 -->
       <div class="form-group">
         <label for="username">用户名</label>
         <div class="input-wrapper">
-          <input v-model="username" type="text" id="username" required placeholder="请输入用户名" autofocus @input="clearError" />
+          <input v-model="username" type="text" id="username" placeholder="请输入用户名" autofocus @input="clearError" />
         </div>
         <div v-if="usernameInvalid && username" class="input-hint">用户名不能为空</div>
       </div>
       
+      <!-- 密码输入 -->
       <div class="form-group">
         <label for="password">密码</label>
         <div class="password-wrap">
-          <input :type="showPassword ? 'text' : 'password'" v-model="password" id="password" required placeholder="请输入密码" @input="clearError" />
+          <input :type="showPassword ? 'text' : 'password'" v-model="password" id="password" placeholder="请输入密码" @input="clearError" />
           <button type="button" class="toggle-psw" @click="showPassword = !showPassword" :aria-pressed="showPassword" :title="showPassword ? '隐藏密码' : '显示密码'" aria-label="切换密码可见性">
             <svg class="eye-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M2 10c2.5-4.5 6-6.5 8-6.5s5.5 2 8 6.5c-2.5 4.5-6 6.5-8 6.5S4.5 14.5 2 10z" fill="none" stroke="currentColor" stroke-width="1.5" />
@@ -25,17 +28,41 @@
         <div v-if="passwordInvalid && password" class="input-hint">密码不能为空</div>
       </div>
       
+
+      
+      <!-- 验证码输入 -->
+      <div class="form-group">
+        <label for="verificationCode">邮箱验证码</label>
+        <div class="verification-code-wrap">
+          <input v-model="verificationCode" type="text" id="verificationCode" placeholder="请输入验证码" maxlength="6" @input="clearError" />
+          <button 
+            type="button" 
+            class="get-code-btn" 
+            :disabled="loading || !canSendCode || countdown > 0"
+            @click="sendVerificationCode"
+            title="验证码将发送至您注册时使用的邮箱"
+          >
+            {{ countdown > 0 ? `${countdown}秒后重新获取` : '获取验证码' }}
+          </button>
+        </div>
+        <div v-if="verificationCodeInvalid && verificationCode" class="input-hint">验证码不能为空</div>
+        <div class="input-hint" style="color: var(--text-tertiary); font-size: 12px;">
+          验证码将发送至您注册时使用的邮箱，请确保该邮箱可访问
+        </div>
+      </div>
+      
       <div class="assist">
         <label class="remember">
           <input type="checkbox" v-model="rememberMe" class="checkbox-custom" />
           <span class="checkbox-label">记住我</span>
         </label>
-        <button class="link-btn" type="button" title="暂未实现接口" @click="showForgotPasswordTooltip = true">
-          忘记密码？
-        </button>
       </div>
       
-      <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+      <div v-if="verificationCodeSent" class="verification-success" style="background-color: #f0fdf4; color: #166534; border: 1px solid #22c55e; padding: 12px 20px; border-radius: 8px; font-size: 14px; margin-top: 8px; text-align: center; display: flex; align-items: center; justify-content: center;">
+        <span style="color: #22c55e; font-weight: bold; margin-right: 8px;">✓</span>
+        验证码已发送到您的邮箱，请查收
+      </div>
+      <div v-if="errorMessage && !verificationCodeSent" class="error-message">{{ errorMessage }}</div>
       
       <button class="primary-btn" type="submit" :disabled="loading || !canLogin">
         <span v-if="loading" class="loading-spinner"></span>
@@ -48,17 +75,7 @@
       <button class="link-btn" type="button" @click="switchToRegister">立即注册</button>
     </p>
     
-    <!-- 忘记密码提示 -->
-    <div v-if="showForgotPasswordTooltip" class="tooltip" @click.self="showForgotPasswordTooltip = false">
-      <div class="tooltip-content">
-        <p>该功能暂未实现</p>
-        <button class="tooltip-close" @click="showForgotPasswordTooltip = false">
-          <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-          </svg>
-        </button>
-      </div>
-    </div>
+
   </div>
 </template>
 
@@ -73,11 +90,15 @@ export default {
     // 响应式数据
     const username = ref('')
     const password = ref('')
+
+    const verificationCode = ref('')
     const rememberMe = ref(true)
     const showPassword = ref(false)
     const loading = ref(false)
     const errorMessage = ref('')
-    const showForgotPasswordTooltip = ref(false)
+    const successMessage = ref('')
+    const countdown = ref(0)
+    let countdownTimer = null
 
     // 计算属性
     const usernameInvalid = computed(() => {
@@ -88,13 +109,59 @@ export default {
       return !(password.value && password.value.length > 0)
     })
     
+
+    
+    const verificationCodeInvalid = computed(() => {
+      return !(verificationCode.value && verificationCode.value.trim().length > 0)
+    })
+    
+    const canSendCode = computed(() => {
+      return username.value && username.value.trim().length > 0
+    })
+    
     const canLogin = computed(() => {
-      return !usernameInvalid.value && !passwordInvalid.value
+      return !usernameInvalid.value && !passwordInvalid.value && !verificationCodeInvalid.value
     })
 
     // 方法
     const clearError = () => {
       errorMessage.value = ''
+      successMessage.value = ''
+      verificationCodeSent.value = false
+    }
+    
+    const startCountdown = () => {
+      countdown.value = 60
+      countdownTimer = setInterval(() => {
+        countdown.value--
+        if (countdown.value <= 0) {
+          clearInterval(countdownTimer)
+          countdown.value = 0
+        }
+      }, 1000)
+    }
+    
+    // 新增一个专门用于标记验证码发送成功的变量
+    const verificationCodeSent = ref(false)
+    
+    const sendVerificationCode = async () => {
+      if (!canSendCode.value || countdown.value > 0) return
+      clearError()
+      
+      try {
+        const response = await authService.sendVerificationCode({ username: username.value.trim() })
+        // 设置验证码发送成功标志，使用专门的绿色提示
+        startCountdown()
+        verificationCodeSent.value = true
+        // 5秒后自动隐藏成功提示
+        setTimeout(() => {
+          verificationCodeSent.value = false
+        }, 5000)
+      } catch (error) {
+        const data = error?.response?.data || {}
+        errorMessage.value = data?.message || '发送验证码失败，请检查网络'
+        verificationCodeSent.value = false
+      }
     }
     
     const handleLogin = async () => {
@@ -103,12 +170,15 @@ export default {
       
       try {
         loading.value = true
+        
+        // 发送包含用户名、密码和邮箱验证码的登录请求
         const payload = {
           username: username.value.trim(),
           password: password.value,
+          code: verificationCode.value,
           remember_me: rememberMe.value
         }
-
+        
         const response = await authService.login(payload)
 
         if (response && response.user) {
@@ -131,16 +201,22 @@ export default {
     return {
       username,
       password,
+
+      verificationCode,
       rememberMe,
       showPassword,
       loading,
       errorMessage,
-      showForgotPasswordTooltip,
+      successMessage,
+      countdown,
       usernameInvalid,
       passwordInvalid,
+      verificationCodeInvalid,
+      canSendCode,
       canLogin,
       clearError,
       handleLogin,
+      sendVerificationCode,
       switchToRegister
     }
   }
@@ -160,6 +236,58 @@ export default {
   background: white;
   border-radius: var(--radius-xl);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+
+
+/* 验证码输入框 */
+.verification-code-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.verification-code-wrap input {
+  flex: 1;
+  padding: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: all var(--transition-normal);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.get-code-btn {
+  white-space: nowrap;
+  padding: 14px 16px;
+  min-width: 120px;
+  border: 1px solid var(--primary-500);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  color: var(--primary-600);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-normal);
+}
+
+.get-code-btn:hover:not(:disabled) {
+  background: var(--primary-50);
+  border-color: var(--primary-600);
+}
+
+.get-code-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
+  color: var(--text-tertiary);
 }
 
 .form-title {
@@ -427,6 +555,64 @@ input:focus::placeholder {
   background: var(--primary-50);
   color: var(--primary-700);
   transform: translateY(-1px);
+}
+
+/* 错误消息 */
+.error-message {
+  background: var(--error-100);
+  color: var(--error-700);
+  border: 1px solid var(--error);
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* 成功消息 - 确保优先显示绿色样式 */
+.success-message {
+  background: #f0fdf4 !important;
+  color: #166534 !important;
+  border: 1px solid #22c55e !important;
+  padding: 12px 20px !important;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  margin-top: 8px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* 移除可能的警告图标和伪元素 */
+  position: relative;
+  overflow: hidden;
+}
+
+/* 确保没有警告图标 */
+.success-message::before {
+  content: '✓' !important;
+  color: #22c55e !important;
+  font-weight: bold;
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+/* 覆盖任何可能的错误图标或样式 */
+.success-message * {
+  color: #166534 !important;
+}
+
+/* 确保success-message类的优先级高于其他类 */
+.login-container .success-message {
+  background: #f0fdf4 !important;
+  color: #166534 !important;
+  border-color: #22c55e !important;
+}
+
+.success-message::before {
+  content: '✓';
+  font-weight: bold;
+  color: #22c55e;
 }
 
 /* 提示框 */
