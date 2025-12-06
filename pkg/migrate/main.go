@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// 初始化配置
-	if err := config.LoadConfigFile(); err != nil {
+	if err := config.LoadConfig(); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 

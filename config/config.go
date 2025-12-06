@@ -1,24 +1,16 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 
-	"gopkg.in/yaml.v2"
+	"github.com/spf13/viper"
 )
 
 // Config 应用程序配置结构
 var Config struct {
-	// 配置文件设置
-	ConfigFiles struct {
-		Path string
-		Type string // yaml/json
-	}
-
 	// 服务器配置
 	Server struct {
 		Port       int
@@ -96,10 +88,6 @@ var Config struct {
 
 // 重置默认配置到初始值
 func resetDefaults() {
-	// 配置文件设置
-	Config.ConfigFiles.Path = "./config/config.yaml"
-	Config.ConfigFiles.Type = "yaml"
-
 	// 服务器配置
 	Config.Server.Port = 8081
 	Config.Server.InstanceID = "weave-default"
@@ -248,6 +236,23 @@ func ValidateConfig() error {
 	return nil
 }
 
+// convertToBool 将interface{}转换为bool
+func convertToBool(value interface{}) bool {
+	switch v := value.(type) {
+	case bool:
+		return v
+	case string:
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
+		}
+	case int:
+		return v != 0
+	case float64:
+		return v != 0
+	}
+	return false
+}
+
 // mapToPrometheusConfig 将map映射到Prometheus配置
 func mapToPrometheusConfig(configMap map[string]interface{}) {
 	if enabled, ok := configMap["enabled"]; ok {
@@ -321,227 +326,14 @@ func SanitizeConfig() map[string]interface{} {
 	return sanitized
 }
 
-// LoadConfigFile 从配置文件加载配置
-func LoadConfigFile() error {
-	// 检查配置文件是否存在
-	if _, err := os.Stat(Config.ConfigFiles.Path); os.IsNotExist(err) {
-		// 配置文件不存在，使用默认配置
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	// 读取配置文件内容
-	content, err := ioutil.ReadFile(Config.ConfigFiles.Path)
-	if err != nil {
-		return err
-	}
-
-	// 创建一个与Config结构相同的临时结构体用于解析
-	// 使用map来保持灵活性
-	var configMap map[string]interface{}
-
-	// 根据文件类型解析配置
-	switch Config.ConfigFiles.Type {
-	case "yaml", "yml":
-		if err := yaml.Unmarshal(content, &configMap); err != nil {
-			return err
-		}
-	case "json":
-		if err := json.Unmarshal(content, &configMap); err != nil {
-			return err
-		}
-	default:
-		return nil
-	}
-
-	// 将解析后的值映射到Config结构体
-	if serverMap, ok := configMap["server"].(map[string]interface{}); ok {
-		mapToServerConfig(serverMap)
-	}
-
-	if databaseMap, ok := configMap["database"].(map[string]interface{}); ok {
-		mapToDatabaseConfig(databaseMap)
-	}
-
-	if loggerMap, ok := configMap["logger"].(map[string]interface{}); ok {
-		mapToLoggerConfig(loggerMap)
-	}
-
-	if jwtMap, ok := configMap["jwt"].(map[string]interface{}); ok {
-		mapToJWTConfig(jwtMap)
-	}
-
-	if csrfMap, ok := configMap["csrf"].(map[string]interface{}); ok {
-		mapToCSRFConfig(csrfMap)
-	}
-
-	// 处理AutoMigrate配置
-	if autoMigrate, ok := configMap["autoMigrate"]; ok {
-		Config.AutoMigrate = convertToBool(autoMigrate)
-	}
-
-	if pluginsMap, ok := configMap["plugins"].(map[string]interface{}); ok {
-		mapToPluginsConfig(pluginsMap)
-	}
-
-	if prometheusMap, ok := configMap["prometheus"].(map[string]interface{}); ok {
-		mapToPrometheusConfig(prometheusMap)
-	}
-
-	return nil
-}
-
-// mapToServerConfig 将map映射到Server配置
-func mapToServerConfig(configMap map[string]interface{}) {
-	if port, ok := configMap["port"]; ok {
-		Config.Server.Port = convertToInt(port)
-	}
-}
-
-// mapToDatabaseConfig 将map映射到Database配置
-func mapToDatabaseConfig(configMap map[string]interface{}) {
-	if driver, ok := configMap["driver"].(string); ok {
-		Config.Database.Driver = driver
-	}
-	if host, ok := configMap["host"].(string); ok {
-		Config.Database.Host = host
-	}
-	if port, ok := configMap["port"]; ok {
-		Config.Database.Port = convertToInt(port)
-	}
-	if username, ok := configMap["username"].(string); ok {
-		Config.Database.Username = username
-	}
-	if password, ok := configMap["password"].(string); ok {
-		Config.Database.Password = password
-	}
-	if dbname, ok := configMap["dbname"].(string); ok {
-		Config.Database.DBName = dbname
-	}
-	if charset, ok := configMap["charset"].(string); ok {
-		Config.Database.Charset = charset
-	}
-}
-
-// mapToLoggerConfig 将map映射到Logger配置
-func mapToLoggerConfig(configMap map[string]interface{}) {
-	if level, ok := configMap["level"].(string); ok {
-		Config.Logger.Level = level
-	}
-	if outputPath, ok := configMap["outputPath"].(string); ok {
-		Config.Logger.OutputPath = outputPath
-	}
-	if errorPath, ok := configMap["errorPath"].(string); ok {
-		Config.Logger.ErrorPath = errorPath
-	}
-	if development, ok := configMap["development"]; ok {
-		Config.Logger.Development = convertToBool(development)
-	}
-}
-
-// mapToJWTConfig 将map映射到JWT配置
-func mapToJWTConfig(configMap map[string]interface{}) {
-	if secret, ok := configMap["secret"].(string); ok {
-		Config.JWT.Secret = secret
-	}
-	if accessTokenExpiry, ok := configMap["accessTokenExpiry"]; ok {
-		Config.JWT.AccessTokenExpiry = convertToInt(accessTokenExpiry)
-	}
-	if refreshTokenExpiry, ok := configMap["refreshTokenExpiry"]; ok {
-		Config.JWT.RefreshTokenExpiry = convertToInt(refreshTokenExpiry)
-	}
-}
-
-// mapToCSRFConfig 将map映射到CSRF配置
-func mapToCSRFConfig(configMap map[string]interface{}) {
-	if enabled, ok := configMap["enabled"]; ok {
-		Config.CSRF.Enabled = convertToBool(enabled)
-	}
-	if cookieName, ok := configMap["cookieName"].(string); ok {
-		Config.CSRF.CookieName = cookieName
-	}
-	if headerName, ok := configMap["headerName"].(string); ok {
-		Config.CSRF.HeaderName = headerName
-	}
-	if tokenLength, ok := configMap["tokenLength"]; ok {
-		Config.CSRF.TokenLength = convertToInt(tokenLength)
-	}
-	if cookieMaxAge, ok := configMap["cookieMaxAge"]; ok {
-		Config.CSRF.CookieMaxAge = convertToInt(cookieMaxAge)
-	}
-	if cookiePath, ok := configMap["cookiePath"].(string); ok {
-		Config.CSRF.CookiePath = cookiePath
-	}
-	if cookieDomain, ok := configMap["cookieDomain"].(string); ok {
-		Config.CSRF.CookieDomain = cookieDomain
-	}
-	if cookieSecure, ok := configMap["cookieSecure"]; ok {
-		Config.CSRF.CookieSecure = convertToBool(cookieSecure)
-	}
-	if cookieHttpOnly, ok := configMap["cookieHttpOnly"]; ok {
-		Config.CSRF.CookieHttpOnly = convertToBool(cookieHttpOnly)
-	}
-	if cookieSameSite, ok := configMap["cookieSameSite"].(string); ok {
-		Config.CSRF.CookieSameSite = cookieSameSite
-	}
-}
-
-// mapToPluginsConfig 将map映射到Plugins配置
-func mapToPluginsConfig(configMap map[string]interface{}) {
-	if dir, ok := configMap["dir"].(string); ok {
-		Config.Plugins.Dir = dir
-	}
-	if watcherEnabled, ok := configMap["watcherEnabled"]; ok {
-		Config.Plugins.WatcherEnabled = convertToBool(watcherEnabled)
-	}
-	if scanInterval, ok := configMap["scanInterval"]; ok {
-		Config.Plugins.ScanInterval = convertToInt(scanInterval)
-	}
-	if hotReload, ok := configMap["hotReload"]; ok {
-		Config.Plugins.HotReload = convertToBool(hotReload)
-	}
-}
-
-// convertToInt 将interface{}转换为int
-func convertToInt(value interface{}) int {
-	switch v := value.(type) {
-	case int:
-		return v
-	case float64:
-		return int(v)
-	case string:
-		if i, err := strconv.Atoi(v); err == nil {
-			return i
-		}
-	}
-	return 0
-}
-
-// convertToBool 将interface{}转换为bool
-func convertToBool(value interface{}) bool {
-	switch v := value.(type) {
-	case bool:
-		return v
-	case string:
-		if b, err := strconv.ParseBool(v); err == nil {
-			return b
-		}
-	case int:
-		return v != 0
-	case float64:
-		return v != 0
-	}
-	return false
-}
-
 // GetAbsConfigFilePath 获取配置文件的绝对路径
 func GetAbsConfigFilePath() (string, error) {
-	if Config.ConfigFiles.Path == "" {
-		return "", nil
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "./config/config.yaml"
 	}
 
-	absPath, err := filepath.Abs(Config.ConfigFiles.Path)
+	absPath, err := filepath.Abs(configPath)
 	if err != nil {
 		return "", err
 	}
@@ -549,243 +341,119 @@ func GetAbsConfigFilePath() (string, error) {
 	return absPath, nil
 }
 
-// LoadConfig 从配置文件和环境变量加载配置
-func LoadConfig() error {
+// LoadConfigWithViper 使用Viper从配置文件和环境变量加载配置
+func LoadConfigWithViper() error {
 	// 在每次加载前重置默认值，避免跨测试用例状态污染
 	resetDefaults()
-	if err := LoadConfigFile(); err != nil {
-		return fmt.Errorf("加载配置文件失败: %w", err)
-	}
 
-	// 然后从环境变量加载配置，环境变量会覆盖配置文件的值
+	// 创建Viper实例
+	v := viper.New()
+
+	// 设置默认值
+	v.SetDefault("server.port", Config.Server.Port)
+	v.SetDefault("server.instanceID", Config.Server.InstanceID)
+	v.SetDefault("database.driver", Config.Database.Driver)
+	v.SetDefault("database.host", Config.Database.Host)
+	v.SetDefault("database.port", Config.Database.Port)
+	v.SetDefault("database.dbname", Config.Database.DBName)
+	v.SetDefault("database.charset", Config.Database.Charset)
+	v.SetDefault("logger.level", Config.Logger.Level)
+	v.SetDefault("logger.outputPath", Config.Logger.OutputPath)
+	v.SetDefault("logger.errorPath", Config.Logger.ErrorPath)
+	v.SetDefault("logger.development", Config.Logger.Development)
+	v.SetDefault("jwt.accessTokenExpiry", Config.JWT.AccessTokenExpiry)
+	v.SetDefault("jwt.refreshTokenExpiry", Config.JWT.RefreshTokenExpiry)
+	v.SetDefault("csrf.enabled", Config.CSRF.Enabled)
+	v.SetDefault("csrf.cookieName", Config.CSRF.CookieName)
+	v.SetDefault("csrf.headerName", Config.CSRF.HeaderName)
+	v.SetDefault("csrf.tokenLength", Config.CSRF.TokenLength)
+	v.SetDefault("csrf.cookieMaxAge", Config.CSRF.CookieMaxAge)
+	v.SetDefault("csrf.cookiePath", Config.CSRF.CookiePath)
+	v.SetDefault("csrf.cookieDomain", Config.CSRF.CookieDomain)
+	v.SetDefault("csrf.cookieSecure", Config.CSRF.CookieSecure)
+	v.SetDefault("csrf.cookieHttpOnly", Config.CSRF.CookieHttpOnly)
+	v.SetDefault("csrf.cookieSameSite", Config.CSRF.CookieSameSite)
+	v.SetDefault("autoMigrate", Config.AutoMigrate)
+	v.SetDefault("plugins.dir", Config.Plugins.Dir)
+	v.SetDefault("plugins.watcherEnabled", Config.Plugins.WatcherEnabled)
+	v.SetDefault("plugins.scanInterval", Config.Plugins.ScanInterval)
+	v.SetDefault("plugins.hotReload", Config.Plugins.HotReload)
+	v.SetDefault("prometheus.enabled", Config.Prometheus.Enabled)
+	v.SetDefault("prometheus.metricsPath", Config.Prometheus.MetricsPath)
+	v.SetDefault("prometheus.enableGoMetrics", Config.Prometheus.EnableGoMetrics)
+	v.SetDefault("prometheus.enableHTTPMetrics", Config.Prometheus.EnableHTTPMetrics)
+	v.SetDefault("email.smtpServer", Config.Email.SMTPServer)
+	v.SetDefault("email.smtpPort", Config.Email.SMTPPort)
+
 	// 配置文件路径
-	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
-		Config.ConfigFiles.Path = configPath
-		// 获取文件扩展名以确定类型
-		ext := filepath.Ext(configPath)
-		if ext == ".json" {
-			Config.ConfigFiles.Type = "json"
-		} else if ext == ".yaml" || ext == ".yml" {
-			Config.ConfigFiles.Type = "yaml"
-		}
-		// 重新从新的配置文件加载
-		if err := LoadConfigFile(); err != nil {
-			return fmt.Errorf("加载指定配置文件失败: %w", err)
-		}
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "./config/config.yaml"
 	}
 
-	// 服务器端口
-	if port := os.Getenv("SERVER_PORT"); port != "" {
-		if p, err := strconv.Atoi(port); err == nil {
-			Config.Server.Port = p
+	// 设置配置文件
+	v.SetConfigFile(configPath)
+
+	// 设置环境变量前缀
+	v.SetEnvPrefix("WEAVE")
+	v.AutomaticEnv()
+
+	// 读取配置文件
+	if err := v.ReadInConfig(); err != nil {
+		// 如果配置文件不存在，只记录警告，不返回错误
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return fmt.Errorf("读取配置文件失败: %w", err)
 		}
 	}
 
-	// 插件配置
-	if dir := os.Getenv("PLUGINS_DIR"); dir != "" {
-		Config.Plugins.Dir = dir
-	}
+	// 映射配置到结构体
+	Config.Server.Port = v.GetInt("server.port")
+	Config.Server.InstanceID = v.GetString("server.instanceID")
+	Config.Database.Driver = v.GetString("database.driver")
+	Config.Database.Host = v.GetString("database.host")
+	Config.Database.Port = v.GetInt("database.port")
+	Config.Database.Username = v.GetString("database.username")
+	Config.Database.Password = v.GetString("database.password")
+	Config.Database.DBName = v.GetString("database.dbname")
+	Config.Database.Charset = v.GetString("database.charset")
+	Config.Logger.Level = v.GetString("logger.level")
+	Config.Logger.OutputPath = v.GetString("logger.outputPath")
+	Config.Logger.ErrorPath = v.GetString("logger.errorPath")
+	Config.Logger.Development = v.GetBool("logger.development")
+	Config.JWT.Secret = v.GetString("jwt.secret")
+	Config.JWT.AccessTokenExpiry = v.GetInt("jwt.accessTokenExpiry")
+	Config.JWT.RefreshTokenExpiry = v.GetInt("jwt.refreshTokenExpiry")
+	Config.CSRF.Enabled = v.GetBool("csrf.enabled")
+	Config.CSRF.CookieName = v.GetString("csrf.cookieName")
+	Config.CSRF.HeaderName = v.GetString("csrf.headerName")
+	Config.CSRF.TokenLength = v.GetInt("csrf.tokenLength")
+	Config.CSRF.CookieMaxAge = v.GetInt("csrf.cookieMaxAge")
+	Config.CSRF.CookiePath = v.GetString("csrf.cookiePath")
+	Config.CSRF.CookieDomain = v.GetString("csrf.cookieDomain")
+	Config.CSRF.CookieSecure = v.GetBool("csrf.cookieSecure")
+	Config.CSRF.CookieHttpOnly = v.GetBool("csrf.cookieHttpOnly")
+	Config.CSRF.CookieSameSite = v.GetString("csrf.cookieSameSite")
+	Config.AutoMigrate = v.GetBool("autoMigrate")
+	Config.Plugins.Dir = v.GetString("plugins.dir")
+	Config.Plugins.WatcherEnabled = v.GetBool("plugins.watcherEnabled")
+	Config.Plugins.ScanInterval = v.GetInt("plugins.scanInterval")
+	Config.Plugins.HotReload = v.GetBool("plugins.hotReload")
+	Config.Prometheus.Enabled = v.GetBool("prometheus.enabled")
+	Config.Prometheus.MetricsPath = v.GetString("prometheus.metricsPath")
+	Config.Prometheus.EnableGoMetrics = v.GetBool("prometheus.enableGoMetrics")
+	Config.Prometheus.EnableHTTPMetrics = v.GetBool("prometheus.enableHTTPMetrics")
+	Config.Email.SMTPServer = v.GetString("email.smtpServer")
+	Config.Email.SMTPPort = v.GetInt("email.smtpPort")
+	Config.Email.Username = v.GetString("email.username")
+	Config.Email.Password = v.GetString("email.password")
+	Config.Email.From = v.GetString("email.from")
 
-	if watcherEnabled := os.Getenv("PLUGINS_WATCHER_ENABLED"); watcherEnabled != "" {
-		if enabled, err := strconv.ParseBool(watcherEnabled); err == nil {
-			Config.Plugins.WatcherEnabled = enabled
-		}
-	}
-
-	if scanInterval := os.Getenv("PLUGINS_SCAN_INTERVAL"); scanInterval != "" {
-		if interval, err := strconv.Atoi(scanInterval); err == nil {
-			Config.Plugins.ScanInterval = interval
-		}
-	}
-
-	if hotReload := os.Getenv("PLUGINS_HOT_RELOAD"); hotReload != "" {
-		if reload, err := strconv.ParseBool(hotReload); err == nil {
-			Config.Plugins.HotReload = reload
-		}
-	}
-
-	// 数据库配置
-	if driver := os.Getenv("DB_DRIVER"); driver != "" {
-		Config.Database.Driver = driver
-	}
-
-	if host := os.Getenv("DB_HOST"); host != "" {
-		Config.Database.Host = host
-	}
-
-	if port := os.Getenv("DB_PORT"); port != "" {
-		if p, err := strconv.Atoi(port); err == nil {
-			Config.Database.Port = p
-		}
-	}
-
-	if username := os.Getenv("DB_USERNAME"); username != "" {
-		Config.Database.Username = username
-	}
-
-	if password := os.Getenv("DB_PASSWORD"); password != "" {
-		Config.Database.Password = password
-	}
-
-	if dbname := os.Getenv("DB_NAME"); dbname != "" {
-		Config.Database.DBName = dbname
-	}
-
-	// 日志配置
-	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
-		Config.Logger.Level = logLevel
-	}
-
-	if logOutputPath := os.Getenv("LOG_OUTPUT_PATH"); logOutputPath != "" {
-		Config.Logger.OutputPath = logOutputPath
-	}
-
-	if logErrorPath := os.Getenv("LOG_ERROR_PATH"); logErrorPath != "" {
-		Config.Logger.ErrorPath = logErrorPath
-	}
-
-	// JWT配置
-	if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
-		Config.JWT.Secret = jwtSecret
-	}
-
-	if accessTokenExpiry := os.Getenv("JWT_ACCESS_TOKEN_EXPIRY"); accessTokenExpiry != "" {
-		if expiry, err := strconv.Atoi(accessTokenExpiry); err == nil {
-			Config.JWT.AccessTokenExpiry = expiry
-		}
-	}
-
-	if refreshTokenExpiry := os.Getenv("JWT_REFRESH_TOKEN_EXPIRY"); refreshTokenExpiry != "" {
-		if expiry, err := strconv.Atoi(refreshTokenExpiry); err == nil {
-			Config.JWT.RefreshTokenExpiry = expiry
-		}
-	}
-
-	if devMode := os.Getenv("DEV_MODE"); devMode != "" {
-		if dev, err := strconv.ParseBool(devMode); err == nil {
-			Config.Logger.Development = dev
-		}
-	}
-
-	// 数据库迁移配置 - 从环境变量加载
-	if autoMigrate := os.Getenv("AUTO_MIGRATE"); autoMigrate != "" {
-		if enabled, err := strconv.ParseBool(autoMigrate); err == nil {
-			Config.AutoMigrate = enabled
-		}
-	}
-
-	// 数据库用户名 - 敏感信息，优先使用环境变量
-	if Config.Database.Username == "" {
-		Config.Database.Username = os.Getenv("DB_USERNAME")
-	}
-
-	// 数据库密码 - 敏感信息，优先使用环境变量
-	if Config.Database.Password == "" {
-		Config.Database.Password = os.Getenv("DB_PASSWORD")
-	}
-
-	// JWT密钥 - 敏感信息，优先使用环境变量
-	if Config.JWT.Secret == "" {
-		Config.JWT.Secret = os.Getenv("JWT_SECRET")
-	}
-
-	// CSRF配置
-	if csrfEnabled := os.Getenv("CSRF_ENABLED"); csrfEnabled != "" {
-		if enabled, err := strconv.ParseBool(csrfEnabled); err == nil {
-			Config.CSRF.Enabled = enabled
-		}
-	}
-
-	if cookieName := os.Getenv("CSRF_COOKIE_NAME"); cookieName != "" {
-		Config.CSRF.CookieName = cookieName
-	}
-
-	if headerName := os.Getenv("CSRF_HEADER_NAME"); headerName != "" {
-		Config.CSRF.HeaderName = headerName
-	}
-
-	if tokenLength := os.Getenv("CSRF_TOKEN_LENGTH"); tokenLength != "" {
-		if length, err := strconv.Atoi(tokenLength); err == nil {
-			Config.CSRF.TokenLength = length
-		}
-	}
-
-	if cookieMaxAge := os.Getenv("CSRF_COOKIE_MAX_AGE"); cookieMaxAge != "" {
-		if maxAge, err := strconv.Atoi(cookieMaxAge); err == nil {
-			Config.CSRF.CookieMaxAge = maxAge
-		}
-	}
-
-	if cookiePath := os.Getenv("CSRF_COOKIE_PATH"); cookiePath != "" {
-		Config.CSRF.CookiePath = cookiePath
-	}
-
-	if cookieDomain := os.Getenv("CSRF_COOKIE_DOMAIN"); cookieDomain != "" {
-		Config.CSRF.CookieDomain = cookieDomain
-	}
-
-	if cookieSecure := os.Getenv("CSRF_COOKIE_SECURE"); cookieSecure != "" {
-		if secure, err := strconv.ParseBool(cookieSecure); err == nil {
-			Config.CSRF.CookieSecure = secure
-		}
-	}
-
-	if cookieHttpOnly := os.Getenv("CSRF_COOKIE_HTTP_ONLY"); cookieHttpOnly != "" {
-		if httpOnly, err := strconv.ParseBool(cookieHttpOnly); err == nil {
-			Config.CSRF.CookieHttpOnly = httpOnly
-		}
-	}
-
-	if cookieSameSite := os.Getenv("CSRF_COOKIE_SAME_SITE"); cookieSameSite != "" {
-		Config.CSRF.CookieSameSite = cookieSameSite
-	}
-
-	// Prometheus配置
-	if enabled := os.Getenv("PROMETHEUS_ENABLED"); enabled != "" {
-		if b, err := strconv.ParseBool(enabled); err == nil {
-			Config.Prometheus.Enabled = b
-		}
-	}
-
-	if metricsPath := os.Getenv("PROMETHEUS_METRICS_PATH"); metricsPath != "" {
-		Config.Prometheus.MetricsPath = metricsPath
-	}
-
-	if enableGoMetrics := os.Getenv("PROMETHEUS_ENABLE_GO_METRICS"); enableGoMetrics != "" {
-		if b, err := strconv.ParseBool(enableGoMetrics); err == nil {
-			Config.Prometheus.EnableGoMetrics = b
-		}
-	}
-
-	if enableHTTPMetrics := os.Getenv("PROMETHEUS_ENABLE_HTTP_METRICS"); enableHTTPMetrics != "" {
-		if b, err := strconv.ParseBool(enableHTTPMetrics); err == nil {
-			Config.Prometheus.EnableHTTPMetrics = b
-		}
-	}
-
-	// 邮件服务配置 - 从环境变量加载
-	if smtpServer := os.Getenv("EMAIL_SMTP_SERVER"); smtpServer != "" {
-		Config.Email.SMTPServer = smtpServer
-	}
-
-	if smtpPort := os.Getenv("EMAIL_SMTP_PORT"); smtpPort != "" {
-		if port, err := strconv.Atoi(smtpPort); err == nil {
-			Config.Email.SMTPPort = port
-		}
-	}
-
-	if emailUsername := os.Getenv("EMAIL_USERNAME"); emailUsername != "" {
-		Config.Email.Username = emailUsername
-	}
-
-	if emailPassword := os.Getenv("EMAIL_PASSWORD"); emailPassword != "" {
-		Config.Email.Password = emailPassword
-	}
-
-	if emailFrom := os.Getenv("EMAIL_FROM"); emailFrom != "" {
-		Config.Email.From = emailFrom
-	}
-
-	// 验证配置有效性
+	// 验证配置
 	return ValidateConfig()
+}
+
+// LoadConfig 从配置文件和环境变量加载配置
+func LoadConfig() error {
+	// 使用Viper加载配置
+	return LoadConfigWithViper()
 }
