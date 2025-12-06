@@ -346,44 +346,97 @@ func LoadConfigWithViper() error {
 	// 在每次加载前重置默认值，避免跨测试用例状态污染
 	resetDefaults()
 
-	// 创建Viper实例
-	v := viper.New()
+	// 从环境变量加载配置，优先级最高
+	// 服务器配置
+	if val := os.Getenv("SERVER_PORT"); val != "" {
+		if port, err := strconv.Atoi(val); err == nil {
+			Config.Server.Port = port
+		}
+	}
 
-	// 设置默认值
-	v.SetDefault("server.port", Config.Server.Port)
-	v.SetDefault("server.instanceID", Config.Server.InstanceID)
-	v.SetDefault("database.driver", Config.Database.Driver)
-	v.SetDefault("database.host", Config.Database.Host)
-	v.SetDefault("database.port", Config.Database.Port)
-	v.SetDefault("database.dbname", Config.Database.DBName)
-	v.SetDefault("database.charset", Config.Database.Charset)
-	v.SetDefault("logger.level", Config.Logger.Level)
-	v.SetDefault("logger.outputPath", Config.Logger.OutputPath)
-	v.SetDefault("logger.errorPath", Config.Logger.ErrorPath)
-	v.SetDefault("logger.development", Config.Logger.Development)
-	v.SetDefault("jwt.accessTokenExpiry", Config.JWT.AccessTokenExpiry)
-	v.SetDefault("jwt.refreshTokenExpiry", Config.JWT.RefreshTokenExpiry)
-	v.SetDefault("csrf.enabled", Config.CSRF.Enabled)
-	v.SetDefault("csrf.cookieName", Config.CSRF.CookieName)
-	v.SetDefault("csrf.headerName", Config.CSRF.HeaderName)
-	v.SetDefault("csrf.tokenLength", Config.CSRF.TokenLength)
-	v.SetDefault("csrf.cookieMaxAge", Config.CSRF.CookieMaxAge)
-	v.SetDefault("csrf.cookiePath", Config.CSRF.CookiePath)
-	v.SetDefault("csrf.cookieDomain", Config.CSRF.CookieDomain)
-	v.SetDefault("csrf.cookieSecure", Config.CSRF.CookieSecure)
-	v.SetDefault("csrf.cookieHttpOnly", Config.CSRF.CookieHttpOnly)
-	v.SetDefault("csrf.cookieSameSite", Config.CSRF.CookieSameSite)
-	v.SetDefault("autoMigrate", Config.AutoMigrate)
-	v.SetDefault("plugins.dir", Config.Plugins.Dir)
-	v.SetDefault("plugins.watcherEnabled", Config.Plugins.WatcherEnabled)
-	v.SetDefault("plugins.scanInterval", Config.Plugins.ScanInterval)
-	v.SetDefault("plugins.hotReload", Config.Plugins.HotReload)
-	v.SetDefault("prometheus.enabled", Config.Prometheus.Enabled)
-	v.SetDefault("prometheus.metricsPath", Config.Prometheus.MetricsPath)
-	v.SetDefault("prometheus.enableGoMetrics", Config.Prometheus.EnableGoMetrics)
-	v.SetDefault("prometheus.enableHTTPMetrics", Config.Prometheus.EnableHTTPMetrics)
-	v.SetDefault("email.smtpServer", Config.Email.SMTPServer)
-	v.SetDefault("email.smtpPort", Config.Email.SMTPPort)
+	// 数据库配置
+	if val := os.Getenv("DB_DRIVER"); val != "" {
+		Config.Database.Driver = val
+	}
+	if val := os.Getenv("DB_HOST"); val != "" {
+		Config.Database.Host = val
+	}
+	if val := os.Getenv("DB_PORT"); val != "" {
+		if port, err := strconv.Atoi(val); err == nil {
+			Config.Database.Port = port
+		}
+	}
+	if val := os.Getenv("DB_USERNAME"); val != "" {
+		Config.Database.Username = val
+	}
+	if val := os.Getenv("DB_PASSWORD"); val != "" {
+		Config.Database.Password = val
+	}
+	if val := os.Getenv("DB_NAME"); val != "" {
+		Config.Database.DBName = val
+	}
+	if val := os.Getenv("DB_CHARSET"); val != "" {
+		Config.Database.Charset = val
+	}
+
+	// JWT配置
+	if val := os.Getenv("JWT_SECRET"); val != "" {
+		Config.JWT.Secret = val
+	}
+	if val := os.Getenv("JWT_ACCESS_TOKEN_EXPIRY"); val != "" {
+		if expiry, err := strconv.Atoi(val); err == nil {
+			Config.JWT.AccessTokenExpiry = expiry
+		}
+	}
+	if val := os.Getenv("JWT_REFRESH_TOKEN_EXPIRY"); val != "" {
+		if expiry, err := strconv.Atoi(val); err == nil {
+			Config.JWT.RefreshTokenExpiry = expiry
+		}
+	}
+
+	// CSRF配置
+	if val := os.Getenv("CSRF_ENABLED"); val != "" {
+		Config.CSRF.Enabled = convertToBool(val)
+	}
+	if val := os.Getenv("CSRF_COOKIE_NAME"); val != "" {
+		Config.CSRF.CookieName = val
+	}
+	if val := os.Getenv("CSRF_HEADER_NAME"); val != "" {
+		Config.CSRF.HeaderName = val
+	}
+	if val := os.Getenv("CSRF_TOKEN_LENGTH"); val != "" {
+		if length, err := strconv.Atoi(val); err == nil {
+			Config.CSRF.TokenLength = length
+		}
+	}
+	if val := os.Getenv("CSRF_COOKIE_MAX_AGE"); val != "" {
+		if maxAge, err := strconv.Atoi(val); err == nil {
+			Config.CSRF.CookieMaxAge = maxAge
+		}
+	}
+	if val := os.Getenv("CSRF_COOKIE_PATH"); val != "" {
+		Config.CSRF.CookiePath = val
+	}
+	if val := os.Getenv("CSRF_COOKIE_DOMAIN"); val != "" {
+		Config.CSRF.CookieDomain = val
+	}
+	if val := os.Getenv("CSRF_COOKIE_SECURE"); val != "" {
+		Config.CSRF.CookieSecure = convertToBool(val)
+	}
+	if val := os.Getenv("CSRF_COOKIE_HTTP_ONLY"); val != "" {
+		Config.CSRF.CookieHttpOnly = convertToBool(val)
+	}
+	if val := os.Getenv("CSRF_COOKIE_SAME_SITE"); val != "" {
+		Config.CSRF.CookieSameSite = val
+	}
+
+	// 自动迁移配置
+	if val := os.Getenv("AUTO_MIGRATE"); val != "" {
+		Config.AutoMigrate = convertToBool(val)
+	}
+
+	// 创建Viper实例用于加载配置文件
+	v := viper.New()
 
 	// 配置文件路径
 	configPath := os.Getenv("CONFIG_PATH")
@@ -394,59 +447,130 @@ func LoadConfigWithViper() error {
 	// 设置配置文件
 	v.SetConfigFile(configPath)
 
-	// 设置环境变量前缀
-	v.SetEnvPrefix("WEAVE")
-	v.AutomaticEnv()
-
 	// 读取配置文件
-	if err := v.ReadInConfig(); err != nil {
-		// 如果配置文件不存在，只记录警告，不返回错误
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return fmt.Errorf("读取配置文件失败: %w", err)
+	if err := v.ReadInConfig(); err == nil {
+		// 从配置文件加载配置，优先级低于环境变量
+		if v.IsSet("server.port") {
+			Config.Server.Port = v.GetInt("server.port")
+		}
+		if v.IsSet("server.instanceID") {
+			Config.Server.InstanceID = v.GetString("server.instanceID")
+		}
+		if v.IsSet("database.driver") {
+			Config.Database.Driver = v.GetString("database.driver")
+		}
+		if v.IsSet("database.host") {
+			Config.Database.Host = v.GetString("database.host")
+		}
+		if v.IsSet("database.port") {
+			Config.Database.Port = v.GetInt("database.port")
+		}
+		if v.IsSet("database.username") {
+			Config.Database.Username = v.GetString("database.username")
+		}
+		if v.IsSet("database.password") {
+			Config.Database.Password = v.GetString("database.password")
+		}
+		if v.IsSet("database.dbname") {
+			Config.Database.DBName = v.GetString("database.dbname")
+		}
+		if v.IsSet("database.charset") {
+			Config.Database.Charset = v.GetString("database.charset")
+		}
+		if v.IsSet("logger.level") {
+			Config.Logger.Level = v.GetString("logger.level")
+		}
+		if v.IsSet("logger.outputPath") {
+			Config.Logger.OutputPath = v.GetString("logger.outputPath")
+		}
+		if v.IsSet("logger.errorPath") {
+			Config.Logger.ErrorPath = v.GetString("logger.errorPath")
+		}
+		if v.IsSet("logger.development") {
+			Config.Logger.Development = convertToBool(v.Get("logger.development"))
+		}
+		if v.IsSet("jwt.secret") {
+			Config.JWT.Secret = v.GetString("jwt.secret")
+		}
+		if v.IsSet("jwt.accessTokenExpiry") {
+			Config.JWT.AccessTokenExpiry = v.GetInt("jwt.accessTokenExpiry")
+		}
+		if v.IsSet("jwt.refreshTokenExpiry") {
+			Config.JWT.RefreshTokenExpiry = v.GetInt("jwt.refreshTokenExpiry")
+		}
+		if v.IsSet("csrf.enabled") {
+			Config.CSRF.Enabled = convertToBool(v.Get("csrf.enabled"))
+		}
+		if v.IsSet("csrf.cookieName") {
+			Config.CSRF.CookieName = v.GetString("csrf.cookieName")
+		}
+		if v.IsSet("csrf.headerName") {
+			Config.CSRF.HeaderName = v.GetString("csrf.headerName")
+		}
+		if v.IsSet("csrf.tokenLength") {
+			Config.CSRF.TokenLength = v.GetInt("csrf.tokenLength")
+		}
+		if v.IsSet("csrf.cookieMaxAge") {
+			Config.CSRF.CookieMaxAge = v.GetInt("csrf.cookieMaxAge")
+		}
+		if v.IsSet("csrf.cookiePath") {
+			Config.CSRF.CookiePath = v.GetString("csrf.cookiePath")
+		}
+		if v.IsSet("csrf.cookieDomain") {
+			Config.CSRF.CookieDomain = v.GetString("csrf.cookieDomain")
+		}
+		if v.IsSet("csrf.cookieSecure") {
+			Config.CSRF.CookieSecure = convertToBool(v.Get("csrf.cookieSecure"))
+		}
+		if v.IsSet("csrf.cookieHttpOnly") {
+			Config.CSRF.CookieHttpOnly = convertToBool(v.Get("csrf.cookieHttpOnly"))
+		}
+		if v.IsSet("csrf.cookieSameSite") {
+			Config.CSRF.CookieSameSite = v.GetString("csrf.cookieSameSite")
+		}
+		if v.IsSet("autoMigrate") {
+			Config.AutoMigrate = convertToBool(v.Get("autoMigrate"))
+		}
+		if v.IsSet("plugins.dir") {
+			Config.Plugins.Dir = v.GetString("plugins.dir")
+		}
+		if v.IsSet("plugins.watcherEnabled") {
+			Config.Plugins.WatcherEnabled = convertToBool(v.Get("plugins.watcherEnabled"))
+		}
+		if v.IsSet("plugins.scanInterval") {
+			Config.Plugins.ScanInterval = v.GetInt("plugins.scanInterval")
+		}
+		if v.IsSet("plugins.hotReload") {
+			Config.Plugins.HotReload = convertToBool(v.Get("plugins.hotReload"))
+		}
+		if v.IsSet("prometheus.enabled") {
+			Config.Prometheus.Enabled = convertToBool(v.Get("prometheus.enabled"))
+		}
+		if v.IsSet("prometheus.metricsPath") {
+			Config.Prometheus.MetricsPath = v.GetString("prometheus.metricsPath")
+		}
+		if v.IsSet("prometheus.enableGoMetrics") {
+			Config.Prometheus.EnableGoMetrics = convertToBool(v.Get("prometheus.enableGoMetrics"))
+		}
+		if v.IsSet("prometheus.enableHTTPMetrics") {
+			Config.Prometheus.EnableHTTPMetrics = convertToBool(v.Get("prometheus.enableHTTPMetrics"))
+		}
+		if v.IsSet("email.smtpServer") {
+			Config.Email.SMTPServer = v.GetString("email.smtpServer")
+		}
+		if v.IsSet("email.smtpPort") {
+			Config.Email.SMTPPort = v.GetInt("email.smtpPort")
+		}
+		if v.IsSet("email.username") {
+			Config.Email.Username = v.GetString("email.username")
+		}
+		if v.IsSet("email.password") {
+			Config.Email.Password = v.GetString("email.password")
+		}
+		if v.IsSet("email.from") {
+			Config.Email.From = v.GetString("email.from")
 		}
 	}
-
-	// 映射配置到结构体
-	Config.Server.Port = v.GetInt("server.port")
-	Config.Server.InstanceID = v.GetString("server.instanceID")
-	Config.Database.Driver = v.GetString("database.driver")
-	Config.Database.Host = v.GetString("database.host")
-	Config.Database.Port = v.GetInt("database.port")
-	Config.Database.Username = v.GetString("database.username")
-	Config.Database.Password = v.GetString("database.password")
-	Config.Database.DBName = v.GetString("database.dbname")
-	Config.Database.Charset = v.GetString("database.charset")
-	Config.Logger.Level = v.GetString("logger.level")
-	Config.Logger.OutputPath = v.GetString("logger.outputPath")
-	Config.Logger.ErrorPath = v.GetString("logger.errorPath")
-	Config.Logger.Development = v.GetBool("logger.development")
-	Config.JWT.Secret = v.GetString("jwt.secret")
-	Config.JWT.AccessTokenExpiry = v.GetInt("jwt.accessTokenExpiry")
-	Config.JWT.RefreshTokenExpiry = v.GetInt("jwt.refreshTokenExpiry")
-	Config.CSRF.Enabled = v.GetBool("csrf.enabled")
-	Config.CSRF.CookieName = v.GetString("csrf.cookieName")
-	Config.CSRF.HeaderName = v.GetString("csrf.headerName")
-	Config.CSRF.TokenLength = v.GetInt("csrf.tokenLength")
-	Config.CSRF.CookieMaxAge = v.GetInt("csrf.cookieMaxAge")
-	Config.CSRF.CookiePath = v.GetString("csrf.cookiePath")
-	Config.CSRF.CookieDomain = v.GetString("csrf.cookieDomain")
-	Config.CSRF.CookieSecure = v.GetBool("csrf.cookieSecure")
-	Config.CSRF.CookieHttpOnly = v.GetBool("csrf.cookieHttpOnly")
-	Config.CSRF.CookieSameSite = v.GetString("csrf.cookieSameSite")
-	Config.AutoMigrate = v.GetBool("autoMigrate")
-	Config.Plugins.Dir = v.GetString("plugins.dir")
-	Config.Plugins.WatcherEnabled = v.GetBool("plugins.watcherEnabled")
-	Config.Plugins.ScanInterval = v.GetInt("plugins.scanInterval")
-	Config.Plugins.HotReload = v.GetBool("plugins.hotReload")
-	Config.Prometheus.Enabled = v.GetBool("prometheus.enabled")
-	Config.Prometheus.MetricsPath = v.GetString("prometheus.metricsPath")
-	Config.Prometheus.EnableGoMetrics = v.GetBool("prometheus.enableGoMetrics")
-	Config.Prometheus.EnableHTTPMetrics = v.GetBool("prometheus.enableHTTPMetrics")
-	Config.Email.SMTPServer = v.GetString("email.smtpServer")
-	Config.Email.SMTPPort = v.GetInt("email.smtpPort")
-	Config.Email.Username = v.GetString("email.username")
-	Config.Email.Password = v.GetString("email.password")
-	Config.Email.From = v.GetString("email.from")
 
 	// 验证配置
 	return ValidateConfig()
