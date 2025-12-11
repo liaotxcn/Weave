@@ -206,4 +206,62 @@ export const authService = {
   }
 }
 
+// 团队相关API方法
+export const teamService = {
+  // 更新团队信息
+  updateTeam: async (teamId, teamData) => {
+    try {
+      await ensureCsrf()
+      return await api.put(`/api/v1/teams/${teamId}`, teamData)
+    } catch (error) {
+      console.error('更新团队信息失败:', error)
+      throw error
+    }
+  },
+  
+  // 获取团队成员列表
+  getTeamMembers: async (teamId) => {
+    try {
+      return await api.get(`/api/v1/teams/${teamId}/members`)
+    } catch (error) {
+      console.error('获取团队成员失败:', error)
+      throw error
+    }
+  },
+  
+  // 搜索团队成员
+  searchTeamMembers: async (teamId, keyword) => {
+    try {
+      return await api.get(`/api/v1/teams/${teamId}/members/search`, {
+        params: { keyword }
+      })
+    } catch (error) {
+      console.error('搜索团队成员失败:', error)
+      throw error
+    }
+  },
+  
+  // 添加团队成员
+  addTeamMember: async (teamId, memberData) => {
+    try {
+      await ensureCsrf()
+      return await api.post(`/api/v1/teams/${teamId}/members`, memberData)
+    } catch (error) {
+      console.error('添加团队成员失败:', error)
+      throw error
+    }
+  },
+  
+  // 移除团队成员
+  removeTeamMember: async (teamId, memberId) => {
+    try {
+      await ensureCsrf()
+      return await api.delete(`/api/v1/teams/${teamId}/members/${memberId}`)
+    } catch (error) {
+      console.error('移除团队成员失败:', error)
+      throw error
+    }
+  }
+}
+
 export default api
