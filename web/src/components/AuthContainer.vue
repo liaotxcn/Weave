@@ -4,40 +4,42 @@
     <div class="auth-bg-pattern"></div>
     
     <div class="auth-card">
-      <!-- 品牌展示区域 -->
-      <div class="brand">
-        <div class="logo-container">
-          <div class="logo">
-            <img src="/logo.png" alt="Weave Logo" class="logo-image" />
+      <!-- 品牌展示区域 - 使用Element Plus卡片 -->
+      <el-card class="brand-card" shadow="never" :body-style="{ padding: 0 }">
+        <div class="brand">
+          <div class="logo-container">
+            <el-avatar shape="circle" size="large" class="brand-logo">
+              <img src="/logo.png" alt="Weave Logo" />
+            </el-avatar>
+            <h1 class="brand-title">Weave</h1>
           </div>
-          <h1>Weave</h1>
         </div>
-        <p class="brand-subtitle">欢迎使用，请先登录或注册</p>
-      </div>
+      </el-card>
       
-      <!-- 标签切换区域 -->
+      <!-- 标签切换区域 - 使用Element Plus按钮和Tabs组件思路 -->
       <div class="tabs">
-        <button :class="['tab', showLogin ? 'active' : '']" @click="switchToLogin">
-          <span class="tab-icon">
-            <svg viewBox="0 0 20 20" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M16 12a6 6 0 11-12 0 6 6 0 0112 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 10h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M16 10h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
+        <el-button 
+          type="primary" 
+          :plain="!showLogin" 
+          :icon="UserFilled" 
+          @click="switchToLogin"
+          class="tab-btn"
+        >
           登录
-        </button>
-        <button :class="['tab', !showLogin ? 'active' : '']" @click="switchToRegister">
-          <span class="tab-icon">
-            <svg viewBox="0 0 20 20" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10 5v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M5 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
+        </el-button>
+        <el-button 
+          type="primary" 
+          :plain="showLogin" 
+          :icon="Plus" 
+          @click="switchToRegister"
+          class="tab-btn"
+        >
           注册
-        </button>
-        <div class="tab-indicator" :style="{ transform: showLogin ? 'translateX(0%)' : 'translateX(100%)' }"></div>
+        </el-button>
+        <el-tabs v-model="activeTab" class="tab-indicator-container" :show-tabbar="false">
+          <el-tab-pane label="登录" name="login"></el-tab-pane>
+          <el-tab-pane label="注册" name="register"></el-tab-pane>
+        </el-tabs>
       </div>
       
       <!-- 表单区域 -->
@@ -65,17 +67,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import Login from './Login.vue'
 import Register from './Register.vue'
 import { authService } from '../services/auth.js'
 import api from '../services/auth.js'
+// 导入Element Plus图标
+import { UserFilled, Plus } from '@element-plus/icons-vue'
 
 // 定义props和emits
 const emit = defineEmits(['auth-success'])
 
 // 状态管理
 const showLogin = ref(true) // 默认显示登录表单
+// 计算属性用于标签切换
+const activeTab = computed({
+  get() {
+    return showLogin.value ? 'login' : 'register'
+  },
+  set(val) {
+    showLogin.value = val === 'login'
+  }
+})
 
 // 初始化时检查用户是否已登录，并预热CSRF Cookie
 onMounted(() => {
@@ -156,41 +169,36 @@ const handleRegisterSuccess = () => {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
+/* 品牌卡片 */
+.brand-card {
+  border: none;
+  margin-bottom: 16px;
+}
+
 /* 品牌区域 */
 .brand {
   background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
   color: var(--bg-primary);
   padding: 32px 32px 24px;
   text-align: center;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
 }
 
 .logo-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.logo {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-lg);
-  color: var(--bg-primary);
+.brand-logo {
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.logo-image {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-.brand h1 {
+.brand-title {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   margin: 0;
@@ -198,71 +206,53 @@ const handleRegisterSuccess = () => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  letter-spacing: -0.02em;
 }
 
 .brand-subtitle {
   font-size: var(--font-size-sm);
-  opacity: 0.95;
   margin: 0;
   font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  padding: 6px 20px;
+  font-size: 14px;
 }
 
 /* 标签切换区域 */
 .tabs {
   position: relative;
   display: flex;
-  gap: 8px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-light);
-  background: var(--bg-secondary);
-}
-
-.tab {
-  flex: 1;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 20px 24px 16px;
   background: var(--bg-primary);
-  border: 1px solid var(--border-light);
+  justify-content: center;
+}
+
+.tab-btn {
+  flex: 1;
+  max-width: 180px;
   border-radius: var(--radius-lg);
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-weight: var(--font-weight-medium);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all var(--transition-normal);
+  font-weight: var(--font-weight-semibold);
+  padding: 12px 20px;
+  transition: all 0.3s ease;
 }
 
-.tab:hover:not(.active) {
-  background: var(--bg-secondary);
-  border-color: var(--primary-300);
-  color: var(--primary-600);
+.tab-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
 }
 
-.tab.active {
-  background: var(--primary-600);
-  border-color: var(--primary-600);
-  color: var(--bg-primary);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-  transform: translateY(-1px);
-}
-
-.tab-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 滑动指示条 */
-.tab-indicator {
+/* 标签指示器 */
+.tab-indicator-container {
   position: absolute;
   bottom: 0;
-  left: 0;
-  width: 50%;
-  height: 3px;
-  background: var(--primary-600);
-  border-radius: var(--radius-full);
-  transition: transform var(--transition-slow) cubic-bezier(0.22, 0.61, 0.36, 1);
+  left: 24px;
+  right: 24px;
+  width: calc(100% - 48px);
+}
+
+:deep(.el-tabs__nav-wrap) {
+  display: none;
 }
 
 /* 表单区域 */

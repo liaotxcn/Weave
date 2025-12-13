@@ -1,67 +1,44 @@
 <template>
   <div class="register-container">
     <h2 class="form-title">注册</h2>
-    <form class="auth-form" @submit.prevent="handleRegister">
+    <el-form class="auth-form" @submit.prevent="handleRegister" label-position="top" size="large">
       <!-- 用户名输入 -->
-      <div class="form-group">
-        <label for="username">用户名</label>
-        <div class="input-wrapper">
-          <input 
-            v-model="username" 
-            type="text" 
-            id="username" 
-            required 
-            minlength="3" 
-            maxlength="50" 
-            placeholder="3-50个字符" 
-            @input="clearError"
-            :class="{ 'input-error': usernameInvalid && username }"
-          />
-        </div>
-        <div v-if="usernameInvalid && username" class="input-hint input-hint-error">用户名至少需要3个字符</div>
-        <div v-else-if="username && !usernameInvalid" class="input-hint input-hint-success">用户名可用</div>
-      </div>
+      <el-form-item label="用户名" :error="usernameInvalid && username ? '用户名至少需要3个字符' : ''" :validate-status="usernameInvalid && username ? 'error' : (username && !usernameInvalid ? 'success' : '')" required>
+        <el-input 
+          v-model="username" 
+          placeholder="3-50个字符" 
+          maxlength="50" 
+          clearable
+          @input="clearError"
+          prefix-icon="User"
+        />
+        <div v-if="username && !usernameInvalid" class="input-hint input-hint-success">用户名可用</div>
+      </el-form-item>
       
       <!-- 邮箱输入 -->
-      <div class="form-group">
-        <label for="email">邮箱</label>
-        <div class="input-wrapper">
-          <input 
-            v-model="email" 
-            type="email" 
-            id="email" 
-            required 
-            placeholder="name@example.com" 
-            @input="clearError"
-            :class="{ 'input-error': emailInvalid && email }"
-          />
-        </div>
-        <div v-if="emailInvalid && email" class="input-hint input-hint-error">请输入有效的邮箱地址</div>
-        <div v-else-if="email && !emailInvalid" class="input-hint input-hint-success">邮箱格式正确</div>
-      </div>
+      <el-form-item label="邮箱" :error="emailInvalid && email ? '请输入有效的邮箱地址' : ''" :validate-status="emailInvalid && email ? 'error' : (email && !emailInvalid ? 'success' : '')" required>
+        <el-input 
+          v-model="email" 
+          type="email" 
+          placeholder="name@example.com" 
+          clearable
+          @input="clearError"
+          prefix-icon="Message"
+        />
+        <div v-if="email && !emailInvalid" class="input-hint input-hint-success">邮箱格式正确</div>
+      </el-form-item>
       
       <!-- 密码输入 -->
-      <div class="form-group">
-        <label for="password">密码</label>
-        <div class="password-wrap">
-          <input 
-            :type="showPassword ? 'text' : 'password'" 
-            v-model="password" 
-            id="password" 
-            required 
-            minlength="6" 
-            placeholder="至少6个字符" 
-            @input="clearError"
-            :class="{ 'input-error': password.length > 0 && password.length < 6 }"
-          />
-          <button type="button" class="toggle-psw" @click="showPassword = !showPassword" :aria-pressed="showPassword" :title="showPassword ? '隐藏密码' : '显示密码'" aria-label="切换密码可见性">
-            <svg class="eye-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 10c2.5-4.5 6-6.5 8-6.5s5.5 2 8 6.5c-2.5 4.5-6 6.5-8 6.5S4.5 14.5 2 10z" fill="none" stroke="currentColor" stroke-width="1.5" />
-              <circle cx="10" cy="10" r="3" fill="currentColor" />
-              <path v-if="!showPassword" d="M4 4L16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-            </svg>
-          </button>
-        </div>
+      <el-form-item label="密码" :error="password.length > 0 && password.length < 6 ? '密码至少需要6个字符' : ''" :validate-status="password.length > 0 && password.length < 6 ? 'error' : ''" required>
+        <el-input 
+          v-model="password" 
+          type="password" 
+          placeholder="至少6个字符" 
+          show-password 
+          clearable
+          @input="clearError"
+          prefix-icon="Lock"
+        />
         
         <!-- 密码强度指示器 -->
         <div v-if="password" class="pw-strength">
@@ -101,47 +78,38 @@
             </div>
           </div>
         </div>
-      </div>
+      </el-form-item>
       
       <!-- 确认密码 -->
-      <div class="form-group">
-        <label for="confirmPassword">确认密码</label>
-        <div class="password-wrap">
-          <input 
-            :type="showConfirmPassword ? 'text' : 'password'" 
-            v-model="confirmPassword" 
-            id="confirmPassword" 
-            required 
-            minlength="6" 
-            placeholder="再次输入密码" 
-            @input="clearError"
-            :class="{ 'input-error': passwordMismatch && confirmPassword }"
-          />
-          <button type="button" class="toggle-psw" @click="showConfirmPassword = !showConfirmPassword" :aria-pressed="showConfirmPassword" :title="showConfirmPassword ? '隐藏密码' : '显示密码'" aria-label="切换密码可见性">
-            <svg class="eye-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 10c2.5-4.5 6-6.5 8-6.5s5.5 2 8 6.5c-2.5 4.5-6 6.5-8 6.5S4.5 14.5 2 10z" fill="none" stroke="currentColor" stroke-width="1.5" />
-              <circle cx="10" cy="10" r="3" fill="currentColor" />
-              <path v-if="!showConfirmPassword" d="M4 4L16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-            </svg>
-          </button>
-        </div>
-        <div v-if="passwordMismatch && confirmPassword" class="input-hint input-hint-error">两次输入的密码不一致</div>
-        <div v-else-if="confirmPassword && !passwordMismatch && password" class="input-hint input-hint-success">密码一致</div>
-      </div>
+      <el-form-item label="确认密码" :error="passwordMismatch && confirmPassword ? '两次输入的密码不一致' : ''" :validate-status="passwordMismatch && confirmPassword ? 'error' : (confirmPassword && !passwordMismatch && password ? 'success' : '')" required>
+        <el-input 
+          v-model="confirmPassword" 
+          type="password" 
+          placeholder="请再次输入密码" 
+          show-password 
+          clearable
+          @input="clearError"
+          prefix-icon="Lock"
+        />
+        <div v-if="confirmPassword && !passwordMismatch && password" class="input-hint input-hint-success">密码一致</div>
+      </el-form-item>
       
       <!-- 错误消息 -->
-      <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+      <el-form-item>
+        <el-alert v-if="errorMessage" type="error" :message="errorMessage" show-icon center :closable="false" />
+      </el-form-item>
       
       <!-- 注册按钮 -->
-      <button class="primary-btn" type="submit" :disabled="loading || !canRegister">
-        <span v-if="loading" class="loading-spinner"></span>
-        {{ loading ? '注册中...' : '注册' }}
-      </button>
-    </form>
+      <el-form-item>
+        <el-button type="primary" native-type="submit" :disabled="loading || !canRegister" :loading="loading" style="width: 100%;" size="large">
+        注册
+      </el-button>
+      </el-form-item>
+    </el-form>
     
     <p class="switch-tip">
       已有账号？
-      <button class="link-btn" type="button" @click="switchToLogin">返回登录</button>
+      <el-button type="text" @click="switchToLogin">返回登录</el-button>
     </p>
   </div>
 </template>
@@ -301,111 +269,65 @@ export default {
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: relative;
-}
-
-.form-group label {
-  font-weight: 500;
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  letter-spacing: 0.02em;
-  margin-bottom: 2px;
-}
-
-.input-wrapper,
-.password-wrap {
-  position: relative;
+/* 验证码输入框 */
+.verification-code-wrap {
   display: flex;
   align-items: center;
+  gap: 12px;
   width: 100%;
 }
 
-/* 图标已移除 */
-
-.auth-form input {
-  width: 100%;
-  padding: 16px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  font-size: 16px;
-  font-family: inherit;
-  line-height: 1.5;
-  transition: all var(--transition-normal);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  box-sizing: border-box;
-}
-
-input::placeholder {
+.input-hint {
+  font-size: var(--font-size-xs);
   color: var(--text-tertiary);
-  font-size: 14px;
-  opacity: 0.8;
-  transition: all var(--transition-fast);
+  margin-top: 6px;
+  padding-left: 2px;
 }
 
-input:focus {
-  outline: none;
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-  background: var(--bg-primary);
+.input-hint-success {
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+  margin-top: 6px;
+  padding-left: 2px;
 }
 
-input:focus::placeholder {
-  opacity: 0.6;
-  transform: translateX(2px);
+/* 彻底修复Element Plus输入框双重边框问题 */
+:deep(.el-input) {
+  /* 确保输入框容器没有额外边框 */
+  border: none !important;
+  box-shadow: none !important;
 }
 
-/* 图标相关的聚焦样式已移除 */
-
-input.input-error {
-  border-color: var(--error);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+:deep(.el-input__wrapper) {
+  /* 重置输入框包装器的所有边框和阴影 */
+  transition: all 0.3s ease;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--border-color) !important;
+  outline: none !important;
+  background-color: #fff !important;
 }
 
-/* 密码输入框特殊样式 */
-.password-wrap input {
-  padding-right: 52px;
+:deep(.el-input__wrapper:focus-within) {
+  /* 焦点状态只保留一层阴影和边框 */
+  box-shadow: 0 0 0 2px rgba(144, 202, 249, 0.2), 0 2px 8px rgba(144, 202, 249, 0.3) !important;
+  border-color: #69b1ff !important;
 }
 
-.toggle-psw {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  z-index: 2;
+:deep(.el-input__inner) {
+  /* 确保内部输入元素没有额外边框 */
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
 }
 
-.toggle-psw:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.toggle-psw:focus {
-  outline: none;
-  background: var(--bg-secondary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.eye-icon {
-  display: block;
+/* 禁用状态优化 */
+:deep(.el-input.is-disabled .el-input__wrapper) {
+  opacity: 0.7;
+  background-color: var(--bg-secondary) !important;
 }
 
 /* 输入提示 */
@@ -548,114 +470,12 @@ input.input-error {
   color: var(--success);
 }
 
-/* 提交按钮 */
-.primary-btn {
-  padding: 14px 24px;
-  border: none;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
-  color: white;
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  transition: all var(--transition-normal);
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 20px;
-  min-height: 48px;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
-}
-
-.primary-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-  transform: translateY(-1px);
-}
-
-.primary-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
-}
-
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* 加载动画 */
-.loading-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid var(--bg-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* 错误消息 */
-.error-message {
-  background: var(--error-100);
-  color: var(--error-700);
-  border: 1px solid var(--error);
-  padding: 10px 12px;
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-}
-
-.error-message::before {
-  content: '';
-  width: 16px;
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23dc2626'%3E%3Cpath fill-rule='evenodd' d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z' clip-rule='evenodd'/%3E%3C/svg%3E") no-repeat center center;
-  background-size: contain;
-}
-
 /* 切换提示 */
 .switch-tip {
   text-align: center;
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin-top: 24px;
-}
-
-.link-btn {
-  font-size: var(--font-size-sm);
-  background: none;
-  border: none;
-  color: var(--primary-600);
-  cursor: pointer;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: var(--radius);
-  transition: all var(--transition-fast);
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-}
-
-.link-btn:hover {
-  background: var(--primary-50);
-  color: var(--primary-700);
-  transform: translateY(-1px);
 }
 
 /* 响应式调整 */
