@@ -372,28 +372,28 @@ const handleKeyDown = (event) => {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: #6366f1;
+  background: var(--el-color-primary);
   color: white;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  box-shadow: var(--el-box-shadow-light);
   transition: all 0.3s ease;
   outline: none;
   font-size: 16px;
 }
 
 .ai-chat-icon:hover {
-  background: #4f46e5;
+  background: var(--el-color-primary-light-3);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+  box-shadow: var(--el-box-shadow);
 }
 
 .ai-chat-icon:active {
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: var(--el-box-shadow-light);
 }
 
 .chat-icon-image {

@@ -1,77 +1,84 @@
 <template>
   <div class="teams-center">
-    <div class="header-section">
-      <h1 class="page-title">协作团队</h1>
-      <button class="create-team-btn" @click="showCreateModal = true">
-        <svg class="plus-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        创建团队
-      </button>
-    </div>
-    
-    <div class="content-card">
+    <el-card class="content-card" shadow="hover">
       <!-- 搜索与统计工具栏 -->
       <div class="toolbar">
-        <div class="search-container">
-          <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <input class="search-input" v-model="keyword" placeholder="搜索团队名称..." />
+        <div class="toolbar-left">
+          <el-input
+            v-model="keyword"
+            placeholder="搜索团队名称..."
+            style="width: 300px;"
+            clearable
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-statistic title="共" :value="filteredTeams.length" suffix="个团队" />
         </div>
-        <div class="stats">
-          <span class="team-count">共 <strong>{{ filteredTeams.length }}</strong> 个团队</span>
-        </div>
+        <el-button type="primary" @click="showCreateModal = true" :icon="Plus">
+          创建团队
+        </el-button>
       </div>
       
       <!-- 状态区域 -->
       <div v-if="loading" class="status-container loading-state">
-        <div class="loading-spinner"></div>
-        <p>正在加载团队列表...</p>
+        <el-skeleton :rows="3" animated />
       </div>
       
       <div v-else-if="errorMessage" class="status-container error-state">
-        <svg class="error-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="1.5"/>
-          <path d="M12 8V12M12 16H12.01" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        <p>{{ errorMessage }}</p>
-        <button class="retry-btn" @click="loadTeams">重试</button>
+        <el-result
+          icon="error"
+          title="加载失败"
+          sub-title="{{ errorMessage }}"
+        >
+          <template #extra>
+            <el-button type="primary" @click="loadTeams" :icon="Loading">重试</el-button>
+          </template>
+        </el-result>
       </div>
       
       <div v-else>
         <!-- 空状态 -->
-        <div v-if="filteredTeams.length === 0" class="status-container empty-state">
-          <svg class="empty-icon" viewBox="0 0 24 24" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#cbd5e1" stroke-width="1.5"/>
-            <path d="M8 12L16 12" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <h3>暂无团队</h3>
-          <p>{{ keyword ? '没有找到匹配的团队' : '您还没有加入任何团队' }}</p>
-        </div>
+        <el-empty v-if="filteredTeams.length === 0" :image-size="200">
+          <template #description>
+            <span>{{ keyword ? '没有找到匹配的团队' : '您还没有加入任何团队' }}</span>
+          </template>
+          <template #footer>
+            <el-button type="primary" @click="showCreateModal = true" :icon="Plus">创建第一个团队</el-button>
+          </template>
+        </el-empty>
         
         <!-- 团队列表 -->
         <div v-else class="team-grid">
-          <div v-for="team in filteredTeams" :key="team.id" class="team-card" @click="viewTeam(team)">
+          <el-card
+            v-for="team in filteredTeams"
+            :key="team.id"
+            class="team-card"
+            @click="viewTeam(team)"
+            shadow="hover"
+          >
             <div class="team-header">
               <div class="team-avatar" :style="{'--avatar-bg': getAvatarColor(team.name)}">
                 {{ getAvatarLetter(team.name) }}
               </div>
               <div class="team-actions">
-                <button class="action-btn" @click.stop="editTeam(team)" title="编辑团队">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.5"/>
-                  </svg>
-                </button>
-                <button class="action-btn" @click.stop="viewTeamMembers(team)" title="查看成员">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5"/>
-                    <circle cx="8.5" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M20 8.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z" stroke="currentColor" stroke-width="1.5"/>
-                  </svg>
-                </button>
+                <el-button
+                  type="text"
+                  @click.stop="editTeam(team)"
+                  title="编辑团队"
+                  size="small"
+                >
+                  <el-icon><EditPen /></el-icon>
+                </el-button>
+                <el-button
+                  type="text"
+                  @click.stop="viewTeamMembers(team)"
+                  title="查看成员"
+                  size="small"
+                >
+                  <el-icon><UserFilled /></el-icon>
+                </el-button>
               </div>
             </div>
             
@@ -82,267 +89,245 @@
             </div>
             
             <div class="team-meta">
-              <div class="meta-item">
-                <svg class="meta-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5"/>
-                  <circle cx="8.5" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M20 8.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z" stroke="currentColor" stroke-width="1.5"/>
-                </svg>
-                <span>{{ team.members ? parseMembers(team.members).length : 0 }} 成员</span>
-              </div>
-              <div class="meta-item">
-                <svg class="meta-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                <span>{{ team.owner_id === this.$root.currentUser?.id ? '管理员' : '成员' }}</span>
-              </div>
+              <el-tag size="small" type="info" effect="plain">
+                <el-icon><UserFilled /></el-icon>
+                {{ team.members ? parseMembers(team.members).length : 0 }} 成员
+              </el-tag>
+              <el-tag size="small" :type="team.owner_id === this.$root.currentUser?.id ? 'success' : 'warning'" effect="plain">
+                {{ team.owner_id === this.$root.currentUser?.id ? '管理员' : '成员' }}
+              </el-tag>
             </div>
             
             <div class="team-footer">
               <span class="create-time">创建于 {{ formatDate(team.created_at) }}</span>
             </div>
-          </div>
+          </el-card>
         </div>
       </div>
-    </div>
+    </el-card>
     
     <!-- 创建团队模态框 -->
-    <div v-if="showCreateModal" class="modal-overlay" @click="closeCreateModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h2>创建新团队</h2>
-          <button class="modal-close" @click="closeCreateModal">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body">
-          <form @submit.prevent="submitCreateTeam" class="create-team-form">
-            <div class="form-group">
-              <label for="teamName" class="form-label">
-                <span>团队名称</span>
-                <span class="char-count" v-if="createForm.name.length">{{ createForm.name.length }}/50</span>
-              </label>
-              <input
-                type="text"
-                id="teamName"
-                v-model="createForm.name"
-                placeholder="请输入团队名称，如：产品开发团队"
-                required
-                maxlength="50"
-                class="form-input"
-              />
-              <div v-if="errors.name" class="error-message">{{ errors.name }}</div>
-              <div v-else-if="createForm.name.length" class="success-indicator"></div>
-            </div>
-            
-            <div class="form-group">
-              <label for="teamDescription" class="form-label">
-                <span>团队描述</span>
-                <span class="char-count">{{ createForm.description.length }}/200</span>
-              </label>
-              <textarea
-                id="teamDescription"
-                v-model="createForm.description"
-                placeholder="请输入团队描述，帮助团队成员了解团队的目标和职责"
-                rows="4"
-                maxlength="200"
-                class="form-textarea"
-              ></textarea>
-            </div>
-            
-            <div class="modal-footer">
-              <button type="button" class="cancel-btn" @click="closeCreateModal">取消</button>
-              <button type="submit" class="submit-btn" :disabled="creatingTeam">
-                <span v-if="creatingTeam" class="loading-spinner-small"></span>
-                {{ creatingTeam ? '创建中...' : '创建团队' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+    <el-dialog
+      v-model="showCreateModal"
+      title="创建新团队"
+      width="500px"
+      destroy-on-close
+    >
+      <el-form :model="createForm" ref="createFormRef" @submit.prevent="submitCreateTeam" label-position="top">
+        <el-form-item 
+          label="团队名称" 
+          prop="name"
+          :rules="[{ required: true, message: '请输入团队名称', trigger: 'blur' },
+                   { min: 2, max: 50, message: '团队名称长度在 2 到 50 个字符', trigger: 'blur' }]"
+        >
+          <el-input
+            v-model="createForm.name"
+            placeholder="请输入团队名称，如：产品开发团队"
+            maxlength="50"
+            show-word-limit
+          />
+        </el-form-item>
+        
+        <el-form-item 
+          label="团队描述"
+          prop="description"
+          :rules="[{ max: 200, message: '团队描述不能超过 200 个字符', trigger: 'blur' }]"
+        >
+          <el-input
+            v-model="createForm.description"
+            type="textarea"
+            placeholder="请输入团队描述，帮助团队成员了解团队的目标和职责"
+            rows="4"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="closeCreateModal">取消</el-button>
+        <el-button type="primary" @click="submitCreateTeam" :loading="creatingTeam" :icon="Plus">
+          {{ creatingTeam ? '创建中...' : '创建团队' }}
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- 编辑团队模态框 -->
-    <div v-if="showEditModal" class="modal-overlay" @click="closeEditModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h2>编辑团队信息</h2>
-          <button class="modal-close" @click="closeEditModal">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body">
-          <form @submit.prevent="submitUpdateTeam" class="edit-team-form">
-            <div class="form-group">
-              <label for="editTeamName" class="form-label">
-                <span>团队名称</span>
-                <span class="char-count" v-if="editForm.name.length">{{ editForm.name.length }}/50</span>
-              </label>
-              <input
-                type="text"
-                id="editTeamName"
-                v-model="editForm.name"
-                placeholder="请输入团队名称"
-                required
-                maxlength="50"
-                class="form-input"
-              />
-              <div v-if="errors.name" class="error-message">{{ errors.name }}</div>
-            </div>
-            
-            <div class="form-group">
-              <label for="editTeamDescription" class="form-label">
-                <span>团队描述</span>
-                <span class="char-count">{{ editForm.description.length }}/200</span>
-              </label>
-              <textarea
-                id="editTeamDescription"
-                v-model="editForm.description"
-                placeholder="请输入团队描述"
-                rows="4"
-                maxlength="200"
-                class="form-textarea"
-              ></textarea>
-            </div>
-            
-            <div class="modal-footer">
-              <button type="button" class="cancel-btn" @click="closeEditModal">取消</button>
-              <button type="submit" class="submit-btn" :disabled="updatingTeam">
-                <span v-if="updatingTeam" class="loading-spinner-small"></span>
-                {{ updatingTeam ? '更新中...' : '更新团队' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+    <el-dialog
+      v-model="showEditModal"
+      title="编辑团队信息"
+      width="500px"
+      destroy-on-close
+    >
+      <el-form :model="editForm" ref="editFormRef" @submit.prevent="submitUpdateTeam" label-position="top">
+        <el-form-item 
+          label="团队名称" 
+          prop="name"
+          :rules="[{ required: true, message: '请输入团队名称', trigger: 'blur' },
+                   { min: 2, max: 50, message: '团队名称长度在 2 到 50 个字符', trigger: 'blur' }]"
+        >
+          <el-input
+            v-model="editForm.name"
+            placeholder="请输入团队名称"
+            maxlength="50"
+            show-word-limit
+          />
+        </el-form-item>
+        
+        <el-form-item 
+          label="团队描述"
+          prop="description"
+          :rules="[{ max: 200, message: '团队描述不能超过 200 个字符', trigger: 'blur' }]"
+        >
+          <el-input
+            v-model="editForm.description"
+            type="textarea"
+            placeholder="请输入团队描述"
+            rows="4"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="closeEditModal">取消</el-button>
+        <el-button type="primary" @click="submitUpdateTeam" :loading="updatingTeam" :icon="EditPen">
+          {{ updatingTeam ? '更新中...' : '更新团队' }}
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- 团队成员管理模态框 -->
-    <div v-if="showMembersModal" class="modal-overlay" @click="closeMembersModal">
-      <div class="modal-content members-modal" @click.stop>
-        <div class="modal-header">
-          <h2>{{ currentTeam?.name }} - 团队成员</h2>
-          <button class="modal-close" @click="closeMembersModal">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
+    <el-dialog
+      v-model="showMembersModal"
+      :title="currentTeam?.name + ' - 团队成员'"
+      width="800px"
+      destroy-on-close
+    >
+      <div class="modal-body">
+        <!-- 搜索与添加成员 -->
+        <div class="members-toolbar">
+          <el-input
+            v-model="memberSearchKeyword"
+            placeholder="搜索团队成员..."
+            style="width: 300px;"
+            clearable
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-button type="primary" @click="showAddMemberForm = true" :icon="Plus">
+            添加成员
+          </el-button>
         </div>
-        <div class="modal-body">
-          <!-- 搜索与添加成员 -->
-          <div class="members-toolbar">
-            <div class="search-container">
-              <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <input class="search-input" v-model="memberSearchKeyword" placeholder="搜索团队成员..." />
-            </div>
-            <button class="add-member-btn" @click="showAddMemberForm = true">
-              <svg class="plus-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              添加成员
-            </button>
-          </div>
 
-          <!-- 成员列表 -->
-          <div v-if="loading" class="status-container loading-state">
-            <div class="loading-spinner"></div>
-            <p>正在加载成员列表...</p>
-          </div>
-          <div v-else class="members-list">
-            <div v-if="teamMembers.length === 0" class="empty-members">
-              <p>暂无团队成员</p>
-            </div>
-            <div v-else>
-              <div v-for="member in filteredTeamMembers" :key="member.user_id" class="member-item">
-                <div class="member-info">
-                  <div class="member-avatar" :style="{'--avatar-bg': getAvatarColor(member.username || 'User')}">
-                    {{ getAvatarLetter(member.username || 'U') }}
-                  </div>
-                  <div class="member-details">
-                    <span class="member-username">{{ member.username || '未知用户' }}</span>
-                    <span class="member-role">{{ member.role === 'owner' ? '所有者' : member.role === 'admin' ? '管理员' : '成员' }}</span>
-                  </div>
-                </div>
-                <div class="member-actions">
-                  <button 
-                    class="remove-member-btn"
-                    @click="removeTeamMember(member)"
-                    :disabled="member.role === 'owner'"
-                    :title="member.role === 'owner' ? '不能移除团队所有者' : '移除成员'"
-                  >
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    移除
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 添加成员表单 -->
-          <div v-if="showAddMemberForm" class="add-member-form-container">
-            <div class="form-section-header">
-              <h3>添加新成员</h3>
-              <button class="close-form-btn" @click="showAddMemberForm = false">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
-            <form @submit.prevent="submitAddMember" class="add-member-form">
-              <div class="form-group">
-                <label for="addMemberId" class="form-label">用户ID</label>
-                <input
-                  type="number"
-                  id="addMemberId"
-                  v-model="addMemberForm.user_id"
-                  placeholder="请输入用户ID"
-                  required
-                  class="form-input"
-                />
-              </div>
-              
-              <div class="form-group">
-                <label for="addMemberRole" class="form-label">角色</label>
-                <select
-                  id="addMemberRole"
-                  v-model="addMemberForm.role"
-                  class="form-select"
+        <!-- 成员列表 -->
+        <div v-if="loading" class="status-container loading-state">
+          <el-skeleton :rows="5" animated />
+        </div>
+        <div v-else class="members-list">
+          <el-empty v-if="teamMembers.length === 0" description="暂无团队成员" />
+          <el-table 
+            v-else 
+            :data="filteredTeamMembers" 
+            stripe 
+            style="width: 100%;"
+            border
+            size="small"
+          >
+            <el-table-column prop="username" label="用户名" width="200">
+              <template #default="scope">
+                <el-avatar 
+                  :size="32" 
+                  :style="{ backgroundColor: getAvatarColor(scope.row.username || 'User'), marginRight: '10px' }"
                 >
-                  <option value="member">成员</option>
-                  <option value="admin">管理员</option>
-                </select>
-              </div>
-              
-              <div class="form-actions">
-                <button type="button" class="cancel-btn" @click="showAddMemberForm = false">取消</button>
-                <button type="submit" class="submit-btn" :disabled="addingMember">
-                  <span v-if="addingMember" class="loading-spinner-small"></span>
-                  {{ addingMember ? '添加中...' : '添加成员' }}
-                </button>
-              </div>
-            </form>
-          </div>
+                  {{ getAvatarLetter(scope.row.username || 'U') }}
+                </el-avatar>
+                <span>{{ scope.row.username || '未知用户' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="role" label="角色" width="140">
+              <template #default="scope">
+                <el-tag :type="scope.row.role === 'owner' ? 'success' : scope.row.role === 'admin' ? 'warning' : 'info'">
+                  {{ scope.row.role === 'owner' ? '所有者' : scope.row.role === 'admin' ? '管理员' : '成员' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="scope">
+                <el-button
+                  type="danger"
+                  text
+                  size="small"
+                  @click="removeTeamMember(scope.row)"
+                  :disabled="scope.row.role === 'owner'"
+                  :title="scope.row.role === 'owner' ? '不能移除团队所有者' : '移除成员'"
+                >
+                  移除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <!-- 添加成员表单 -->
+        <el-divider v-if="showAddMemberForm" />
+        <div v-if="showAddMemberForm" class="add-member-form-container">
+          <h3>添加新成员</h3>
+          <el-form :model="addMemberForm" ref="addMemberFormRef" @submit.prevent="submitAddMember" label-position="top">
+            <el-form-item 
+              label="用户ID" 
+              prop="user_id"
+              :rules="[{ required: true, message: '请输入用户ID', trigger: 'blur' }]"
+            >
+              <el-input
+                type="number"
+                v-model="addMemberForm.user_id"
+                placeholder="请输入用户ID"
+              />
+            </el-form-item>
+            
+            <el-form-item 
+              label="角色" 
+              prop="role"
+              :rules="[{ required: true, message: '请选择角色', trigger: 'change' }]"
+            >
+              <el-select
+                v-model="addMemberForm.role"
+                style="width: 100%;"
+              >
+                <el-option value="member">成员</el-option>
+                <el-option value="admin">管理员</el-option>
+              </el-select>
+            </el-form-item>
+            
+            <div class="form-actions">
+              <el-button @click="showAddMemberForm = false">取消</el-button>
+              <el-button type="primary" @click="submitAddMember" :loading="addingMember" :icon="Plus">
+                {{ addingMember ? '添加中...' : '添加成员' }}
+              </el-button>
+            </div>
+          </el-form>
         </div>
       </div>
-    </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
+import { Search, Plus, EditPen, UserFilled, CircleCloseFilled, Loading } from '@element-plus/icons-vue'
 import api, { teamService } from '../services/auth'
 
 export default {
   name: 'TeamsCenter',
+  components: {
+    Search,
+    Plus,
+    EditPen,
+    UserFilled,
+    CircleCloseFilled,
+    Loading
+  },
   data() {
     return {
       loading: true,
@@ -372,7 +357,10 @@ export default {
         user_id: '',
         role: 'member'
       },
-      errors: {}
+      errors: {},
+      createFormRef: null,
+      editFormRef: null,
+      addMemberFormRef: null
     }
   },
   mounted() {
@@ -500,75 +488,59 @@ export default {
       this.errors = {}
     },
     
-    // 验证创建表单
-    validateCreateForm() {
-      const errors = {}
-      
-      if (!this.createForm.name?.trim()) {
-        errors.name = '团队名称不能为空'
-      } else if (this.createForm.name.trim().length < 2) {
-        errors.name = '团队名称至少需要2个字符'
-      } else if (this.createForm.name.trim().length > 50) {
-        errors.name = '团队名称不能超过50个字符'
-      }
-      
-      if (this.createForm.description && this.createForm.description.length > 200) {
-        errors.description = '团队描述不能超过200个字符'
-      }
-      
-      this.errors = errors
-      return Object.keys(errors).length === 0
-    },
-    
     // 提交创建团队
     async submitCreateTeam() {
-      if (!this.validateCreateForm()) {
-        return
-      }
+      if (!this.$refs.createFormRef) return;
       
-      this.creatingTeam = true
-      try {
-        const teamData = {
-          name: this.createForm.name.trim(),
-          description: this.createForm.description.trim()
+      await this.$refs.createFormRef.validate(async (valid) => {
+        if (!valid) return;
+        
+        this.creatingTeam = true
+        try {
+          const teamData = {
+            name: this.createForm.name.trim(),
+            description: this.createForm.description.trim()
+          }
+          
+          // 调用后端API创建团队
+          await api.post('/api/v1/teams/', teamData)
+          
+          // 创建成功后刷新团队列表
+          await this.loadTeams()
+          
+          // 显示成功提示
+          this.$message.success('团队创建成功')
+          
+          // 关闭模态框
+          this.closeCreateModal()
+        } catch (e) {
+          const errorMsg = e?.response?.data?.message || '创建团队失败，请稍后重试'
+          this.$message.error(errorMsg)
+        } finally {
+          this.creatingTeam = false
         }
-        
-        // 调用后端API创建团队
-        await api.post('/api/v1/teams/', teamData)
-        
-        // 创建成功后刷新团队列表
-        await this.loadTeams()
-        
-        // 显示成功提示
-        alert('团队创建成功')
-        
-        // 关闭模态框
-        this.closeCreateModal()
-      } catch (e) {
-        const errorMsg = e?.response?.data?.message || '创建团队失败，请稍后重试'
-        alert(errorMsg)
-      } finally {
-        this.creatingTeam = false
-      }
+      });
     },
-    
+      
     // 更新团队信息
     async submitUpdateTeam() {
-      this.updatingTeam = true
-      this.errors = {}
-      try {
-        await teamService.updateTeam(this.currentTeam.id, this.editForm)
-        this.closeEditModal()
-        this.loadTeams() // 更新团队列表
-        alert('团队信息更新成功')
-      } catch (error) {
-        alert('更新团队信息失败')
-        if (error.response?.data?.errors) {
-          this.errors = error.response.data.errors
+      if (!this.$refs.editFormRef) return;
+      
+      await this.$refs.editFormRef.validate(async (valid) => {
+        if (!valid) return;
+        
+        this.updatingTeam = true
+        try {
+          await teamService.updateTeam(this.currentTeam.id, this.editForm)
+          this.closeEditModal()
+          this.loadTeams() // 更新团队列表
+          this.$message.success('团队信息更新成功')
+        } catch (error) {
+          this.$message.error('更新团队信息失败')
+        } finally {
+          this.updatingTeam = false
         }
-      } finally {
-        this.updatingTeam = false
-      }
+      });
     },
     // 查看团队成员列表
     async viewTeamMembers(team) {
@@ -629,7 +601,7 @@ export default {
         return
       }
       try {
-        await teamService.removeTeamMember(this.currentTeam.id, member.id)
+        await teamService.removeTeamMember(this.currentTeam.id, member.user_id)
         await this.loadTeamMembers(this.currentTeam.id) // 刷新成员列表
         alert('移除成员成功')
       } catch (error) {
@@ -671,117 +643,140 @@ export default {
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.create-team-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 28px;
-  background: white;
-  color: #667eea;
-  border: none;
-  border-radius: 16px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-.create-team-btn:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  background: #f8fafc;
-}
-
 /* 内容卡片 */
 .content-card {
-  background: white;
   border-radius: 24px;
   padding: 28px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s ease;
   backdrop-filter: blur(10px);
 }
 
 /* 团队卡片 */
 .team-card {
-  background: white;
   border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f4f8;
+  margin-bottom: 20px;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
 }
 
 .team-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-  border-color: #e8f1f8;
 }
 
-/* 团队卡片头部 */
-.team-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 20px;
-  background-color: var(--avatar-bg, #667eea);
-  color: white;
+/* 团队卡片内部样式 */
+.team-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  font-size: 28px;
+  margin-bottom: 16px;
+}
+
+.team-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.team-content {
+  margin-bottom: 16px;
+}
+
+.team-name {
+  font-size: 20px;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.35s ease;
+  color: #1e293b;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.025em;
 }
 
-.team-card:hover .team-avatar {
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+.team-card:hover .team-name {
+  color: #667eea;
 }
 
-/* 模态框样式 */
-.modal-content {
-  background: white;
-  border-radius: 24px;
-  width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  transform: scale(0.95) translateY(20px);
-  opacity: 0;
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
-  animation: modalSlideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  padding: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.team-meta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
-/* 按钮样式 */
-.submit-btn {
-  padding: 14px 28px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+.team-footer {
+  text-align: right;
+}
+
+/* 工具栏样式 */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* 搜索与统计容器 */
+.toolbar-left {
   display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.submit-btn:hover:not(:disabled) {
-  transform: translateY(-4px) scale(1.03);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.45);
+/* 团队数量统计样式 */
+:deep(.el-statistic) {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-left: 16px;
+  align-self: center;
+}
+
+/* 成员管理模态框样式 */
+.members-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.members-list {
+  margin-bottom: 24px;
+}
+
+.add-member-form-container {
+  margin-top: 24px;
+}
+
+.add-member-form-container h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* 状态容器 */
+.status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loading-state {
+  color: #64748b;
+}
+
+.error-state {
+  color: #ef4444;
 }
 
 /* 响应式设计 */
@@ -794,14 +789,25 @@ export default {
     padding: 20px;
   }
   
-  .team-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
+  .header-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
   
-  .modal-content {
-    padding: 24px;
-    margin: 16px;
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .members-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .team-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 

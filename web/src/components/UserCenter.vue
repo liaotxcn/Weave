@@ -2,12 +2,7 @@
   <div class="user-center">
     <div class="welcome-header">
       <div class="welcome-content">
-        <div class="user-avatar-large">
-          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M19 20C19 16.134 12 14 12 14C12 14 5 16.134 5 20V21H19V20Z" stroke="currentColor" stroke-width="1.5"/>
-          </svg>
-        </div>
+        <el-avatar :size="80" :icon="UserFilled" class="user-avatar-large"></el-avatar>
         <div class="welcome-info">
           <h2>个人中心</h2>
           <p>管理您的账户信息、安全设置和活动记录</p>
@@ -16,167 +11,87 @@
     </div>
 
     <div class="cards">
-      <section class="card profile-card">
-        <div class="card-header">
-          <div class="card-icon">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+      <el-card class="profile-card" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <div class="card-icon">
+              <el-icon><User /></el-icon>
+            </div>
+            <h3>基本资料</h3>
           </div>
-          <h3>基本资料</h3>
-        </div>
+        </template>
         
         <div class="form-content">
-          <div class="form-group">
-            <label class="form-label">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M19 20C19 16.134 12 14 12 14C12 14 5 16.134 5 20V21H19V20Z" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-              用户名
-            </label>
-            <div class="input-wrapper">
-              <input 
-                type="text" 
-                :value="user?.username" 
-                readonly 
-                class="form-input readonly"
-              />
-              <div class="input-suffix">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 15L15 12L12 9L12 15Z" fill="currentColor"/>
-                  <path d="M9 12L12 15L12 9L9 12Z" fill="currentColor"/>
-                </svg>
-              </div>
-            </div>
-          </div>
+          <el-form-item label="用户名" class="form-group">
+            <el-input 
+              :value="user?.username" 
+              readonly 
+              placeholder="用户名不可修改"
+              :prefix-icon="User"
+            />
+          </el-form-item>
 
-          <div class="form-group" :class="{ 'has-error': emailInvalid }">
-            <label class="form-label">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-              邮箱地址
-            </label>
-            <div class="input-wrapper">
-              <input 
-                v-model="email" 
-                type="email" 
-                placeholder="name@example.com" 
-                class="form-input"
-                :class="{ 'error': emailInvalid }"
-                @input="clearStatus" 
-              />
-              <div class="input-suffix" v-if="email && !emailInvalid">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-            </div>
-            <div v-if="emailInvalid" class="field-message error">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 8V12M12 16H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              请输入有效的邮箱地址
-            </div>
-          </div>
+          <el-form-item label="邮箱地址" :error="emailInvalid ? '请输入有效的邮箱地址' : ''" class="form-group">
+            <el-input 
+              v-model="email" 
+              type="email" 
+              placeholder="name@example.com" 
+              :prefix-icon="Message"
+              @input="clearStatus" 
+            />
+          </el-form-item>
 
-          <div class="form-group">
-            <label class="form-label">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              创建时间
-            </label>
-            <div class="input-wrapper">
-              <input 
-                type="text" 
-                :value="formatDate(user?.created_at)" 
-                readonly 
-                class="form-input readonly"
-              />
-            </div>
-          </div>
+          <el-form-item label="创建时间" class="form-group">
+            <el-input 
+              :value="formatDate(user?.created_at)" 
+              readonly 
+              :prefix-icon="Calendar"
+            />
+          </el-form-item>
         </div>
 
         <div class="card-actions">
-          <button 
-            class="btn btn-primary" 
+          <el-button 
+            type="primary" 
             @click="updateProfile" 
             :disabled="updating || !canSave"
+            :loading="updating"
+            :icon="Check"
           >
-            <span v-if="updating" class="btn-loading">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2V6M12 18V22M4.22 4.22L6.34 6.34M17.66 17.66L19.78 19.78M2 12H6M18 12H22M4.22 19.78L6.34 17.66M17.66 6.34L19.78 4.22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              保存中...
-            </span>
-            <span v-else>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              保存资料
-            </span>
-          </button>
+            保存资料
+          </el-button>
         </div>
-      </section>
+      </el-card>
 
-      <section class="card security-card">
-        <div class="card-header">
-          <div class="card-icon">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M12 14V16M12 10H12.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M12 2V6M22 12H18M6 12H2M19.07 4.93L16.24 7.76M7.76 16.24L4.93 19.07M19.07 19.07L16.24 16.24M7.76 7.76L4.93 4.93" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+      <el-card class="security-card" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <div class="card-icon">
+              <el-icon><Lock /></el-icon>
+            </div>
+            <h3>安全设置</h3>
           </div>
-          <h3>安全设置</h3>
-        </div>
+        </template>
 
         <div class="form-content">
-          <div class="form-group" :class="{ 'has-error': currentPasswordError }">
-            <label class="form-label">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 15V17C12 18.6569 10.6569 20 9 20H7C5.34315 20 4 18.6569 4 17V15M12 9V7C12 5.34315 13.3431 4 15 4H17C18.6569 4 20 5.34315 20 7V9M12 15L9 12M12 15V12M12 12L15 9M12 12V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              当前密码
-            </label>
-            <div class="input-wrapper">
-              <input 
-                v-model="currentPassword" 
-                type="password" 
-                placeholder="请输入当前密码" 
-                class="form-input"
-                :class="{ 'error': currentPasswordError }"
-                @input="clearStatus" 
-              />
-            </div>
-            <div v-if="currentPasswordError" class="field-message error">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 8V12M12 16H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              {{ currentPasswordError }}
-            </div>
-          </div>
+          <el-form-item label="当前密码" :error="currentPasswordError" class="form-group">
+            <el-input 
+              v-model="currentPassword" 
+              type="password" 
+              placeholder="请输入当前密码" 
+              :prefix-icon="Lock" 
+              @input="clearStatus"
+            />
+          </el-form-item>
           
-          <div class="form-group" :class="{ 'has-error': passwordMismatch }">
-            <label class="form-label">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M7 10V7C7 4.23858 9.23858 2 12 2C14.7614 2 17 4.23858 17 7V10M5 21H19C20.1046 21 21 20.1046 21 19V12C21 10.8954 20.1046 10 19 10H5C3.89543 10 3 10.8954 3 12V19C3 20.1046 3.89543 21 5 21Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              新密码
-            </label>
-            <div class="input-wrapper">
-              <input 
-                v-model="newPassword" 
-                type="password" 
-                placeholder="至少6个字符" 
-                class="form-input"
-                @input="clearStatus" 
-              />
-            </div>
+          <el-form-item label="新密码" class="form-group">
+            <el-input 
+              v-model="newPassword" 
+              type="password" 
+              placeholder="至少6个字符" 
+              :prefix-icon="Key" 
+              @input="clearStatus"
+            />
             
             <div v-if="newPassword" class="password-strength">
               <div class="strength-bar">
@@ -193,177 +108,133 @@
                 </span>
               </div>
             </div>
-          </div>
+          </el-form-item>
 
-          <div class="form-group" :class="{ 'has-error': passwordMismatch }">
-            <label class="form-label">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              确认密码
-            </label>
-            <div class="input-wrapper">
-              <input 
-                v-model="confirmNewPassword" 
-                type="password" 
-                placeholder="再次输入新密码" 
-                class="form-input"
-                :class="{ 'error': passwordMismatch }"
-                @input="clearStatus" 
-              />
-              <div class="input-suffix" v-if="confirmNewPassword && !passwordMismatch">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-            </div>
-            <div v-if="passwordMismatch" class="field-message error">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 8V12M12 16H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              两次输入的密码不一致
-            </div>
-          </div>
+          <el-form-item label="确认密码" :error="passwordMismatch ? '两次输入的密码不一致' : ''" class="form-group">
+            <el-input 
+              v-model="confirmNewPassword" 
+              type="password" 
+              placeholder="再次输入新密码" 
+              :prefix-icon="Key" 
+              @input="clearStatus"
+            />
+          </el-form-item>
         </div>
 
         <div class="card-actions">
-          <button 
-            class="btn btn-secondary" 
+          <el-button 
+            type="primary" 
             @click="updatePassword" 
             :disabled="updating || !canUpdatePassword"
+            :loading="updating"
+            :icon="DocumentCopy"
           >
-            <span v-if="updating" class="btn-loading">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2V6M12 18V22M4.22 4.22L6.34 6.34M17.66 17.66L19.78 19.78M2 12H6M18 12H22M4.22 19.78L6.34 17.66M17.66 6.34L19.78 4.22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              提交中...
-            </span>
-            <span v-else>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M12 14V16M12 10H12.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              更新密码
-            </span>
-          </button>
+            更新密码
+          </el-button>
         </div>
-      </section>
+      </el-card>
     </div>
 
-    <section class="card activity-card">
-      <div class="card-header">
-        <div class="card-icon">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+    <el-card class="activity-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="card-icon">
+            <el-icon><List /></el-icon>
+          </div>
+          <h3>近期活动</h3>
+          <span class="card-subtitle">审计日志记录</span>
         </div>
-        <h3>近期活动</h3>
-        <span class="card-subtitle">审计日志记录</span>
-      </div>
+      </template>
       
       <div class="activity-content">
-        <div v-if="auditLogs.length === 0" class="empty-state">
-          <div class="empty-icon">
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <p>暂无活动记录</p>
-        </div>
+        <el-empty v-if="auditLogs.length === 0" description="暂无活动记录">
+          <template #icon>
+            <el-icon :size="48"><List /></el-icon>
+          </template>
+        </el-empty>
         
         <div v-else class="activity-list">
-          <div v-for="log in currentPageLogs" :key="log.id" class="activity-item">
-            <div class="activity-header">
-              <div class="activity-action">
-                <span class="action-badge" :class="getActionClass(log.action)">
-                  {{ log.action }}
-                </span>
-                <span class="resource-info">{{ log.resource_type }} #{{ log.resource_id }}</span>
+          <el-timeline>
+            <el-timeline-item 
+              v-for="log in currentPageLogs" 
+              :key="log.id" 
+              :timestamp="formatDate(log.created_at)"
+              placement="top"
+            >
+              <div class="activity-item">
+                <div class="activity-action">
+                  <el-tag :type="getActionType(log.action)">
+                    {{ log.action }}
+                  </el-tag>
+                  <span class="resource-info">{{ log.resource_type }} #{{ log.resource_id }}</span>
+                </div>
+                <div v-if="log.new_value || log.old_value" class="activity-details">
+                  <div v-if="log.old_value" class="change-item old">
+                    <el-icon><CircleCloseFilled /></el-icon>
+                    <span>变更前: {{ short(log.old_value) }}</span>
+                  </div>
+                  <div v-if="log.new_value" class="change-item new">
+                    <el-icon><CircleCheckFilled /></el-icon>
+                    <span>变更后: {{ short(log.new_value) }}</span>
+                  </div>
+                </div>
               </div>
-              <div class="activity-time">{{ formatDate(log.created_at) }}</div>
-            </div>
-            <div v-if="log.new_value || log.old_value" class="activity-details">
-              <div v-if="log.old_value" class="change-item old">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 12H21M3 12L9 6M3 12L9 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>变更前: {{ short(log.old_value) }}</span>
-              </div>
-              <div v-if="log.new_value" class="change-item new">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 12H3M21 12L15 6M21 12L15 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>变更后: {{ short(log.new_value) }}</span>
-              </div>
-            </div>
-          </div>
+            </el-timeline-item>
+          </el-timeline>
         </div>
         
         <!-- 分页控制 -->
         <div v-if="auditLogs.length > 0" class="pagination">
-          <button 
-            class="pagination-btn" 
-            @click="goToPrevPage"
-            :disabled="currentPage === 1"
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            上一页
-          </button>
-          
-          <div class="pagination-numbers">
-            <button 
-              v-for="page in visiblePages" 
-              :key="page"
-              class="pagination-number"
-              :class="{ active: page === currentPage }"
-              @click="goToPage(page)"
-            >
-              {{ page }}
-            </button>
-          </div>
-          
-          <button 
-            class="pagination-btn" 
-            @click="goToNextPage"
-            :disabled="currentPage === totalPages"
-          >
-            下一页
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[8, 16, 24]"
+            :total="auditLogs.length"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+          />
         </div>
       </div>
-    </section>
+    </el-card>
 
-    <!-- 全局消息提示 -->
-    <div v-if="errorMessage" class="global-message error">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 8V12M12 16H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      {{ errorMessage }}
-    </div>
-    
-    <div v-if="successMessage" class="global-message success">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      {{ successMessage }}
-    </div>
+    <!-- 消息提示 -->
+    <el-message :message="errorMessage" type="error" :show-close="true" v-if="errorMessage" duration="3000" />
+    <el-message :message="successMessage" type="success" :show-close="true" v-if="successMessage" duration="3000" />
   </div>
 </template>
 
 <script>
 import api, { authService } from '../services/auth'
+import { 
+  UserFilled, 
+  User, 
+  Message, 
+  Calendar, 
+  Lock, 
+  Key, 
+  Check, 
+  List, 
+  DocumentCopy,
+  CircleCloseFilled,
+  CircleCheckFilled
+} from '@element-plus/icons-vue'
 
 export default {
   name: 'UserCenter',
+  components: {
+    UserFilled,
+    User,
+    Message,
+    Calendar,
+    Lock,
+    Key,
+    Check,
+    List,
+    DocumentCopy,
+    CircleCloseFilled,
+    CircleCheckFilled
+  },
   props: {
     currentUser: { type: Object, default: null }
   },
@@ -388,40 +259,15 @@ export default {
     this.loadUser()
   },
   computed: {
-    // 新增：是否允许保存资料
+    // 是否允许保存资料
     canSave() {
       return !!this.email && !this.emailInvalid
-    },
-    // 分页相关计算属性
-    totalPages() {
-      return Math.ceil(this.auditLogs.length / this.pageSize)
     },
     // 当前页显示的数据
     currentPageLogs() {
       const startIndex = (this.currentPage - 1) * this.pageSize
       const endIndex = startIndex + this.pageSize
       return this.auditLogs.slice(startIndex, endIndex)
-    },
-    // 可见的页码范围
-    visiblePages() {
-      const pages = []
-      const total = this.totalPages
-      const current = this.currentPage
-      
-      // 显示当前页附近的页码，最多显示5个
-      let start = Math.max(1, current - 2)
-      let end = Math.min(total, start + 4)
-      
-      // 调整起始页码，确保显示5个页码（除非总页数少于5）
-      if (end - start < 4) {
-        start = Math.max(1, end - 4)
-      }
-      
-      for (let i = start; i <= end; i++) {
-        pages.push(i)
-      }
-      
-      return pages
     },
     // 新增：邮箱是否非法
     emailInvalid() {
@@ -457,18 +303,19 @@ export default {
   },
   methods: {
     // 分页相关方法
-    goToPage(page) {
-      if (page >= 1 && page <= this.totalPages) {
-        this.currentPage = page
-        // 触发视图更新
-        this.$forceUpdate()
-      }
+    handleSizeChange(val) {
+      this.pageSize = val
+      this.currentPage = 1
     },
-    goToPrevPage() {
-      this.goToPage(this.currentPage - 1)
+    handleCurrentChange(val) {
+      this.currentPage = val
     },
-    goToNextPage() {
-      this.goToPage(this.currentPage + 1)
+    handleSizeChange(newSize) {
+      this.pageSize = newSize
+      this.currentPage = 1 // Reset to first page when changing page size
+    },
+    handleCurrentChange(newPage) {
+      this.currentPage = newPage
     },
     // 新增：输入时清除顶部成功/错误提示，避免阻碍表单操作
     clearStatus() {
@@ -476,14 +323,14 @@ export default {
       this.successMessage = ''
       this.currentPasswordError = ''
     },
-    // 新增：获取操作类型对应的样式类
-    getActionClass(action) {
+    // 新增：获取操作类型对应的Element Plus标签类型
+    getActionType(action) {
       const actionMap = {
-        'UPDATE': 'UPDATE',
-        'CREATE': 'CREATE', 
-        'DELETE': 'DELETE'
+        'UPDATE': 'warning',
+        'CREATE': 'success', 
+        'DELETE': 'danger'
       }
-      return actionMap[action] || 'UPDATE'
+      return actionMap[action] || 'warning'
     },
     async loadUser() {
       try {
@@ -637,15 +484,6 @@ export default {
 }
 
 .user-avatar-large {
-  width: 80px;
-  height: 80px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.3);
   transition: transform 0.3s ease;
 }
 
@@ -674,36 +512,11 @@ export default {
 }
 
 /* 卡片样式 */
-.card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
-  position: relative;
+.profile-card,
+.security-card,
+.activity-card {
+  border-radius: 12px;
   overflow: hidden;
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.card:hover::before {
-  opacity: 1;
 }
 
 /* 卡片头部 */
@@ -749,85 +562,7 @@ export default {
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-group.has-error {
-  position: relative;
-}
-
-.form-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.form-label svg {
-  color: #6b7280;
-}
-
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.form-input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  background: #fff;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.form-input.error {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
-
-.form-input.readonly {
-  background: #f9fafb;
-  color: #6b7280;
-  cursor: not-allowed;
-}
-
-.input-suffix {
-  position: absolute;
-  right: 12px;
-  color: #10b981;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 字段消息 */
-.field-message {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  margin-top: 4px;
-}
-
-.field-message.error {
-  color: #ef4444;
-}
-
-.field-message svg {
-  flex-shrink: 0;
+  margin-bottom: 0;
 }
 
 /* 密码强度 */
@@ -907,61 +642,7 @@ export default {
   border-top: 1px solid #f3f4f6;
 }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  position: relative;
-  overflow: hidden;
-}
 
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-}
-
-.btn-primary:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.btn-secondary {
-  background: #fff;
-  color: #374151;
-  border: 2px solid #e5e7eb;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #d1d5db;
-  transform: translateY(-1px);
-}
-
-.btn-loading {
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
 
 /* 活动卡片 */
 .activity-card {
@@ -1085,121 +766,13 @@ export default {
 
 /* 分页样式 */
 .pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid #e5e7eb;
 }
 
-.pagination-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  color: #374151;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #d1d5db;
-  color: #111827;
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #f9fafb;
-}
-
-.pagination-numbers {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.pagination-number {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  color: #374151;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pagination-number:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-  color: #111827;
-}
-
-.pagination-number.active {
-  background: #667eea;
-  border-color: #667eea;
-  color: #ffffff;
-}
-
-.pagination-number.active:hover {
-  background: #5a67d8;
-  border-color: #5a67d8;
-}
-
 /* 全局消息 */
-.global-message {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 16px 20px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  animation: slideIn 0.3s ease;
-  max-width: 400px;
-}
 
-.global-message.error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-.global-message.success {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
 
 /* 响应式设计 */
 @media (max-width: 768px) {

@@ -1,16 +1,3 @@
-/* 基础按钮样式 */
-.base-button {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: var(--transition-all);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-}
-
 /* 可点击项样式 */
 .clickable-item {
   position: relative;
@@ -39,15 +26,4 @@
   width: 400px;
   height: 400px;
   opacity: 1;
-}
-
-/* 选中状态样式 */
-.active-state {
-  background: linear-gradient(90deg, 
-    rgba(99, 102, 241, 0.15) 0%, 
-    rgba(99, 102, 241, 0.08) 100%
-  );
-  color: var(--primary-600);
-  font-weight: var(--font-weight-semibold);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
 }

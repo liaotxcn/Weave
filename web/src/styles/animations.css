@@ -22,12 +22,3 @@
     opacity: 1;
   }
 }
-
-/* 动画类 */
-.animate-slide-in {
-  animation: slideIn 0.3s ease forwards;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.3s ease forwards;
-}

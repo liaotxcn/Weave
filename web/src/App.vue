@@ -11,6 +11,8 @@ import NotePlugin from './plugins/NotePlugin.js'
 import { authService } from './services/auth.js'
 import UserCenter from './components/UserCenter.vue'
 import TeamsCenter from './components/TeamsCenter.vue'
+// 导入需要的 Element Plus 图标
+import { Search } from '@element-plus/icons-vue'
 
 // 导入共享样式
 import './styles/shared.css'
@@ -169,96 +171,112 @@ const handleMenuSelect = (key) => {
     
     <!-- 用户已登录时显示主应用界面 -->
     <template v-else>
-      <header class="app-header">
+      <el-header class="app-header">
         <div class="header-content">
+          <!-- 左侧品牌区域 -->
           <div class="brand-section">
             <div class="brand-container">
-              <img src="/logo.png" alt="Weave Logo" class="brand-icon" />
+              <el-avatar 
+                size="64px" 
+                class="brand-avatar"
+                src="/logo.png"
+              />
               <div class="brand-text">
-                <h1>Weave</h1>
-                <p>高性能、高效率、安全可靠的插件开发/服务聚合平台</p>
+                <h1 class="brand-name">Weave</h1>
               </div>
             </div>
           </div>
+          
+          <!-- 右侧用户信息区域 -->
           <div class="user-info">
-            <div class="user-menu">
-              <button 
-                class="menu-trigger"
-                :class="{ 'active': showMenu }"
-                @click="showMenu = !showMenu"
-                aria-expanded="showMenu"
-                aria-haspopup="true"
-                aria-controls="user-dropdown"
-              >
-                <span class="user-avatar">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M19 20C19 16.134 12 14 12 14C12 14 5 16.134 5 20V21H19V20Z" stroke="currentColor" stroke-width="1.5"/>
-                  </svg>
-                </span>
-                <span class="user-name">{{ currentUser?.username }}</span>
-                <span class="dropdown-arrow" :class="{ 'rotate': showMenu }">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </span>
-              </button>
-              <div 
-                class="dropdown"
-                :class="{ 'show': showMenu }"
-                id="user-dropdown"
-                role="menu"
-                aria-labelledby="user-menu"
-              >
-                <button 
-                  @click="handleMenuSelect('logout')"
-                  class="dropdown-item logout-item"
-                  role="menuitem"
-                >
-                  <svg viewBox="0 0 24 24" width="18" height="18" class="item-icon" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M21 12H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  <span>退出登录</span>
-                </button>
+            <el-dropdown
+              @command="handleMenuSelect"
+              trigger="click"
+              placement="bottom"
+            >
+              <div class="user-dropdown-trigger">
+                <el-avatar 
+                  size="40px" 
+                  class="user-avatar"
+                  :src="currentUser?.avatar || ''"
+                  icon="User"
+                />
+                <div class="user-info-text">
+                  <span class="user-name">{{ currentUser?.username }}</span>
+                  <span class="user-role-tag">
+                    <el-tag size="small" type="primary" effect="plain">用户</el-tag>
+                  </span>
+                </div>
+                <el-icon class="arrow-icon">
+                  <ArrowDown />
+                </el-icon>
               </div>
-            </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item 
+                    command="logout" 
+                    class="logout-item"
+                    icon="SwitchButton"
+                  >
+                    退出登录
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </div>
-      </header>
+      </el-header>
       
       <main class="app-main">
         <aside class="sidebar">
           <!-- 主菜单 -->
           <nav class="sidebar-nav">
-            <ul class="menu-list">
-              <li v-for="(item, index) in menuItems" :key="item.value">
-                <MenuItem
-                  :icon="item.icon"
-                  :label="item.label"
-                  :value="item.value"
-                  :is-active="selectedSection === item.value"
-                  :index="index"
-                  @select="handleMenuSelect"
-                />
-              </li>
-            </ul>
+            <el-menu
+              class="menu-list"
+              @select="handleMenuSelect"
+              background-color="transparent"
+              text-color="var(--text-secondary)"
+              active-text-color="var(--primary)"
+              router="false"
+              unique-opened
+            >
+              <el-menu-item
+                v-for="(item, index) in menuItems"
+                :key="item.value"
+                :index="item.value"
+                :class="{ active: selectedSection === item.value }"
+              >
+                <span class="menu-icon">{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+              </el-menu-item>
+            </el-menu>
           </nav>
         </aside>
         
         <!-- 右侧内容区域 -->
         <div class="content-area">
           <header class="content-header">
-            <h2>
-              {{ 
-                selectedSection === 'services' ? 'Services' :
-                selectedSection === 'plugins' ? 'Plugins' :
-                selectedSection === 'teams' ? 'Treams' :
-                selectedSection === 'personal' ? 'Personal' :
-                selectedSection === 'security' ? 'Security' :
-                '内容'
-              }}
+            <h2 class="section-title">
+              <span class="title-icon">
+                {{ 
+                  selectedSection === 'services' ? '🏢' :
+                  selectedSection === 'plugins' ? '🔌' :
+                  selectedSection === 'teams' ? '👥' :
+                  selectedSection === 'personal' ? '👤' :
+                  selectedSection === 'security' ? '🔒' :
+                  '📄'
+                }}
+              </span>
+              <span class="title-text">
+                {{ 
+                  selectedSection === 'services' ? 'Services' :
+                  selectedSection === 'plugins' ? 'Plugins' :
+                  selectedSection === 'teams' ? '团队' :
+                  selectedSection === 'personal' ? '个人' :
+                  selectedSection === 'security' ? '安全中心' :
+                  '内容'
+                }}
+              </span>
             </h2>
           </header>
           
@@ -277,42 +295,69 @@ const handleMenuSelect = (key) => {
                 <div class="plugins-layout">
                   <!-- 插件列表区域 -->
                   <div class="plugins-sidebar">
-                    <div class="plugins-header">
-                      <h3>插件列表</h3>
+                    <el-card shadow="hover" class="plugin-list-card">
+                      <template #header>
+                        <div class="plugins-header">
+                          <h3 class="plugin-list-title">插件列表</h3>
+                        </div>
+                      </template>
                       <div class="plugins-tools">
-                        <input v-model="pluginKeyword" type="text" class="plugins-search" placeholder="搜索插件..." />
-                        <span class="plugins-count">共 {{ availablePlugins.length }}，匹配 {{ filteredPlugins.length }}</span>
+                        <el-input
+                          v-model="pluginKeyword"
+                          placeholder="搜索插件..."
+                          clearable
+                          size="small"
+                          class="plugins-search"
+                        >
+                          <template #prefix>
+                            <el-icon class="el-input__icon"><Search /></el-icon>
+                          </template>
+                        </el-input>
+                        <div class="plugins-count">共 {{ availablePlugins.length }}，匹配 {{ filteredPlugins.length }}</div>
                       </div>
-                    </div>
-                    <div class="plugins-list">
-                      <PluginItem
-                        v-for="pluginInfo in filteredPlugins"
-                        :key="pluginInfo.name"
-                        :name="pluginInfo.name"
-                        :description="pluginInfo.info?.description"
-                        :badge-count="pluginInfo.info?.noteCount"
-                        :is-active="selectedPlugin === pluginInfo.name"
-                        @select="selectPlugin"
-                      />
-                    </div>
+                      <el-scrollbar class="plugins-scrollbar">
+                        <div class="plugins-list">
+                          <PluginItem
+                            v-for="pluginInfo in filteredPlugins"
+                            :key="pluginInfo.name"
+                            :name="pluginInfo.name"
+                            :description="pluginInfo.info?.description"
+                            :badge-count="pluginInfo.info?.noteCount"
+                            :is-active="selectedPlugin === pluginInfo.name"
+                            @select="selectPlugin"
+                          />
+                        </div>
+                      </el-scrollbar>
+                    </el-card>
                   </div>
                   
                   <!-- 插件内容区域 -->
                   <div class="plugins-main">
-                    <div v-if="selectedPlugin" class="plugin-renderer-container">
-                      <PluginRenderer 
-                        :plugin-name="selectedPlugin"
-                        :plugin-manager="pluginManager"
-                        ref="pluginRendererRef"
-                      />
-                    </div>
-                    <div v-else class="no-plugin-selected">
-                      <div class="empty-state">
-                        <span class="empty-icon">🔌</span>
-                        <h3>请选择一个插件</h3>
-                        <p>从左侧插件列表中选择要使用的插件</p>
+                    <el-card shadow="hover" class="plugin-content-card">
+                      <div v-if="selectedPlugin" class="plugin-renderer-container">
+                        <PluginRenderer 
+                          :plugin-name="selectedPlugin"
+                          :plugin-manager="pluginManager"
+                          ref="pluginRendererRef"
+                        />
                       </div>
-                    </div>
+                      <div v-else class="no-plugin-selected">
+                        <el-empty
+                          description="请选择一个插件"
+                          image-size="120"
+                        >
+                          <template #image>
+                            <div class="empty-icon">🔌</div>
+                          </template>
+                          <template #description>
+                            <div class="empty-description">
+                              <h3>请选择一个插件</h3>
+                              <p>从左侧插件列表中选择要使用的插件</p>
+                            </div>
+                          </template>
+                        </el-empty>
+                      </div>
+                    </el-card>
                   </div>
                 </div>
               </div>
@@ -342,28 +387,24 @@ const handleMenuSelect = (key) => {
         </div>
       </main>
       
-      <footer class="app-footer">
+      <el-footer class="app-footer">
         <div class="footer-content">
-          <!-- <div class="footer-left">
-            <span class="brand">Weave</span>
-            <span class="sep">·</span>
-          </div> -->
+          <!-- <div class="footer-left"> -->
           <div class="footer-right">
             <span class="version">Weave v{{ appVersion }}</span>
-            <a class="github-link" href="https://github.com/liaotxcn/Weave" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-              <svg class="github-icon" viewBox="0 0 16 16" width="18" height="18" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
-                0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53
-                .63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
-                0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
-                .68 0 1.36.09 2 .27 1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15
-                0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.19 0 .21.15.46.55.38
-                A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-              </svg>
-            </a>
+            <el-link 
+              href="https://github.com/liaotxcn/Weave" 
+              target="_blank" 
+              type="primary"
+              :underline="false"
+              class="github-link"
+            >
+              <!-- 使用Element Plus GitHub图标 -->
+              <el-icon class="github-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></el-icon>
+            </el-link>
           </div>
         </div>
-      </footer>
+      </el-footer>
       
       <!-- AI智能助手（仅在登录后显示） -->
       <AIAssistant v-if="isAuthenticated" />
@@ -382,63 +423,52 @@ const handleMenuSelect = (key) => {
 /* 头部样式 - 优化版本 */
 .app-header {
   background: linear-gradient(135deg, 
-    rgba(99, 102, 241, 0.95) 0%, 
-    rgba(79, 70, 229, 0.95) 25%,
-    rgba(67, 56, 202, 0.95) 75%,
-    rgba(55, 48, 163, 0.95) 100%
+    rgba(99, 102, 241, 1) 0%, 
+    rgba(79, 70, 229, 1) 25%,
+    rgba(67, 56, 202, 1) 75%,
+    rgba(55, 48, 163, 1) 100%
   );
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   color: white;
-  padding: var(--space-3) 0;
+  padding: var(--space-1.5) 0; /* 增加上下内边距，提高背景高度 */
   box-shadow: 
-    0 4px 20px rgba(0, 0, 0, 0.08),
-    0 1px 3px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 4px 20px rgba(0, 0, 0, 0.1),
+    0 2px 6px rgba(0, 0, 0, 0.08);
   position: sticky;
   top: 0;
   z-index: 100;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
 }
 
+/* 头部装饰效果 */
 .app-header::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.1) 0%, 
-    transparent 50%, 
-    rgba(255, 255, 255, 0.05) 100%
+  height: 3px;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.8) 0%, 
+    rgba(255, 255, 255, 0.3) 100%
   );
-  pointer-events: none;
-}
-
-.app-header:hover {
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 0 var(--space-5);
-  min-height: 72px;
+  padding: 0 var(--space-6);
+  min-height: 88px; /* 增加最小高度，提高整体背景高度 */
   position: relative;
   z-index: 1;
 }
 
+/* 品牌区域样式 */
 .brand-section {
-  flex: 1;
   display: flex;
   align-items: center;
 }
@@ -446,90 +476,54 @@ const handleMenuSelect = (key) => {
 .brand-container {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   position: relative;
+  padding: var(--space-2) 0;
 }
 
-.brand-icon {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  border-radius: 12px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+.brand-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  transition: all 0.3s ease;
   box-shadow: 
     0 4px 12px rgba(0, 0, 0, 0.15),
     0 2px 4px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.1) !important;
+  background: #f1f5f9;
 }
 
-.brand-icon::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.2) 0%, 
-    transparent 50%
-  );
-  border-radius: 12px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.brand-icon:hover::before {
-  opacity: 1;
-}
-
-.app-header:hover .brand-icon {
-  transform: rotate(3deg) scale(1.08);
+.brand-avatar:hover {
+  transform: scale(1.05);
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.2),
-    0 4px 8px rgba(0, 0, 0, 0.15);
+    0 6px 18px rgba(0, 0, 0, 0.2),
+    0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-.brand-text h1 {
-  font-size: 2rem;
-  font-weight: var(--font-weight-bold);
+.brand-name {
+  font-size: 2.4rem;
+  font-weight: 400;
   margin: 0;
-  background: linear-gradient(135deg, 
-    #ffffff 0%, 
-    rgba(255, 255, 255, 0.95) 50%,
-    rgba(255, 255, 255, 0.85) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  letter-spacing: -0.02em;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
+  color: var(--el-text-color-primary);
+  letter-spacing: 0.01em;
+  text-shadow: none;
   position: relative;
+  transition: all 0.3s ease;
+  font-family: var(--el-font-family);
 }
 
-.brand-text h1::after {
+.brand-name::after {
   content: '';
   position: absolute;
-  bottom: -2px;
+  bottom: -4px;
   left: 0;
   width: 0;
   height: 2px;
-  background: linear-gradient(90deg, 
-    rgba(255, 255, 255, 0.8) 0%, 
-    transparent 100%
-  );
+  background: var(--el-color-primary);
   transition: width 0.3s ease;
 }
 
-.app-header:hover .brand-text h1::after {
+.brand-container:hover .brand-name::after {
   width: 100%;
 }
 
@@ -543,178 +537,141 @@ const handleMenuSelect = (key) => {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-weight: 800;
+  font-weight: 600;
   margin-left: 4px;
-  text-shadow: 0 1px 3px rgba(255, 183, 0, 0.3);
+  text-shadow: none;
+  font-family: var(--el-font-family);
 }
 
-.brand-text p {
-  font-size: var(--font-size-sm);
+.brand-subtitle {
+  font-size: var(--font-size-xs);
   opacity: 0;
   margin: 4px 0 0;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(0, 0, 0, 0.8);
   letter-spacing: 0.01em;
   font-weight: var(--font-weight-medium);
   transform: translateY(-4px);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.1);
+  line-height: 1.2;
 }
 
-.app-header:hover .brand-text p {
+.app-header:hover .brand-subtitle {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* 用户菜单样式 - 优化版本 */
-.user-menu {
-  position: relative;
+/* 用户信息区域样式 */
+.user-info {
+  display: flex;
+  align-items: center;
 }
 
-.menu-trigger {
+.user-dropdown-trigger {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.15) 0%, 
-    rgba(255, 255, 255, 0.08) 100%
-  );
+  background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-xl);
+  border-radius: 50px;
   color: white;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.menu-trigger::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(255, 255, 255, 0.2) 50%, 
-    transparent 100%
-  );
-  transition: left 0.6s ease;
-}
-
-.menu-trigger:hover::before {
-  left: 100%;
-}
-
-.menu-trigger:hover {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.25) 0%, 
-    rgba(255, 255, 255, 0.15) 100%
-  );
+.user-dropdown-trigger:hover {
+  background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
-  box-shadow: 
-    0 8px 25px rgba(0, 0, 0, 0.15),
-    0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.menu-trigger.active {
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.3) 0%, 
-    rgba(255, 255, 255, 0.2) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, 
-    rgba(255, 255, 255, 0.2) 0%, 
-    rgba(255, 255, 255, 0.1) 100%
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border: 2px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
 }
 
-.menu-trigger:hover .user-avatar {
+.user-dropdown-trigger:hover .user-avatar {
   border-color: rgba(255, 255, 255, 0.5);
   transform: scale(1.05);
 }
 
+.user-info-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
 .user-name {
   font-weight: var(--font-weight-medium);
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.dropdown-arrow {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.dropdown-arrow.rotate {
-  transform: rotate(180deg);
-}
-
-/* 下拉菜单样式 */
-.dropdown {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  right: 0;
-  background: white;
-  border-radius: var(--radius-lg);
-  box-shadow: 
-    0 10px 40px rgba(0, 0, 0, 0.15),
-    0 2px 10px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  min-width: 200px;
-  z-index: 1000;
+  color: white;
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role-tag {
+  margin-top: 2px;
+}
+
+:deep(.el-tag) {
+  font-size: var(--font-size-xs);
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.arrow-icon {
+  font-size: 14px;
+  color: white;
+  transition: transform 0.3s ease;
+}
+
+.user-dropdown-trigger:hover .arrow-icon {
+  transform: translateY(2px);
+}
+
+/* 下拉菜单样式优化 */
+:deep(.el-dropdown-item__icon) {
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+:deep(.el-dropdown-menu) {
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  opacity: 0;
-  transform: translateY(-10px) scale(0.95);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: top right;
+  padding: var(--space-1) 0;
+  min-width: 140px;
+  background: rgba(255, 255, 255, 0.95);
 }
 
-.dropdown.show {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.dropdown-item {
+:deep(.el-dropdown-item) {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border: none;
-  background: transparent;
-  color: var(--text-primary);
-  cursor: pointer;
+  padding: var(--space-2) var(--space-4);
   transition: all 0.2s ease;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  text-align: left;
   position: relative;
   overflow: hidden;
+  height: auto;
+  line-height: 1.4;
 }
 
-.dropdown-item::before {
+:deep(.el-dropdown-item::before) {
   content: '';
   position: absolute;
   left: 0;
@@ -726,42 +683,32 @@ const handleMenuSelect = (key) => {
   transition: transform 0.2s ease;
 }
 
-.dropdown-item:hover {
+:deep(.el-dropdown-item:hover) {
   background: linear-gradient(90deg, 
-    rgba(99, 102, 241, 0.08) 0%, 
-    rgba(99, 102, 241, 0.04) 100%
+    rgba(99, 102, 241, 0.1) 0%, 
+    rgba(99, 102, 241, 0.05) 100%
   );
   color: var(--primary);
 }
 
-.dropdown-item:hover::before {
+:deep(.el-dropdown-item:hover::before) {
   transform: scaleY(1);
 }
 
-.dropdown-item.logout-item {
+:deep(.el-dropdown-item.logout-item) {
   color: var(--error);
 }
 
-.dropdown-item.logout-item:hover {
+:deep(.el-dropdown-item.logout-item:hover) {
   background: linear-gradient(90deg, 
-    rgba(239, 68, 68, 0.08) 0%, 
-    rgba(239, 68, 68, 0.04) 100%
+    rgba(239, 68, 68, 0.1) 0%, 
+    rgba(239, 68, 68, 0.05) 100%
   );
   color: var(--error);
 }
 
-.dropdown-item.logout-item:hover::before {
+:deep(.el-dropdown-item.logout-item:hover::before) {
   background: var(--error);
-}
-
-.dropdown-divider {
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(0, 0, 0, 0.08) 50%, 
-    transparent 100%
-  );
-  margin: var(--space-1) 0;
 }
 
 /* 主内容区域样式 */
@@ -822,29 +769,58 @@ const handleMenuSelect = (key) => {
   overflow: hidden;
   background: var(--background);
   backdrop-filter: blur(8px);
+  border: none !important;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border: none;
-  background: transparent;
+}
+
+/* Element Plus 菜单组件样式优化 */
+:deep(.el-menu) {
+  background: transparent !important;
+  border-right: none !important;
+}
+
+:deep(.el-menu-item) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) !important;
+  border: none !important;
+  background: transparent !important;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   text-align: left;
   border-radius: var(--radius-md);
-  position: relative;
-  overflow: hidden;
+  margin-bottom: var(--space-1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 菜单项样式由MenuItem组件提供 */
-.menu-icon {
+:deep(.el-menu-item:hover) {
+  background: linear-gradient(90deg, 
+    rgba(99, 102, 241, 0.1) 0%, 
+    rgba(99, 102, 241, 0.05) 100% 
+  ) !important;
+  color: var(--primary) !important;
+  transform: translateX(2px);
+}
+
+:deep(.el-menu-item.is-active) {
+  background: linear-gradient(90deg, 
+    rgba(99, 102, 241, 0.15) 0%, 
+    rgba(99, 102, 241, 0.08) 100% 
+  ) !important;
+  color: var(--primary) !important;
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+:deep(.el-menu-item .menu-icon) {
   font-size: 1.3em;
   width: 28px;
   text-align: center;
@@ -857,20 +833,18 @@ const handleMenuSelect = (key) => {
   border-radius: var(--radius-md);
 }
 
-.menu-label {
-  flex: 1;
-  position: relative;
-  transition: color 0.3s ease;
+:deep(.el-menu-item:hover .menu-icon) {
+  transform: scale(1.1);
+  background: rgba(99, 102, 241, 0.15);
+}
+
+:deep(.el-menu-item.is-active .menu-icon) {
+  background: rgba(99, 102, 241, 0.2);
 }
 
 /* 优化侧边栏整体阴影和边界 */
 .sidebar:hover {
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.06);
-}
-
-/* 优化菜单分组 */
-.menu-list li:not(:last-child) {
-  margin-bottom: var(--space-1);
 }
 
 /* 插件内容区域样式 */
@@ -887,49 +861,39 @@ const handleMenuSelect = (key) => {
 .plugins-sidebar {
   width: 320px;
   min-width: 280px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 200px);
 }
 
-.plugins-header {
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
+/* Element Plus 卡片样式优化 */
+.plugin-list-card {
+  height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
 }
 
-.plugins-header h3 {
-  margin: 0 0 var(--space-3) 0;
+.plugin-content-card {
+  height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+}
+
+.plugin-list-title {
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
+  margin: 0;
 }
 
 .plugins-tools {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
-.plugins-search {
+:deep(.el-input) {
   width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  background: var(--color-background);
-  color: var(--color-text-primary);
-  transition: all 0.2s ease;
-}
-
-.plugins-search:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .plugins-count {
@@ -937,88 +901,28 @@ const handleMenuSelect = (key) => {
   color: var(--color-text-secondary);
 }
 
-.plugins-list {
+.plugins-scrollbar {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
+}
+
+.plugins-list {
+  padding: var(--space-1);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.plugins-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-text-primary);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: left;
-  width: 100%;
-  will-change: transform, background-color, border-color;
-}
-
-.plugins-item:hover {
-  background: var(--color-background-hover);
-  border-color: var(--color-primary-light);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-}
-
-.plugins-item.active {
-  background: var(--color-primary-light);
-  color: var(--color-text-primary);
-  border-color: var(--color-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-color: var(--color-primary);
-}
-
-.plugins-item .item-title {
-  font-weight: 500;
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--space-1);
-}
-
-.plugins-item .item-desc {
-  font-size: var(--font-size-xs);
-  opacity: 0.8;
-  line-height: 1.4;
-}
-
-.plugins-item .item-badge {
-  align-self: flex-end;
-  background: rgba(99, 102, 241, 0.2);
-  color: var(--color-primary);
-  font-size: var(--font-size-xs);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  margin-top: var(--space-1);
-}
-
-.plugins-item.active .item-badge {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
 .plugins-main {
   flex: 1;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  overflow: auto;
-  max-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
 }
 
 .plugin-renderer-container {
   height: 100%;
   width: 100%;
+  overflow: auto;
 }
 
 /* 空状态样式 */
@@ -1029,26 +933,21 @@ const handleMenuSelect = (key) => {
   justify-content: center;
 }
 
-.empty-state {
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
 .empty-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-4);
+  font-size: 4rem;
   opacity: 0.5;
 }
 
-.empty-state h3 {
+.empty-description h3 {
   margin: 0 0 var(--space-2) 0;
   font-size: var(--font-size-lg);
   color: var(--color-text-primary);
 }
 
-.empty-state p {
+.empty-description p {
   margin: 0;
   font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 /* 响应式设计 */
@@ -1141,16 +1040,105 @@ const handleMenuSelect = (key) => {
 }
 
 .content-header {
-  padding: var(--space-5) var(--space-6) var(--space-3);
+  padding: var(--space-5) var(--space-6) var(--space-4);
   border-bottom: 1px solid var(--color-border);
-  background: white;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 1) 0%, 
+    rgba(248, 250, 252, 1) 100%
+  );
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
 }
 
-.content-header h2 {
+.content-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  background: linear-gradient(90deg, 
+    rgba(99, 102, 241, 1) 0%, 
+    rgba(139, 92, 246, 1) 100%
+  );
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content-header:hover::before {
+  width: 100%;
+}
+
+.section-title {
   margin: 0;
   font-size: 1.5rem;
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.title-icon {
+  font-size: 1.8rem;
+  padding: var(--space-2);
+  background: linear-gradient(135deg, 
+    rgba(99, 102, 241, 0.15) 0%, 
+    rgba(139, 92, 246, 0.15) 100%
+  );
+  border-radius: var(--radius-lg);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.title-text {
+  background: linear-gradient(135deg, 
+    rgba(99, 102, 241, 1) 0%, 
+    rgba(139, 92, 246, 1) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  position: relative;
+}
+
+.title-text::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    rgba(99, 102, 241, 0.3) 0%, 
+    rgba(139, 92, 246, 0.3) 100%
+  );
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content-header:hover .section-title {
+  transform: translateX(5px);
+}
+
+.content-header:hover .title-icon {
+  transform: scale(1.1) rotate(3deg);
+  background: linear-gradient(135deg, 
+    rgba(99, 102, 241, 0.25) 0%, 
+    rgba(139, 92, 246, 0.25) 100%
+  );
+}
+
+.content-header:hover .title-text::after {
+  transform: scaleX(1);
 }
 
 .content-body {
@@ -1249,8 +1237,9 @@ const handleMenuSelect = (key) => {
 .app-footer {
   background: white;
   border-top: 1px solid var(--color-border);
-  padding: var(--space-3) 0;
+  padding: var(--space-4) 0;
   margin-top: auto;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
 }
 
 .footer-content {
@@ -1272,27 +1261,30 @@ const handleMenuSelect = (key) => {
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
   font-weight: var(--font-weight-medium);
+  letter-spacing: 0.2px;
 }
 
-.github-link {
+:deep(.github-link) {
   display: flex;
   align-items: center;
   color: var(--color-text-tertiary);
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
 }
 
-.github-link:hover {
+:deep(.github-link:hover) {
   color: var(--color-primary);
   transform: translateY(-2px);
 }
 
-.github-icon {
-  transition: all 0.2s ease;
+:deep(.github-icon) {
+  font-size: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.github-link:hover .github-icon {
-  transform: scale(1.1);
+:deep(.github-link:hover .github-icon) {
+  transform: scale(1.2) rotate(5deg);
+  filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3));
 }
 
 /* 响应式设计 */
@@ -1335,22 +1327,6 @@ const handleMenuSelect = (key) => {
     padding: 0 var(--space-2);
   }
   
-  .menu-item {
-    flex-shrink: 0;
-    min-width: 80px;
-    flex-direction: column;
-    gap: var(--space-1);
-    padding: var(--space-2);
-  }
-  
-  .menu-label {
-    font-size: var(--font-size-xs);
-  }
-  
-  .plugin-submenu {
-    display: none;
-  }
-  
   .content-header {
     padding: var(--space-3) var(--space-4) var(--space-2);
   }
@@ -1360,4 +1336,3 @@ const handleMenuSelect = (key) => {
   }
 }
 </style>
-

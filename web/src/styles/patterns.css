@@ -1,15 +1,3 @@
-/* 悬停效果模式 */
-.hover-effect-light {
-  transition: var(--transition-all);
-}
-
-.hover-effect-light:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--primary-300);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-}
-
 /* 侧边指示器模式 */
 .sidebar-indicator::before {
   content: '';
