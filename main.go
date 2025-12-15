@@ -113,35 +113,36 @@ func main() {
 
 	// 监控指标将在路由设置中初始化
 
-	// 初始化数据库
+	// 初始化数据库（优化连接参数）
 	if err := pkg.InitDatabase(); err != nil {
 		pkg.Fatal("Failed to initialize database", zap.Error(err))
 	}
-	
+	pkg.Info("Database initialized successfully")
 
-	// 执行数据库迁移
-	// 如果禁用了自动迁移，使用SQL迁移文件
-	if !config.Config.AutoMigrate {
-		log.Println("Starting SQL migrations...")
-		mm := migration.NewMigrationManager()
-		if err := mm.Init(); err != nil {
-			log.Printf("Warning: Failed to initialize migration manager: %v", err)
-		} else {
-			if err := mm.Up(); err != nil {
-				log.Printf("Warning: Migration errors: %v", err)
+	// 数据库迁移（异步）
+	go func() {
+		if !config.Config.AutoMigrate {
+			log.Println("Starting SQL migrations...")
+			mm := migration.NewMigrationManager()
+			if err := mm.Init(); err != nil {
+				log.Printf("Warning: Failed to initialize migration manager: %v", err)
 			} else {
-				log.Println("SQL migrations completed successfully")
+				if err := mm.Up(); err != nil {
+					log.Printf("Warning: Migration errors: %v", err)
+				} else {
+					pkg.Info("SQL migrations completed successfully")
+				}
+			}
+		} else {
+			// 仅当启用自动迁移时才使用GORM自动迁移
+			log.Println("Starting GORM auto-migration...")
+			if err := models.MigrateTables(pkg.DB); err != nil {
+				pkg.Warn("Failed to migrate database tables", zap.Error(err))
+			} else {
+				pkg.Info("GORM auto-migration completed successfully")
 			}
 		}
-	} else {
-		// 仅当启用自动迁移时才使用GORM自动迁移
-		log.Println("Starting GORM auto-migration...")
-		if err := models.MigrateTables(pkg.DB); err != nil {
-			pkg.Warn("Failed to migrate database tables", zap.Error(err))
-		} else {
-			log.Println("GORM auto-migration completed successfully")
-		}
-	}
+	}()
 
 	// 初始化路由
 	router := routers.SetupRouter()
@@ -167,7 +168,7 @@ func main() {
 	// 启动服务器
 	port := config.Config.Server.Port
 	instanceID := config.Config.Server.InstanceID
-	
+
 	// 创建HTTP服务器并配置连接复用参数
 	srv := &http.Server{
 		Addr:           fmt.Sprintf(":%d", port),
@@ -179,7 +180,7 @@ func main() {
 	}
 
 	go func() {
-		pkg.Info("Weave 服务启动成功", 
+		pkg.Info("Weave 服务启动成功",
 			zap.String("instance_id", instanceID),
 			zap.String("address", fmt.Sprintf("http://localhost:%d", port)))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -199,12 +200,12 @@ func main() {
 	// 创建超时上下文，用于优雅关闭服务器和数据库
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	// 先关闭HTTP服务器
 	if err := srv.Shutdown(ctx); err != nil {
 		pkg.Fatal("Server forced to shutdown", zap.Error(err))
 	}
-	
+
 	// 然后使用相同上下文优雅关闭数据库连接
 	// 确保数据库连接在服务器停止接收新请求后有足够时间完成正在进行的操作
 	if err := pkg.CloseDatabaseWithContext(ctx); err != nil {

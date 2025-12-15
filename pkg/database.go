@@ -22,7 +22,9 @@ var DB *gorm.DB
 // InitDatabase 初始化数据库连接
 func InitDatabase() error {
 	// 加载配置
-	config.LoadConfig()
+	if config.Config.Database.Host == "" {
+		config.LoadConfig()
+	}
 
 	var dsn string
 	var dialector gorm.Dialector
@@ -43,7 +45,7 @@ func InitDatabase() error {
 		fallthrough
 	default:
 		// MySQL连接字符串
-		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local&timeout=30s&readTimeout=30s&writeTimeout=30s&collation=utf8mb4_unicode_ci&tls=false",
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local&timeout=10s&readTimeout=10s&writeTimeout=10s&collation=utf8mb4_unicode_ci&tls=false",
 			config.Config.Database.Username,
 			config.Config.Database.Password,
 			config.Config.Database.Host,
@@ -64,7 +66,7 @@ func InitDatabase() error {
 	customLogger := logger.New(
 		log.New(os.Stdout, "[gorm] ", log.LstdFlags),
 		logger.Config{
-			SlowThreshold:             time.Second, // 慢查询阈值
+			SlowThreshold:             800 * time.Millisecond,
 			LogLevel:                  logLevel,
 			IgnoreRecordNotFoundError: true,
 			Colorful:                  config.Config.Logger.Development,
@@ -88,8 +90,6 @@ func InitDatabase() error {
 		if lastErr == nil {
 			// 记录连接建立指标
 			metrics.RecordDatabaseQuery("connect", "system", 0)
-		}
-		if lastErr == nil {
 			break
 		}
 		log.Printf("Database connection attempt failed, retrying... attempt=%d/%d, error=%v",
@@ -106,26 +106,18 @@ func InitDatabase() error {
 		return fmt.Errorf("failed to get database instance: %w", err)
 	}
 
-	// 设置优化的连接池参数
-	sqlDB.SetMaxIdleConns(20)                  // 增加空闲连接数，适应高峰期
-	sqlDB.SetMaxOpenConns(100)                 // 保持最大打开连接数
+	// 设置优化连接池参数
+	sqlDB.SetMaxIdleConns(5)                   // 减少空闲连接数，降低启动资源消耗
+	sqlDB.SetMaxOpenConns(50)                  // 最大打开连接数
 	sqlDB.SetConnMaxLifetime(time.Hour)        // 连接最大生命周期
 	sqlDB.SetConnMaxIdleTime(15 * time.Minute) // 添加连接最大空闲时间
 
-	// 连接池预热
-	for i := 0; i < 5; i++ {
-		if err := sqlDB.Ping(); err == nil {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	// 连接健康检查
+	// 快速连接检查
 	if err := sqlDB.Ping(); err != nil {
 		return fmt.Errorf("database ping failed: %w", err)
 	}
 
-	// 启动数据库连接监控
+	// 启动数据库连接监控（异步）
 	go func() {
 		// 根据环境配置监测时间间隔
 		monitorInterval := 5 * time.Minute // 生产环境(5分钟)
