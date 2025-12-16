@@ -442,7 +442,6 @@ export default {
     // 查看团队详情
     viewTeam(team) {
       // 这里可以添加查看团队详情的逻辑
-      console.log('查看团队:', team)
     },
     
     // 编辑团队

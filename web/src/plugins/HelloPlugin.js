@@ -9,7 +9,6 @@ class HelloPlugin {
 
   // 初始化插件
   initialize() {
-    console.log('HelloPlugin 初始化')
     // 这里可以添加插件的初始化逻辑
   }
 
@@ -50,7 +49,6 @@ class HelloPlugin {
 
   // 销毁插件
   destroy() {
-    console.log('HelloPlugin 已销毁')
     // 这里可以添加插件的清理逻辑
   }
 }

@@ -13,16 +13,15 @@ class NotePlugin {
 
   // 初始化插件
   async initialize() {
-    console.log('NotePlugin 初始化开始')
     // 未登录时不加载笔记，避免触发后端鉴权错误
     if (!authService.isAuthenticated()) {
-      console.log('未认证，跳过笔记加载')
+
       return
     }
     // 从后端API加载笔记
     try {
       await this.loadNotesFromAPI()
-      console.log('NotePlugin 初始化完成，当前笔记数量:', this.notes.length)
+
     } catch (error) {
       console.error('笔记插件初始化失败:', error)
     }
@@ -77,7 +76,7 @@ class NotePlugin {
         console.warn('Unexpected response format:', data)
         this.notes = []
       }
-      console.log('Loaded notes:', this.notes)
+
       return this.notes
     } catch (error) {
       console.error('从API加载笔记失败:', error)
@@ -272,7 +271,6 @@ class NotePlugin {
 
   // 销毁插件
   destroy() {
-    console.log('NotePlugin 已销毁')
     // 这里可以添加插件的清理逻辑
   }
 }

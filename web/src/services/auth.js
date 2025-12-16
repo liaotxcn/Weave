@@ -11,7 +11,7 @@ const api = axios.create({
   withCredentials: true
 })
 
-console.log('Axios实例已创建，baseURL:', api.defaults.baseURL)
+
 
 // 小工具：确保已获取CSRF Cookie
 async function ensureCsrf() {
@@ -61,7 +61,7 @@ api.interceptors.response.use(
         sessionStorage.setItem('csrf_token', csrfHeader)
       }
     } catch (_) {}
-    console.log('API请求成功:', response.config.url, response.data)
+
     return response.data
   },
   error => {
@@ -169,13 +169,12 @@ export const authService = {
   // 检查用户是否已登录
   isAuthenticated: () => {
     const token = localStorage.getItem('token')
-    console.log('认证检查 - 当前token存在:', !!token)
+
     return !!token
   },
   
   // 清除所有认证相关数据（用于调试和解决登录问题）
   clearAuthData: () => {
-    console.log('清除所有认证数据')
     localStorage.removeItem('token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('userInfo')

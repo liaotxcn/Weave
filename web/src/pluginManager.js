@@ -29,7 +29,7 @@ class PluginManager {
     }
 
     this.plugins[pluginName] = plugin
-    console.log(`插件 ${pluginName} 注册成功`)
+
   }
 
   // 获取插件
@@ -49,7 +49,7 @@ class PluginManager {
       plugin.destroy()
     }
     delete this.plugins[pluginName]
-    console.log(`插件 ${pluginName} 已卸载`)
+
   }
 }
 

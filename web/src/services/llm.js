@@ -17,7 +17,7 @@ export const llmService = {
     try {
       // 显示超时警告（但不中止请求）
       const warningTimeoutId = setTimeout(() => {
-        console.log(`[LLM] 请求处理时间较长，请耐心等待... (${url})`);
+
       }, Math.min(timeout / 2, 30000)); // 超时一半或30秒时显示警告
       
       const response = await fetch(url, {
@@ -36,11 +36,11 @@ export const llmService = {
   async sendChatMessage(message) {
     try {
       const startTime = Date.now();
-      console.log(`[LLM] 发送消息: ${message}`);
+
       
       // 使用配置的baseURL而不是硬编码URL
       const endpoint = `${this.config.baseURL}/plugins/LLMChat/api/chat`;
-      console.log(`[LLM] 发送请求到: ${endpoint}`);
+
       
       const response = await this.fetchWithTimeout(endpoint, {
         method: 'POST',
@@ -54,7 +54,7 @@ export const llmService = {
       clearTimeout(timeoutId);
       
       const endTime = Date.now();
-      console.log(`[LLM] 响应状态: ${response.status}, 耗时: ${endTime - startTime}ms`);
+
       
       if (!response.ok) {
         // 尝试获取错误详情
@@ -70,7 +70,7 @@ export const llmService = {
       
       // 解析响应
       const data = await response.json();
-      console.log('[LLM] 响应数据:', data);
+
       
       // 确保响应格式正确
       if (!data || typeof data.response === 'undefined') {
@@ -92,7 +92,7 @@ export const llmService = {
   async getChatHistory() {
     try {
       const endpoint = `${this.config.baseURL}/plugins/LLMChat/api/history`;
-      console.log(`[LLM] 获取历史记录请求到: ${endpoint}`);
+
       
       const response = await this.fetchWithTimeout(endpoint, {
         method: 'GET',
@@ -133,7 +133,7 @@ export const llmService = {
   async clearChatHistory() {
     try {
       const endpoint = `${this.config.baseURL}/plugins/LLMChat/api/clear-history`;
-      console.log(`[LLM] 清空历史记录请求到: ${endpoint}`);
+
       
       const response = await this.fetchWithTimeout(endpoint, {
         method: 'POST',
@@ -166,7 +166,7 @@ export const llmService = {
   async checkConnection() {
     try {
       const endpoint = `${this.config.baseURL}/plugins/LLMChat/api/health`;
-      console.log(`[LLM] 健康检查请求到: ${endpoint}`);
+
       
       // 使用健康检查端点而不是history端点，这样更轻量
       const response = await this.fetchWithTimeout(endpoint, {
@@ -179,7 +179,7 @@ export const llmService = {
       
       // 如果health端点不可用，尝试使用history端点作为备选
       if (!response.ok) {
-        console.log('[LLM] 健康检查端点不可用，尝试使用history端点');
+
         const historyEndpoint = `${this.config.baseURL}/plugins/LLMChat/api/history`;
         return this.checkConnectionWithFallback(historyEndpoint);
       }
@@ -195,7 +195,7 @@ export const llmService = {
   // 备用连接检查方法
   async checkConnectionWithFallback(endpoint) {
     try {
-      console.log(`[LLM] 使用备用端点进行连接检查: ${endpoint}`);
+
       const response = await this.fetchWithTimeout(endpoint, {
         method: 'GET',
         headers: {

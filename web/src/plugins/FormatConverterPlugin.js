@@ -13,11 +13,11 @@ class FormatConverterPlugin {
 
   // 初始化插件
   async initialize() {
-    console.log('FormatConverterPlugin 初始化开始')
+
     try {
       // 获取插件信息
       const info = await formatConverterService.getPluginInfo()
-      console.log('FormatConverterPlugin 初始化完成:', info)
+
     } catch (error) {
       console.error('格式转换器插件初始化失败:', error)
     }

@@ -43,7 +43,7 @@ initializeChat();
 
 // 切换聊天窗口 - 确保方法简单直接
 const toggleChat = () => {
-  console.log('AI Assistant toggle clicked');
+
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
     nextTick(() => {
@@ -221,17 +221,23 @@ const handleKeyDown = (event) => {
 <template>
   <!-- AI助手容器 -->
   <div class="ai-assistant-container">
-    <!-- 悬浮按钮 - 简化版，确保可点击性 -->
-    <button 
-      class="ai-chat-icon"
-      @click="toggleChat"
-      title="AI智能助手-PaiChat"
-      aria-label="打开AI智能助手-PaiChat"
-      type="button"
-      style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; pointer-events: all;"
-    >
-      <img src="/chat.png" alt="AI助手" class="chat-icon-image" />
-    </button>
+    <!-- 悬浮按钮 - Element Plus增强版 -->
+    <div class="ai-chat-button-wrapper">
+      <el-button
+        class="ai-chat-icon"
+        @click="toggleChat"
+        title="AI智能助手-PaiChat"
+        aria-label="打开AI智能助手-PaiChat"
+        type="primary"
+        circle
+        size="large"
+        style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; border-radius: 50% !important;"
+      >
+        <img src="/chat.png" alt="AI助手" class="chat-icon-image" />
+      </el-button>
+      <!-- 装饰性光晕 -->
+      <div class="ai-chat-icon-glow"></div>
+    </div>
     
     <!-- 聊天窗口 -->
     <div 
@@ -369,40 +375,124 @@ const handleKeyDown = (event) => {
 <style scoped>
 /* 简化的样式，确保按钮可点击性 */
 .ai-chat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: var(--el-color-primary);
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 60%);
   color: white;
-  border: none;
+  border: 2px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--el-box-shadow-light);
-  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
-  font-size: 16px;
+  font-size: 24px;
+  position: relative;
+  overflow: hidden;
+  animation: bounce 2s ease-in-out infinite;
+  padding: 0 !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
+}
+
+.ai-chat-icon::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+  transform: scale(0);
+  transition: transform 0.5s ease;
+}
+
+.ai-chat-icon:hover::before {
+  transform: scale(1);
 }
 
 .ai-chat-icon:hover {
-  background: var(--el-color-primary-light-3);
-  transform: translateY(-2px);
-  box-shadow: var(--el-box-shadow);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 60%);
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
 }
 
 .ai-chat-icon:active {
-  transform: translateY(0);
-  box-shadow: var(--el-box-shadow-light);
+  transform: translateY(-2px) scale(0.98);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
-.chat-icon-image {
-  width: 60px;
-  height: 60px;
-  object-fit: contain;
+.ai-chat-icon img.chat-icon-image {
+  width: 56px !important;
+  height: 56px !important;
+  object-fit: cover;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 60%);
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
+  transform: scale(1);
+  display: block;
+}
+
+.ai-chat-icon .el-icon {
+  font-size: 28px;
+  color: white;
+  position: relative;
+  z-index: 1;
+}
+
+/* 按钮包装器 */
+.ai-chat-button-wrapper {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 装饰性光晕 */
+.ai-chat-icon-glow {
+  position: absolute;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
-  background: white;
-  padding: 4px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
+  animation: pulse 2.5s ease-in-out infinite;
+  z-index: 9997;
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.2;
+  }
+}
+
+/* 弹跳动画 */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-6px) scale(1.05);
+  }
+  50% {
+    transform: translateY(0) scale(1);
+  }
+  75% {
+    transform: translateY(-3px) scale(1.02);
+  }
 }
 
 /* 聊天窗口样式 */

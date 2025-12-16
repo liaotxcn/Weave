@@ -9,16 +9,3 @@
     transform: translateY(0);
   }
 }
-
-/* 注意：fadeIn动画已在style.css中定义，此处不再重复 */
-
-@keyframes scaleIn {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}

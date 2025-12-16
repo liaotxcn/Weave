@@ -181,7 +181,6 @@ export default {
           ElMessage.error(response?.message || '登录失败，请稍后重试')
         }
       } catch (error) {
-        console.log('登录错误详情:', error)
         // 全面的错误信息处理，确保能获取到具体错误内容
         let errorMsg = '登录失败，请检查账号或网络'
         

@@ -104,22 +104,12 @@ const selectPlugin = (pluginName) => {
 // 检查用户认证状态
 const checkAuthentication = () => {
   const authStatus = authService.isAuthenticated()
-  console.log('App组件 - 认证状态检查结果:', authStatus)
+
   isAuthenticated.value = authStatus
   if (authStatus) {
     currentUser.value = authService.getCurrentUser()
-    console.log('App组件 - 当前用户信息:', currentUser.value)
-  }
-}
 
-// 调试功能：强制清除认证状态（可通过控制台调用）
-window.clearWeaveAuth = () => {
-  console.log('执行强制清除认证状态操作')
-  authService.clearAuthData()
-  isAuthenticated.value = false
-  currentUser.value = null
-  selectedPlugin.value = null
-  console.log('认证状态已重置，请刷新页面查看登录界面')
+  }
 }
 
 // 处理认证成功
