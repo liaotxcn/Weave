@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"weave/services/aichat/internal/chat"
 	"weave/services/aichat/internal/model"
 	"weave/services/aichat/internal/stream"
 	"weave/services/aichat/internal/template"
@@ -76,11 +77,13 @@ func main() {
 		}
 
 		// 使用模板生成消息
+		// 过滤与当前问题相关的对话历史
+		filteredHistory := chat.FilterRelevantHistory(chatHistory, userInput, 50)
 		messages, err := template.Format(ctx, map[string]any{
 			"role":         "PaiChat",
 			"style":        "积极、温暖且专业",
 			"question":     userInput,
-			"chat_history": chatHistory,
+			"chat_history": filteredHistory,
 		})
 		if err != nil {
 			log.Printf("format template failed: %v\n", err)
