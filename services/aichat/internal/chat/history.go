@@ -84,16 +84,29 @@ func FilterRelevantHistory(chatHistory []*schema.Message, currentQuestion string
 		return relevant
 	}
 
+	// 确保maxHistory不超过历史记录总数
+	if maxHistory > len(chatHistory) {
+		maxHistory = len(chatHistory)
+	}
+
+	// 优先获取最近的消息作为基础
+	startIndex := len(chatHistory) - maxHistory
+	if startIndex < 0 {
+		startIndex = 0
+	}
+	recentMessages := chatHistory[startIndex:]
+
+	// 如果不需要更复杂的相关性过滤，直接返回最近的消息
+	if currentQuestion == "" {
+		return recentMessages
+	}
+
 	// 对当前问题进行分词
 	questionWords := segmentText(currentQuestion)
 
-	// 如果没有提取到关键词，返回最近的几条消息
+	// 如果没有提取到关键词，直接返回最近的消息
 	if len(questionWords) == 0 {
-		startIndex := len(chatHistory) - maxHistory
-		if startIndex < 0 {
-			startIndex = 0
-		}
-		return chatHistory[startIndex:]
+		return recentMessages
 	}
 
 	// 为每条历史消息计算相关性分数
@@ -129,18 +142,20 @@ func FilterRelevantHistory(chatHistory []*schema.Message, currentQuestion string
 			}
 		}
 
-		// 如果没有重叠，跳过该消息
-		if overlapCount == 0 {
-			continue
+		// 即使没有重叠，也为最近的消息赋予基础分数
+		baseScore := 0
+		if i >= startIndex {
+			// 最近的消息有基础分数，确保它们至少有机会被选中
+			baseScore = 1
 		}
 
 		// 计算相关性分数：
-		// - 基础分数：重叠词数量
+		// - 基础分数：确保最近的消息有机会被选中
+		// - 重叠分数：重叠词数量
 		// - 时间权重：越新的消息权重越高
-		// - 内容长度权重：更长的消息（提供更多上下文）获得轻微加分
-		recencyWeight := len(chatHistory) - i       // 时间权重
-		contentLengthWeight := len(msgWords)/10 + 1 // 内容长度权重
-		score := overlapCount * recencyWeight * contentLengthWeight
+		recencyWeight := len(chatHistory) - i // 时间权重
+		overlapScore := overlapCount * 100    // 重叠词分数，给予较高权重
+		score := baseScore + overlapScore + recencyWeight
 
 		scoredMessages = append(scoredMessages, scoredMessage{
 			message: msg,
@@ -170,20 +185,9 @@ func FilterRelevantHistory(chatHistory []*schema.Message, currentQuestion string
 		}
 	}
 
-	// 如果相关消息不足，添加最近的消息补充
-	if len(relevant) < maxHistory {
-		var recentMessages []*schema.Message
-		for i := len(chatHistory) - 1; i >= 0 && len(recentMessages) < maxHistory-len(relevant); i-- {
-			if !selectedIndices[i] {
-				recentMessages = append([]*schema.Message{chatHistory[i]}, recentMessages...)
-			}
-		}
-		relevant = append(relevant, recentMessages...)
-	}
-
-	// 确保不超过最大保留数量
-	if len(relevant) > maxHistory {
-		relevant = relevant[len(relevant)-maxHistory:]
+	// 如果没有选中任何消息（不应该发生），返回最近的消息
+	if len(relevant) == 0 {
+		return recentMessages
 	}
 
 	return relevant
