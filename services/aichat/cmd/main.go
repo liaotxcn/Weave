@@ -100,8 +100,8 @@ func main() {
 		var isStopped bool
 		var mu sync.Mutex
 		var wg sync.WaitGroup
-		pauseChan := make(chan bool)
-		stopChan := make(chan bool)
+		pauseChan := make(chan bool, 1)
+		stopChan := make(chan bool, 1)
 		doneChan := make(chan bool)
 
 		// 启动命令监听goroutine
