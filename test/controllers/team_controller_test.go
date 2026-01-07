@@ -8,25 +8,14 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/schema"
 
 	"weave/controllers"
 	"weave/models"
-	"weave/pkg"
 )
 
 func setupMemoryDBForTeam(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{NamingStrategy: schema.NamingStrategy{SingularTable: true}})
-	if err != nil {
-		t.Fatalf("gorm open error: %v", err)
-	}
-	if err := db.AutoMigrate(&models.Team{}, &models.TeamMember{}); err != nil {
-		t.Fatalf("auto migrate team error: %v", err)
-	}
-	pkg.DB = db
-	return db
+	return setupTestDB(t)
 }
 
 func TestCreateTeam_Success(t *testing.T) {

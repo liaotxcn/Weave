@@ -3,7 +3,6 @@ package features
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"strconv"
 	"sync"
@@ -14,7 +13,7 @@ import (
 	"weave/plugins/core"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 // Note 表示一条事件记录
@@ -66,28 +65,28 @@ func (p *NotePlugin) SetPluginManager(manager *core.PluginManager) {
 // Init 初始化插件
 func (p *NotePlugin) Init() error {
 	// 插件初始化
-	fmt.Println("NotePlugin: 记事本插件已初始化")
+	pkg.Debug("NotePlugin initialized", zap.String("plugin", p.Name()))
 	return nil
 }
 
 // Shutdown 关闭插件
 func (p *NotePlugin) Shutdown() error {
 	// 插件关闭逻辑
-	fmt.Println("NotePlugin: 记事本插件已关闭")
+	pkg.Debug("NotePlugin shutdown", zap.String("plugin", p.Name()))
 	return nil
 }
 
 // OnEnable 插件启用时调用
 func (p *NotePlugin) OnEnable() error {
 	// 插件启用逻辑
-	fmt.Println("NotePlugin: 记事本插件已启用")
+	pkg.Debug("NotePlugin enabled", zap.String("plugin", p.Name()))
 	return nil
 }
 
 // OnDisable 插件禁用时调用
 func (p *NotePlugin) OnDisable() error {
 	// 插件禁用逻辑
-	fmt.Println("NotePlugin: 记事本插件已禁用")
+	pkg.Debug("NotePlugin disabled", zap.String("plugin", p.Name()))
 	return nil
 }
 
@@ -96,7 +95,7 @@ func (p *NotePlugin) OnDisable() error {
 func (p *NotePlugin) RegisterRoutes(router *gin.Engine) {
 	// 这个方法在使用新的GetRoutes时不会被调用
 	// 保留只是为了兼容性
-	fmt.Printf("%s: 注意：使用了旧的RegisterRoutes方法，建议使用新的GetRoutes方法\n", p.Name())
+	pkg.Debug("Old RegisterRoutes method called", zap.String("plugin", p.Name()), zap.String("message", "建议使用新的GetRoutes方法"))
 }
 
 // Execute 执行插件功能
@@ -220,12 +219,12 @@ func (p *NotePlugin) listNotes(userID uint, tenantID uint, page, pageSize int) (
 	db := pkg.DB.Where("user_id = ? AND tenant_id = ?", userID, tenantID)
 
 	if err := db.Model(&models.Note{}).Count(&total).Error; err != nil {
-		log.Printf("Database error when counting notes: %v", err)
+		pkg.Error("Database error when counting notes", zap.Error(err))
 		return nil, fmt.Errorf("获取笔记列表失败，请稍后重试")
 	}
 
 	if err := db.Offset(offset).Limit(pageSize).Order("created_time DESC").Find(&notes).Error; err != nil {
-		log.Printf("Database error when fetching notes: %v", err)
+		pkg.Error("Database error when fetching notes", zap.Error(err))
 		return nil, fmt.Errorf("获取笔记列表失败，请稍后重试")
 	}
 
@@ -246,8 +245,14 @@ func (p *NotePlugin) getNote(userID uint, tenantID uint, noteID string) (interfa
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
+	// 将string类型的noteID转换为uint类型
+	id, err := strconv.ParseUint(noteID, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("无效的笔记ID")
+	}
+
 	var note models.Note
-	db := pkg.DB.Where("id = ? AND user_id = ? AND tenant_id = ?", noteID, userID, tenantID)
+	db := pkg.DB.Where("id = ? AND user_id = ? AND tenant_id = ?", uint(id), userID, tenantID)
 	if err := db.First(&note).Error; err != nil {
 		return nil, fmt.Errorf("笔记不存在或无权访问")
 	}
@@ -260,7 +265,6 @@ func (p *NotePlugin) createNote(userID uint, tenantID uint, title, content strin
 	defer p.mutex.Unlock()
 
 	note := models.Note{
-		ID:          uuid.New().String(),
 		Title:       title,
 		Content:     content,
 		UserID:      userID,
@@ -270,7 +274,7 @@ func (p *NotePlugin) createNote(userID uint, tenantID uint, title, content strin
 	}
 
 	if err := pkg.DB.Create(&note).Error; err != nil {
-		log.Printf("Database error when creating note: %v", err)
+		pkg.Error("Database error when creating note", zap.Error(err))
 		return nil, fmt.Errorf("创建笔记失败，请稍后重试")
 	}
 	return note, nil
@@ -281,8 +285,14 @@ func (p *NotePlugin) updateNote(userID uint, tenantID uint, noteID, title, conte
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
+	// 将string类型的noteID转换为uint类型
+	id, err := strconv.ParseUint(noteID, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("无效的笔记ID")
+	}
+
 	var note models.Note
-	db := pkg.DB.Where("id = ? AND user_id = ? AND tenant_id = ?", noteID, userID, tenantID)
+	db := pkg.DB.Where("id = ? AND user_id = ? AND tenant_id = ?", uint(id), userID, tenantID)
 	if err := db.First(&note).Error; err != nil {
 		return nil, fmt.Errorf("笔记不存在或无权访问")
 	}
@@ -292,7 +302,7 @@ func (p *NotePlugin) updateNote(userID uint, tenantID uint, noteID, title, conte
 	note.UpdatedTime = time.Now()
 
 	if err := pkg.DB.Save(&note).Error; err != nil {
-		log.Printf("Database error when updating note: %v", err)
+		pkg.Error("Database error when updating note", zap.Error(err))
 		return nil, fmt.Errorf("更新笔记失败，请稍后重试")
 	}
 	return note, nil
@@ -303,14 +313,20 @@ func (p *NotePlugin) deleteNoteHandler(userID uint, tenantID uint, noteID string
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
+	// 将string类型的noteID转换为uint类型
+	id, err := strconv.ParseUint(noteID, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("无效的笔记ID")
+	}
+
 	var note models.Note
-	db := pkg.DB.Where("id = ? AND user_id = ? AND tenant_id = ?", noteID, userID, tenantID)
+	db := pkg.DB.Where("id = ? AND user_id = ? AND tenant_id = ?", uint(id), userID, tenantID)
 	if err := db.First(&note).Error; err != nil {
 		return nil, fmt.Errorf("笔记不存在或无权访问")
 	}
 
 	if err := pkg.DB.Delete(&note).Error; err != nil {
-		log.Printf("Database error when deleting note: %v", err)
+		pkg.Error("Database error when deleting note", zap.Error(err))
 		return nil, fmt.Errorf("删除笔记失败，请稍后重试")
 	}
 
@@ -322,9 +338,15 @@ func (p *NotePlugin) deleteNote(userID uint, tenantID uint, noteID string) error
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
+	// 将string类型的noteID转换为uint类型
+	id, err := strconv.ParseUint(noteID, 10, 32)
+	if err != nil {
+		return fmt.Errorf("无效的笔记ID")
+	}
+
 	var note models.Note
 	db := pkg.DB
-	if err := db.Where("id = ? AND user_id = ? AND tenant_id = ?", noteID, userID, tenantID).First(&note).Error; err != nil {
+	if err := db.Where("id = ? AND user_id = ? AND tenant_id = ?", uint(id), userID, tenantID).First(&note).Error; err != nil {
 		return errors.New("笔记不存在或无权访问")
 	}
 
@@ -355,12 +377,12 @@ func (p *NotePlugin) searchNotes(userID uint, tenantID uint, keyword string, pag
 	db := pkg.DB.Where("user_id = ? AND tenant_id = ? AND (title LIKE ? OR content LIKE ?)", userID, tenantID, query, query)
 
 	if err := db.Model(&models.Note{}).Count(&total).Error; err != nil {
-		log.Printf("Database error when counting search results: %v", err)
+		pkg.Error("Database error when counting search results", zap.Error(err))
 		return nil, fmt.Errorf("搜索笔记失败，请稍后重试")
 	}
 
 	if err := db.Offset(offset).Limit(pageSize).Order("created_time DESC").Find(&notes).Error; err != nil {
-		log.Printf("Database error when searching notes: %v", err)
+		pkg.Error("Database error when searching notes", zap.Error(err))
 		return nil, fmt.Errorf("搜索笔记失败，请稍后重试")
 	}
 

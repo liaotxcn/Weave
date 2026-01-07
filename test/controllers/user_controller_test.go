@@ -9,27 +9,15 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/schema"
 
 	"weave/controllers"
 	"weave/models"
-	"weave/pkg"
 	"weave/utils"
 )
 
 func setupMemoryDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{NamingStrategy: schema.NamingStrategy{SingularTable: true}})
-	if err != nil {
-		t.Fatalf("gorm open error: %v", err)
-	}
-	// 添加EmailVerificationCode模型的自动迁移
-	if err := db.AutoMigrate(&models.User{}, &models.LoginHistory{}, &models.AuditLog{}, &models.EmailVerificationCode{}); err != nil {
-		t.Fatalf("auto migrate tables error: %v", err)
-	}
-	pkg.DB = db
-	return db
+	return setupTestDB(t)
 }
 
 func TestUserRegister_Success(t *testing.T) {

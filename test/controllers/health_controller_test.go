@@ -7,23 +7,15 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/schema"
 
 	"weave/controllers"
-	"weave/pkg"
 	"weave/plugins"
 	"weave/plugins/core"
 )
 
 func setupMemoryDBForHealth(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{NamingStrategy: schema.NamingStrategy{SingularTable: true}})
-	if err != nil {
-		t.Fatalf("gorm open error: %v", err)
-	}
-	pkg.DB = db
-	return db
+	return setupTestDB(t)
 }
 
 type hcTestPlugin struct{ pm *core.PluginManager }

@@ -17,12 +17,5 @@ type LoginHistory struct {
 	Message   string    `gorm:"size:255" json:"message"`          // 登录结果消息/失败原因
 	UserAgent string    `gorm:"type:text" json:"user_agent"`      // 用户代理信息
 	TenantID  uint      `gorm:"index" json:"tenant_id"`
-	LoginTime time.Time `json:"login_time"`                       // 登录时间
-	// 添加关联关系
-	User      User      `gorm:"foreignKey:Username;references:Username" json:"user,omitempty"`
-}
-
-// AddLoginHistoryToMigration 将LoginHistory模型添加到迁移函数
-func init() {
-	// 这个初始化函数提示需要修改MigrateTables函数以包含LoginHistory模型
+	LoginTime time.Time `json:"login_time"` // 登录时间
 }
