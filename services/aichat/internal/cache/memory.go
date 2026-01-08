@@ -18,6 +18,9 @@ package cache
 
 import (
 	"context"
+	"log"
+	"runtime"
+	"sort"
 	"sync"
 	"time"
 
@@ -32,6 +35,7 @@ type InMemoryCache struct {
 	userExpiry    map[string]time.Time // 记录用户对话的过期时间
 	maxMessages   int                  // 每条对话最大消息数
 	maxUsers      int                  // 最大用户数
+	maxMemoryMB   int                  // 最大内存使用限制（MB）
 	ttl           time.Duration        // 默认过期时间
 	defaultMaxMsg int                  // 默认最大消息数
 	defaultMaxUsr int                  // 默认最大用户数
@@ -42,13 +46,14 @@ type InMemoryCache struct {
 
 // NewInMemoryCache 创建内存缓存实例
 func NewInMemoryCache() *InMemoryCache {
-	// 设置默认值：每条对话最多100条消息，最多1000个用户，默认过期时间3小时
+	// 设置默认值：每条对话最多100条消息，最多1000个用户，默认过期时间3小时，最大内存使用100MB
 	cache := &InMemoryCache{
 		history:       make(map[string][]*schema.Message),
 		userAccess:    make(map[string]time.Time),
 		userExpiry:    make(map[string]time.Time),
 		maxMessages:   100,
 		maxUsers:      1000,
+		maxMemoryMB:   100,
 		ttl:           3 * time.Hour,
 		defaultMaxMsg: 100,
 		defaultMaxUsr: 1000,
@@ -56,7 +61,7 @@ func NewInMemoryCache() *InMemoryCache {
 		stopChan:      make(chan struct{}),
 	}
 
-	// 启动定期清理（每5分钟清理一次过期对话）
+	// 启动定期清理（每5分钟清理一次过期对话、检查内存使用）
 	cache.startPeriodicCleanup()
 	return cache
 }
@@ -130,6 +135,14 @@ func (mc *InMemoryCache) SaveChatHistory(ctx context.Context, userID string, his
 
 	// 如果用户数超过限制，删除最久未访问的用户
 	mc.checkUserLimit(userID)
+
+	// 检查内存使用，如果超过限制，清理最旧对话
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	usedMemoryMB := float64(memStats.Alloc) / (1024 * 1024)
+	if usedMemoryMB > float64(mc.maxMemoryMB) {
+		mc.cleanupOldestConversations()
+	}
 
 	mc.history[userID] = history
 	return nil
@@ -255,18 +268,74 @@ func (mc *InMemoryCache) evictLRUUser() {
 
 // startPeriodicCleanup 启动定期清理过期对话的任务
 func (mc *InMemoryCache) startPeriodicCleanup() {
-	// 每5分钟清理一次过期对话
+	// 每5分钟清理一次过期对话、检查内存使用
 	mc.cleanupTicker = time.NewTicker(5 * time.Minute)
 	go func() {
 		for {
 			select {
 			case <-mc.cleanupTicker.C:
 				mc.cleanupExpired()
+				mc.checkMemoryUsage()
 			case <-mc.stopChan:
 				return
 			}
 		}
 	}()
+}
+
+// checkMemoryUsage 检查内存使用情况并在必要时清理
+func (mc *InMemoryCache) checkMemoryUsage() {
+	mc.mutex.Lock()
+	defer mc.mutex.Unlock()
+
+	// 计算当前内存使用
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	usedMemoryMB := float64(memStats.Alloc) / (1024 * 1024)
+
+	// 如果内存使用超过限制，清理最旧的对话
+	if usedMemoryMB > float64(mc.maxMemoryMB) {
+		log.Printf("memory usage %.2fMB exceeds limit %dMB, starting cleanup", usedMemoryMB, mc.maxMemoryMB)
+		mc.cleanupOldestConversations()
+	}
+}
+
+// cleanupOldestConversations 清理最旧对话
+func (mc *InMemoryCache) cleanupOldestConversations() {
+	// 如果用户数量较少，不需要清理
+	if len(mc.history) < 10 {
+		return
+	}
+
+	// 按最后访问时间排序用户
+	type userWithTime struct {
+		userID string
+		time   time.Time
+	}
+
+	userTimes := make([]userWithTime, 0, len(mc.userAccess))
+	for userID, accessTime := range mc.userAccess {
+		userTimes = append(userTimes, userWithTime{userID: userID, time: accessTime})
+	}
+
+	// 按访问时间排序（最早访问的在前）
+	sort.Slice(userTimes, func(i, j int) bool {
+		return userTimes[i].time.Before(userTimes[j].time)
+	})
+
+	// 清理最旧的20%对话
+	cleanupCount := len(userTimes) / 5
+	if cleanupCount < 1 {
+		cleanupCount = 1
+	}
+
+	for i := 0; i < cleanupCount && i < len(userTimes); i++ {
+		userID := userTimes[i].userID
+		delete(mc.history, userID)
+		delete(mc.userAccess, userID)
+		delete(mc.userExpiry, userID)
+		log.Printf("deleted oldest conversation for user %s to free up memory", userID)
+	}
 }
 
 // cleanupExpired 清理过期对话（内部方法，无需锁保护）
