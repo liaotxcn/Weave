@@ -10,6 +10,7 @@ import (
 type SensitiveFilter struct {
 	sensitiveWords    map[string]bool
 	maliciousPatterns map[string]bool
+	injectionPatterns map[string]bool
 }
 
 // NewSensitiveFilter 创建新的敏感内容过滤器
@@ -17,6 +18,7 @@ func NewSensitiveFilter() *SensitiveFilter {
 	return &SensitiveFilter{
 		sensitiveWords:    loadSensitiveWords(),
 		maliciousPatterns: loadMaliciousPatterns(),
+		injectionPatterns: loadInjectionPatterns(),
 	}
 }
 
@@ -56,6 +58,23 @@ func loadMaliciousPatterns() map[string]bool {
 	return maliciousPatterns
 }
 
+// loadInjectionPatterns 加载提示注入模式
+func loadInjectionPatterns() map[string]bool {
+	injectionPatterns := make(map[string]bool)
+
+	// 从配置文件获取自定义提示注入模式列表
+	injectionPatternsList := viper.GetString("INJECTION_PATTERNS")
+	if injectionPatternsList != "" {
+		for _, pattern := range strings.Split(injectionPatternsList, ",") {
+			if pattern = strings.TrimSpace(pattern); pattern != "" {
+				injectionPatterns[pattern] = true
+			}
+		}
+	}
+
+	return injectionPatterns
+}
+
 // ContainsSensitiveContent 检查是否包含敏感内容
 func (f *SensitiveFilter) ContainsSensitiveContent(input string) bool {
 	inputLower := strings.ToLower(input)
@@ -71,6 +90,17 @@ func (f *SensitiveFilter) ContainsSensitiveContent(input string) bool {
 func (f *SensitiveFilter) ContainsMaliciousInput(input string) bool {
 	inputLower := strings.ToLower(input)
 	for pattern := range f.maliciousPatterns {
+		if strings.Contains(inputLower, strings.ToLower(pattern)) {
+			return true
+		}
+	}
+	return false
+}
+
+// ContainsInjectionPattern 检查是否包含提示注入模式
+func (f *SensitiveFilter) ContainsInjectionPattern(input string) bool {
+	inputLower := strings.ToLower(input)
+	for pattern := range f.injectionPatterns {
 		if strings.Contains(inputLower, strings.ToLower(pattern)) {
 			return true
 		}
@@ -97,12 +127,8 @@ func (f *SensitiveFilter) ValidateInput(input string) (bool, string) {
 		return false, "输入内容不能为空"
 	}
 
-	if f.ContainsMaliciousInput(input) {
-		return false, "输入包含恶意代码或指令"
-	}
-
-	if f.ContainsSensitiveContent(input) {
-		return false, "输入包含敏感内容"
+	if f.ContainsMaliciousInput(input) || f.ContainsInjectionPattern(input) || f.ContainsSensitiveContent(input) {
+		return false, "输入包含不安全内容"
 	}
 
 	return true, ""
