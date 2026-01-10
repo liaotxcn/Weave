@@ -47,8 +47,8 @@ var (
 // 初始化模型支持配置
 func initModelSupportConfig() {
 	// 加载工具调用模型列表
-	supportedModelList := viper.GetString("SUPPORTED_TOOL_CALL_MODELS")
-	unsupportedModelList := viper.GetString("UNSUPPORTED_TOOL_CALL_MODELS")
+	supportedModelList := viper.GetString("AICHAT_SUPPORTED_TOOL_CALL_MODELS")
+	unsupportedModelList := viper.GetString("AICHAT_UNSUPPORTED_TOOL_CALL_MODELS")
 
 	// 初始化映射
 	supportedToolCallModels = make(map[string]bool)
@@ -88,7 +88,7 @@ func TrimSpace(s string) string {
 
 // CreateAgent 创建并初始化一个React Agent
 func CreateAgent(ctx context.Context) (*react.Agent, error) {
-	viper.SetConfigFile(".env")
+	viper.SetConfigFile("../.env")
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 
@@ -107,16 +107,16 @@ func CreateAgent(ctx context.Context) (*react.Agent, error) {
 	var modelName string
 
 	// 根据配置类型选择模型
-	modelType := viper.GetString("AI_MODEL_TYPE")
+	modelType := viper.GetString("AICHAT_MODEL_TYPE")
 	if modelType == "openai" {
 		llm, err = CreateOpenAIChatModel(ctx)
-		modelName = viper.GetString("OPENAI_MODEL_NAME")
+		modelName = viper.GetString("AICHAT_OPENAI_MODEL_NAME")
 	} else if modelType == "modelscope" {
 		llm, err = CreateModelScopeChatModel(ctx)
-		modelName = viper.GetString("MODELSCOPE_MODEL_NAME")
+		modelName = viper.GetString("AICHAT_MODELSCOPE_MODEL_NAME")
 	} else {
 		llm, err = CreateOllamaChatModel(ctx)
-		modelName = viper.GetString("OLLAMA_MODEL_NAME")
+		modelName = viper.GetString("AICHAT_OLLAMA_MODEL_NAME")
 	}
 
 	if err != nil {
@@ -169,17 +169,18 @@ func loadMCPTools(ctx context.Context) []einotool.BaseTool {
 
 	// 初始化MCP请求
 	initRequest := mcp.InitializeRequest{}
-	initRequest.Params.ProtocolVersion = "1.0.0"
+	initRequest.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
 	initRequest.Params.ClientInfo = mcp.Implementation{
 		Name:    "aichat-service",
 		Version: "1.0.0",
 	}
 
-	// 加载MCP客户端
+	// 工具名称去重
 	toolNameSet := make(map[string]struct{})
 
-	mergeToolsFn := func(id string, tools []einotool.BaseTool) {
-		logEntry := logger.With(zap.String("id", id))
+	// 合并工具函数
+	mergeToolsFn := func(source string, id string, tools []einotool.BaseTool) {
+		logEntry := logger.With(zap.String("source", source), zap.String("id", id))
 		count := 0
 		for _, t := range tools {
 			info, err := t.Info(ctx)
@@ -194,15 +195,16 @@ func loadMCPTools(ctx context.Context) []einotool.BaseTool {
 			}
 			toolNameSet[name] = struct{}{}
 			allMcpTools = append(allMcpTools, t)
-
 			count++
+		}
+		if count > 0 {
+			logEntry.Info("成功加载MCP工具", zap.Int("count", count))
 		}
 	}
 
-	// 初始化MCP客户端
-	mcpRootPath := viper.GetString("MCP_PATH")
+	// 加载本地MCP工具
+	mcpRootPath := viper.GetString("AICHAT_MCP_PATH")
 	if mcpRootPath != "" {
-
 		// 获取当前工作目录
 		cwd, _ := os.Getwd()
 		// 标准化路径
@@ -211,102 +213,101 @@ func loadMCPTools(ctx context.Context) []einotool.BaseTool {
 		// 检查路径是否存在
 		if _, err := os.Stat(mcpRootPath); os.IsNotExist(err) {
 			logger.Error("MCP_PATH路径不存在", zap.String("path", mcpRootPath))
-			return allMcpTools
-		}
-
-		var stdioPaths []os.DirEntry
-		stdioPaths, err := os.ReadDir(mcpRootPath)
-		if err != nil {
-			logger.Error("读取 MCP_PATH 失败", zap.String("path", mcpRootPath), zap.Error(err))
-			return allMcpTools
-		}
-
-		for _, path := range stdioPaths {
-			serviceName := path.Name()
-			// 跳过非可执行文件和隐藏文件
-			if path.IsDir() {
-				continue
-			}
-			if strings.HasPrefix(serviceName, ".") {
-				continue
-			}
-			if strings.HasSuffix(serviceName, ".go") {
-				continue
-			}
-
-			mcpPath := filepath.Join(mcpRootPath, serviceName)
-			// 确保路径是绝对路径
-			mcpPathAbs := mcpPath
-			if !filepath.IsAbs(mcpPath) {
-				mcpPathAbs = filepath.Join(cwd, mcpPath)
-			}
-			// 标准化路径
-			mcpPathAbs = filepath.Clean(mcpPathAbs)
-
-			// 检查文件是否存在且可执行
-			if _, err := os.Stat(mcpPathAbs); os.IsNotExist(err) {
-				logger.Error("MCP工具文件不存在", zap.String("path", mcpPathAbs))
-				continue
-			}
-
-			// MCP客户端初始化添加超时控制
-			timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-			defer cancel()
-
-			// 初始化MCP客户端
-			cli, err := client.NewStdioMCPClient(mcpPathAbs, nil, "")
+		} else {
+			stdioPaths, err := os.ReadDir(mcpRootPath)
 			if err != nil {
-				logger.Error("初始化MCP客户端失败", zap.String("service", serviceName), zap.Error(err))
-				continue
-			}
+				logger.Error("读取 MCP_PATH 失败", zap.String("path", mcpRootPath), zap.Error(err))
+			} else {
+				for _, path := range stdioPaths {
+					serviceName := path.Name()
+					// 跳过非可执行文件和隐藏文件
+					if path.IsDir() || strings.HasPrefix(serviceName, ".") || strings.HasSuffix(serviceName, ".go") {
+						continue
+					}
 
-			// 获取MCP工具
-			tools, err := loadMCPToolsFromClient(timeoutCtx, cli, &initRequest)
-			if err != nil {
-				logger.Error("获取MCP工具失败", zap.String("service", serviceName), zap.Error(err))
-				continue
+					mcpPath := filepath.Join(mcpRootPath, serviceName)
+					// 确保路径是绝对路径
+					mcpPathAbs := mcpPath
+					if !filepath.IsAbs(mcpPath) {
+						mcpPathAbs = filepath.Join(cwd, mcpPath)
+					}
+					// 标准化路径
+					mcpPathAbs = filepath.Clean(mcpPathAbs)
+
+					// MCP客户端初始化添加超时控制
+					timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+					defer cancel()
+
+					// 初始化MCP客户端
+					cli, err := client.NewStdioMCPClient(mcpPathAbs, nil, "")
+					if err != nil {
+						logger.Error("初始化MCP客户端失败", zap.String("service", serviceName), zap.Error(err))
+						continue
+					}
+
+					// 获取MCP工具
+					tools, err := loadMCPToolsFromClient(timeoutCtx, cli, &initRequest)
+					if err != nil {
+						logger.Error("获取MCP工具失败", zap.String("service", serviceName), zap.Error(err))
+						continue
+					}
+					// 跳过重名的tool
+					mergeToolsFn("local", serviceName, tools)
+				}
 			}
-			// 跳过重名的tool
-			mergeToolsFn(serviceName, tools)
 		}
 	} else {
 		logger.Info("MCP_PATH 未设置，跳过本地MCP工具加载")
 	}
 
 	// 加载 streamable_http tools
-	httpUrls := viper.GetStringMapString("MCP_HTTP_URLS")
-	for name, url := range httpUrls {
-		if url == "" {
-			continue
-		}
+	httpUrlsStr := viper.GetString("AICHAT_MCP_HTTP_URLS")
+	httpUrls := pkg.ParseKeyValuePairs(httpUrlsStr)
+	if len(httpUrls) > 0 {
+		logger.Info("开始加载HTTP MCP工具", zap.Int("count", len(httpUrls)))
+		for name, url := range httpUrls {
+			if url == "" {
+				continue
+			}
 
-		tools, err := loadHttpMcpClient(ctx, url, &initRequest)
-		if err != nil {
-			logger.Error("加载HTTP MCP失败", zap.String("name", name), zap.Error(err))
-			continue
+			timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+
+			tools, err := loadHttpMcpClient(timeoutCtx, url, &initRequest)
+			if err != nil {
+				logger.Error("加载HTTP MCP失败", zap.String("name", name), zap.String("url", url), zap.Error(err))
+				continue
+			}
+			mergeToolsFn("http", name, tools)
 		}
-		mergeToolsFn(name, tools)
 	}
 
 	// 加载 sse tools
-	sseUrls := viper.GetStringMapString("MCP_SSE_URLS")
-	for name, url := range sseUrls {
-		if url == "" {
-			continue
-		}
+	sseUrlsStr := viper.GetString("AICHAT_MCP_SSE_URLS")
+	sseUrls := pkg.ParseKeyValuePairs(sseUrlsStr)
+	if len(sseUrls) > 0 {
+		logger.Info("开始加载SSE MCP工具", zap.Int("count", len(sseUrls)))
+		for name, url := range sseUrls {
+			if url == "" {
+				continue
+			}
 
-		tools, err := loadSSEMcpClient(ctx, url, &initRequest)
-		if err != nil {
-			logger.Error("加载SSE MCP失败", zap.String("name", name), zap.Error(err))
-			continue
+			timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+
+			tools, err := loadSSEMcpClient(timeoutCtx, url, &initRequest)
+			if err != nil {
+				logger.Error("加载SSE MCP失败", zap.String("name", name), zap.String("url", url), zap.Error(err))
+				continue
+			}
+			mergeToolsFn("sse", name, tools)
 		}
-		mergeToolsFn(name, tools)
 	}
 
 	if len(allMcpTools) == 0 {
 		logger.Info("无加载MCP工具")
 	} else {
-
+		logger.Info("MCP工具加载完成", zap.Int("total_count", len(allMcpTools)))
 	}
 
 	return allMcpTools

@@ -40,7 +40,7 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	s.logger = pkg.GetLogger()
 
 	// 初始化配置
-	viper.SetConfigFile(".env")
+	viper.SetConfigFile("../.env")
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 

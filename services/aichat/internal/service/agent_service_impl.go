@@ -28,7 +28,7 @@ func (s *agentServiceImpl) CreateAgent(ctx context.Context) (*react.Agent, error
 	}
 
 	// 初始化配置
-	viper.SetConfigFile(".env")
+	viper.SetConfigFile("../.env")
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 
