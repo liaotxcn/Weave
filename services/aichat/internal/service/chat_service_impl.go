@@ -2,13 +2,13 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"weave/pkg"
 	"weave/services/aichat/internal/cache"
 	"weave/services/aichat/internal/chat"
 	"weave/services/aichat/internal/model"
+	"weave/services/aichat/internal/security"
 	"weave/services/aichat/internal/template"
 
 	"github.com/cloudwego/eino/components/embedding"
@@ -22,11 +22,14 @@ import (
 // chatServiceImpl 聊天服务实现
 type chatServiceImpl struct {
 	agent        *react.Agent
+	visionAgent  *react.Agent
 	chatCache    cache.Cache
 	embedder     embedding.Embedder
 	chatTemplate prompt.ChatTemplate
 	logger       *pkg.Logger
 	filter       *chat.SensitiveFilter
+	modelType    string
+	rateLimiter  *security.ImageRateLimiter
 }
 
 // NewChatService 创建聊天服务实例
@@ -50,15 +53,33 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 		s.logger.Info("已加载 .env 配置文件")
 	}
 
-	// 创建agent
-	s.logger.Info("开始创建agent")
+	// 保存模型类型
+	s.modelType = viper.GetString("AICHAT_MODEL_TYPE")
+
+	// 创建普通agent
+	s.logger.Info("开始创建普通agent")
 	var err error
 	s.agent, err = model.CreateAgent(ctx)
 	if err != nil {
-		s.logger.Error("创建agent失败", zap.Error(err))
+		s.logger.Error("创建普通agent失败", zap.Error(err))
 		return err
 	}
-	s.logger.Info("创建agent成功")
+	s.logger.Info("创建普通agent成功")
+
+	// 创建视觉agent（仅当使用modelscope时）
+	if s.modelType == "modelscope" {
+		s.logger.Info("开始创建视觉agent")
+		s.visionAgent, err = model.CreateModelScopeVisionAgent(ctx)
+		if err != nil {
+			s.logger.Warn("创建视觉agent失败，将使用普通agent处理图像", zap.Error(err))
+			s.visionAgent = s.agent // 失败时回退到普通agent
+		} else {
+			s.logger.Info("创建视觉agent成功")
+		}
+	} else {
+		// 非modelscope时，使用普通agent处理所有请求
+		s.visionAgent = s.agent
+	}
 
 	// 初始化缓存
 	s.chatCache, err = cache.NewRedisClient(ctx)
@@ -70,7 +91,7 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	// 初始化嵌入器
 	s.embedder, err = model.NewOllamaEmbedder(ctx)
 	if err != nil {
-		s.logger.Warn("创建 Ollama 嵌入模型失败，将使用关键词匹配", zap.Error(err))
+
 		s.embedder = nil // 触发 FilterRelevantHistory 回退机制
 	}
 
@@ -81,11 +102,25 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	s.filter = chat.NewSensitiveFilter()
 	s.logger.Info("敏感内容过滤器初始化完成")
 
+	// 初始化图片上传速率限制器
+	s.rateLimiter = security.NewImageRateLimiter(s.chatCache)
+	s.logger.Info("图片上传速率限制器初始化完成")
+
 	return nil
 }
 
 // ProcessUserInput 处理用户输入并生成回复
 func (s *chatServiceImpl) ProcessUserInput(ctx context.Context, userInput string, userID string) (string, error) {
+	return s.processUserInputWithImages(ctx, userInput, userID, nil, nil)
+}
+
+// ProcessUserInputWithImages 处理用户输入（包含图片）并生成回复
+func (s *chatServiceImpl) ProcessUserInputWithImages(ctx context.Context, userInput string, userID string, imageURLs []string, base64Images []string) (string, error) {
+	return s.processUserInputWithImages(ctx, userInput, userID, imageURLs, base64Images)
+}
+
+// processUserInputWithImages 内部方法：处理用户输入（包含图片）并生成回复
+func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userInput string, userID string, imageURLs []string, base64Images []string) (string, error) {
 	// 验证用户输入
 	isValid, errMsg := s.filter.ValidateInput(userInput)
 	if !isValid {
@@ -109,28 +144,89 @@ func (s *chatServiceImpl) ProcessUserInput(ctx context.Context, userInput string
 	// 过滤与当前问题相关的对话历史
 	filteredHistory := chat.FilterRelevantHistory(ctx, s.embedder, chatHistory, filteredInput, 50)
 
-	// 将历史消息转换为字符串形式
-	var chatHistoryStr string
+	// 构造消息
+	messages := []*schema.Message{}
+
+	// 添加历史消息
 	for _, msg := range filteredHistory {
-		if msg.Content != "" {
-			chatHistoryStr += fmt.Sprintf("%s: %s\n", msg.Role, msg.Content)
-		}
+		messages = append(messages, msg)
 	}
 
-	// 使用模板生成消息
-	messages, err := s.chatTemplate.Format(ctx, map[string]any{
-		"role":         "PaiChat",
-		"style":        "积极、温暖且专业",
-		"question":     filteredInput,
-		"chat_history": chatHistoryStr,
-	})
-	if err != nil {
-		s.logger.Error("格式化模板失败", zap.Error(err), zap.String("user_id", userID))
-		return "", err
+	// 构造当前用户消息
+	userMessage := &schema.Message{
+		Role: schema.User,
+	}
+
+	// 如果有图片，构造多模态消息
+	if len(imageURLs) > 0 || len(base64Images) > 0 {
+		// 检查单个请求的图片数量限制
+		totalImages := len(imageURLs) + len(base64Images)
+		if err := s.rateLimiter.CheckRequestLimit(totalImages); err != nil {
+			s.logger.Warn("单请求图片数量超过限制", zap.Error(err), zap.String("user_id", userID))
+			return "", err
+		}
+
+		// 检查单位时间内的上传频率限制
+		if err := s.rateLimiter.CheckRateLimit(ctx, userID, totalImages); err != nil {
+			s.logger.Warn("图片上传频率超过限制", zap.Error(err), zap.String("user_id", userID))
+			return "", err
+		}
+
+		parts := []schema.MessageInputPart{}
+
+		// 处理图片 URL
+		for _, imgURL := range imageURLs {
+			parts = append(parts, schema.MessageInputPart{
+				Type: schema.ChatMessagePartTypeImageURL,
+				Image: &schema.MessageInputImage{
+					MessagePartCommon: schema.MessagePartCommon{
+						URL: &imgURL,
+					},
+				},
+			})
+		}
+
+		// 处理 base64 图片
+		for _, imgBase64 := range base64Images {
+			// 检查 Base64 图片是否合法
+			if err := security.IsValidBase64Image(imgBase64); err != nil {
+				s.logger.Warn("无效的 Base64 图片", zap.Error(err), zap.String("user_id", userID))
+				return "", err
+			}
+			dataURL := "data:image/jpeg;base64," + imgBase64
+			parts = append(parts, schema.MessageInputPart{
+				Type: schema.ChatMessagePartTypeImageURL,
+				Image: &schema.MessageInputImage{
+					MessagePartCommon: schema.MessagePartCommon{
+						URL: &dataURL,
+					},
+				},
+			})
+		}
+
+		// 添加文本部分
+		parts = append(parts, schema.MessageInputPart{
+			Type: schema.ChatMessagePartTypeText,
+			Text: filteredInput,
+		})
+
+		userMessage.UserInputMultiContent = parts
+	} else {
+		// 纯文本消息
+		userMessage.Content = filteredInput
+	}
+
+	messages = append(messages, userMessage)
+
+	// 选择合适的agent
+	targetAgent := s.agent
+	if (len(imageURLs) > 0 || len(base64Images) > 0) && s.visionAgent != nil {
+		targetAgent = s.visionAgent
+		s.logger.Info("使用视觉agent处理包含图片的请求", zap.String("user_id", userID))
 	}
 
 	// 生成回复
-	streamReader, err := s.agent.Stream(ctx, messages)
+	streamReader, err := targetAgent.Stream(ctx, messages)
 	if err != nil {
 		s.logger.Error("生成回复失败", zap.Error(err), zap.String("user_id", userID))
 		return "", err
@@ -150,7 +246,7 @@ func (s *chatServiceImpl) ProcessUserInput(ctx context.Context, userInput string
 	// 更新对话历史
 	resultContent := fullContent.String()
 	chatHistory = append(chatHistory,
-		schema.UserMessage(filteredInput),
+		userMessage,
 		schema.AssistantMessage(resultContent, nil),
 	)
 
@@ -166,6 +262,20 @@ func (s *chatServiceImpl) ProcessUserInput(ctx context.Context, userInput string
 
 // ProcessUserInputStream 流式处理用户输入并生成回复
 func (s *chatServiceImpl) ProcessUserInputStream(ctx context.Context, userInput string, userID string,
+	streamCallback func(content string, isToolCall bool) error,
+	controlCallback func() (bool, bool)) (string, error) {
+	return s.processUserInputStreamWithImages(ctx, userInput, userID, nil, nil, streamCallback, controlCallback)
+}
+
+// ProcessUserInputStreamWithImages 流式处理用户输入（包含图片）并生成回复
+func (s *chatServiceImpl) ProcessUserInputStreamWithImages(ctx context.Context, userInput string, userID string, imageURLs []string, base64Images []string,
+	streamCallback func(content string, isToolCall bool) error,
+	controlCallback func() (bool, bool)) (string, error) {
+	return s.processUserInputStreamWithImages(ctx, userInput, userID, imageURLs, base64Images, streamCallback, controlCallback)
+}
+
+// processUserInputStreamWithImages 内部方法：流式处理用户输入（包含图片）并生成回复
+func (s *chatServiceImpl) processUserInputStreamWithImages(ctx context.Context, userInput string, userID string, imageURLs []string, base64Images []string,
 	streamCallback func(content string, isToolCall bool) error,
 	controlCallback func() (bool, bool)) (string, error) {
 
@@ -193,29 +303,90 @@ func (s *chatServiceImpl) ProcessUserInputStream(ctx context.Context, userInput 
 	// 过滤与当前问题相关的对话历史
 	filteredHistory := chat.FilterRelevantHistory(ctx, s.embedder, chatHistory, filteredInput, 50)
 
-	// 将历史消息转换为字符串形式
-	var chatHistoryStr string
+	// 构造消息
+	messages := []*schema.Message{}
+
+	// 添加历史消息
 	for _, msg := range filteredHistory {
-		if msg.Content != "" {
-			chatHistoryStr += fmt.Sprintf("%s: %s\n", msg.Role, msg.Content)
-		}
+		messages = append(messages, msg)
 	}
 
-	// 使用模板生成消息
-	messages, err := s.chatTemplate.Format(ctx, map[string]any{
-		"role":         "PaiChat",
-		"style":        "积极、温暖且专业",
-		"question":     filteredInput,
-		"chat_history": chatHistoryStr,
-	})
-	if err != nil {
-		s.logger.Error("格式化模板失败", zap.Error(err), zap.String("user_id", userID))
-		return "", err
+	// 构造当前用户消息
+	userMessage := &schema.Message{
+		Role: schema.User,
+	}
+
+	// 如果有图片，构造多模态消息
+	if len(imageURLs) > 0 || len(base64Images) > 0 {
+		// 检查单个请求的图片数量限制
+		totalImages := len(imageURLs) + len(base64Images)
+		if err := s.rateLimiter.CheckRequestLimit(totalImages); err != nil {
+			s.logger.Warn("单请求图片数量超过限制", zap.Error(err), zap.String("user_id", userID))
+			return "", err
+		}
+
+		// 检查单位时间内的上传频率限制
+		if err := s.rateLimiter.CheckRateLimit(ctx, userID, totalImages); err != nil {
+			s.logger.Warn("图片上传频率超过限制", zap.Error(err), zap.String("user_id", userID))
+			return "", err
+		}
+
+		parts := []schema.MessageInputPart{}
+
+		// 处理图片 URL
+		for _, imgURL := range imageURLs {
+			parts = append(parts, schema.MessageInputPart{
+				Type: schema.ChatMessagePartTypeImageURL,
+				Image: &schema.MessageInputImage{
+					MessagePartCommon: schema.MessagePartCommon{
+						URL: &imgURL,
+					},
+				},
+			})
+		}
+
+		// 处理 base64 图片
+		for _, imgBase64 := range base64Images {
+			// 检查 Base64 图片是否合法
+			if err := security.IsValidBase64Image(imgBase64); err != nil {
+				s.logger.Warn("无效的 Base64 图片", zap.Error(err), zap.String("user_id", userID))
+				return "", err
+			}
+			dataURL := "data:image/jpeg;base64," + imgBase64
+			parts = append(parts, schema.MessageInputPart{
+				Type: schema.ChatMessagePartTypeImageURL,
+				Image: &schema.MessageInputImage{
+					MessagePartCommon: schema.MessagePartCommon{
+						URL: &dataURL,
+					},
+				},
+			})
+		}
+
+		// 添加文本部分
+		parts = append(parts, schema.MessageInputPart{
+			Type: schema.ChatMessagePartTypeText,
+			Text: filteredInput,
+		})
+
+		userMessage.UserInputMultiContent = parts
+	} else {
+		// 纯文本消息
+		userMessage.Content = filteredInput
+	}
+
+	messages = append(messages, userMessage)
+
+	// 选择合适的agent
+	targetAgent := s.agent
+	if (len(imageURLs) > 0 || len(base64Images) > 0) && s.visionAgent != nil {
+		targetAgent = s.visionAgent
+		s.logger.Info("使用视觉agent处理包含图片的流式请求", zap.String("user_id", userID))
 	}
 
 	// 生成回复（使用流式输出）
 	s.logger.Info("开始生成流式回复", zap.String("user_id", userID))
-	streamReader, err := s.agent.Stream(ctx, messages)
+	streamReader, err := targetAgent.Stream(ctx, messages)
 	if err != nil {
 		s.logger.Error("生成回复失败", zap.Error(err), zap.String("user_id", userID))
 		return "", err
@@ -261,7 +432,7 @@ func (s *chatServiceImpl) ProcessUserInputStream(ctx context.Context, userInput 
 	// 更新对话历史
 	resultContent := fullContent.String()
 	chatHistory = append(chatHistory,
-		schema.UserMessage(filteredInput),
+		userMessage,
 		schema.AssistantMessage(resultContent, nil),
 	)
 
@@ -287,6 +458,9 @@ func (s *chatServiceImpl) ClearChatHistory(ctx context.Context, userID string) e
 
 // Close 关闭服务资源
 func (s *chatServiceImpl) Close(ctx context.Context) error {
+	if s.rateLimiter != nil {
+		s.rateLimiter.Stop()
+	}
 	if s.chatCache != nil {
 		s.chatCache.Close()
 	}
