@@ -86,8 +86,9 @@ func TrimSpace(s string) string {
 	return strings.TrimSpace(s)
 }
 
-// CreateAgent 创建并初始化一个React Agent
-func CreateAgent(ctx context.Context) (*react.Agent, error) {
+// createAgent 内部函数：创建并初始化一个React Agent
+// useVisionModel: 是否使用视觉模型
+func createAgent(ctx context.Context, useVisionModel bool) (*react.Agent, error) {
 	viper.SetConfigFile("../.env")
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
@@ -108,15 +109,19 @@ func CreateAgent(ctx context.Context) (*react.Agent, error) {
 
 	// 根据配置类型选择模型
 	modelType := viper.GetString("AICHAT_MODEL_TYPE")
-	if modelType == "openai" {
-		llm, err = CreateOpenAIChatModel(ctx)
-		modelName = viper.GetString("AICHAT_OPENAI_MODEL_NAME")
-	} else if modelType == "modelscope" {
-		llm, err = CreateModelScopeChatModel(ctx)
-		modelName = viper.GetString("AICHAT_MODELSCOPE_MODEL_NAME")
+	if useVisionModel {
+		llm, err = CreateVisionChatModel(ctx, modelType)
+		if modelType == "modelscope" {
+			modelName = viper.GetString("AICHAT_MODELSCOPE_VISUAL_MODEL_NAME")
+			if modelName == "" {
+				modelName = GetModelNameByType(modelType)
+			}
+		} else {
+			modelName = GetModelNameByType(modelType)
+		}
 	} else {
-		llm, err = CreateOllamaChatModel(ctx)
-		modelName = viper.GetString("AICHAT_OLLAMA_MODEL_NAME")
+		llm, err = CreateChatModel(ctx, modelType)
+		modelName = GetModelNameByType(modelType)
 	}
 
 	if err != nil {
@@ -127,10 +132,18 @@ func CreateAgent(ctx context.Context) (*react.Agent, error) {
 	var tools []einotool.BaseTool
 	if isModelSupportToolCall(modelName) {
 		tools = loadTools(ctx)
-		logger.Info("当前模型支持工具调用", zap.String("model_name", modelName), zap.Int("tool_count", len(tools)))
+		if useVisionModel {
+			logger.Info("视觉模型支持工具调用", zap.String("model_name", modelName), zap.Int("tool_count", len(tools)))
+		} else {
+			logger.Info("当前模型支持工具调用", zap.String("model_name", modelName), zap.Int("tool_count", len(tools)))
+		}
 	} else {
 		tools = []einotool.BaseTool{}
-		logger.Info("当前模型不支持工具调用，将以普通对话模式运行", zap.String("model_name", modelName))
+		if useVisionModel {
+
+		} else {
+			logger.Info("当前模型不支持工具调用，将以普通对话模式运行", zap.String("model_name", modelName))
+		}
 	}
 
 	// 创建React Agent
@@ -146,6 +159,16 @@ func CreateAgent(ctx context.Context) (*react.Agent, error) {
 	}
 
 	return agent, nil
+}
+
+// CreateAgent 创建并初始化一个React Agent
+func CreateAgent(ctx context.Context) (*react.Agent, error) {
+	return createAgent(ctx, false)
+}
+
+// CreateModelScopeVisionAgent 创建并初始化一个支持图像分析的React Agent
+func CreateModelScopeVisionAgent(ctx context.Context) (*react.Agent, error) {
+	return createAgent(ctx, true)
 }
 
 // loadTools 加载所有可用的工具

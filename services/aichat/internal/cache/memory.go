@@ -46,22 +46,31 @@ type InMemoryCache struct {
 
 // NewInMemoryCache 创建内存缓存实例
 func NewInMemoryCache() *InMemoryCache {
-	// 设置默认值：每条对话最多100条消息，最多1000个用户，默认过期时间3小时，最大内存使用100MB
+	config := GetDefaultCacheConfig()
+	return NewInMemoryCacheWithConfig(&config)
+}
+
+// NewInMemoryCacheWithConfig 基于配置创建内存缓存实例
+func NewInMemoryCacheWithConfig(config *CacheConfig) *InMemoryCache {
+	maxUsers := config.MaxUsers
+	maxMessages := config.MaxMessages
+	maxMemoryMB := config.MaxMemoryMB
+	ttl := config.TTL
 	cache := &InMemoryCache{
 		history:       make(map[string][]*schema.Message),
 		userAccess:    make(map[string]time.Time),
 		userExpiry:    make(map[string]time.Time),
-		maxMessages:   100,
-		maxUsers:      1000,
-		maxMemoryMB:   100,
-		ttl:           3 * time.Hour,
-		defaultMaxMsg: 100,
-		defaultMaxUsr: 1000,
-		defaultTTL:    3 * time.Hour,
+		maxMessages:   maxMessages,
+		maxUsers:      maxUsers,
+		maxMemoryMB:   maxMemoryMB,
+		ttl:           ttl,
+		defaultMaxMsg: maxMessages,
+		defaultMaxUsr: maxUsers,
+		defaultTTL:    ttl,
 		stopChan:      make(chan struct{}),
 	}
 
-	// 启动定期清理（每5分钟清理一次过期对话、检查内存使用）
+	// 启动定期清理
 	cache.startPeriodicCleanup()
 	return cache
 }

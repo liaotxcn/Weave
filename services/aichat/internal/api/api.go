@@ -44,8 +44,10 @@ type APIServer struct {
 
 // ChatRequest 聊天请求结构
 type ChatRequest struct {
-	UserInput string `json:"user_input" binding:"required"`
-	UserID    string `json:"user_id" binding:"required"`
+	UserInput    string   `json:"user_input" binding:"required"`
+	UserID       string   `json:"user_id" binding:"required"`
+	ImageURLs    []string `json:"image_urls"`    // 图片 URL 列表
+	Base64Images []string `json:"base64_images"` // Base64 编码的图片列表
 }
 
 // ChatResponse 聊天响应结构
@@ -119,7 +121,18 @@ func (s *APIServer) handleChat(c *gin.Context) {
 	}
 
 	// 调用服务层处理
-	content, err := s.chatService.ProcessUserInput(c.Request.Context(), req.UserInput, req.UserID)
+	var content string
+	var err error
+	
+	// 检查是否包含图片
+	if len(req.ImageURLs) > 0 || len(req.Base64Images) > 0 {
+		// 处理包含图片的请求
+		content, err = s.chatService.ProcessUserInputWithImages(c.Request.Context(), req.UserInput, req.UserID, req.ImageURLs, req.Base64Images)
+	} else {
+		// 处理纯文本请求
+		content, err = s.chatService.ProcessUserInput(c.Request.Context(), req.UserInput, req.UserID)
+	}
+	
 	if err != nil {
 		s.logger.Error("处理聊天请求失败", zap.Error(err), zap.String("user_id", req.UserID))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -196,7 +209,18 @@ func (s *APIServer) handleChatStream(c *gin.Context) {
 	}
 
 	// 使用服务层处理用户输入
-	fullContent, err := s.chatService.ProcessUserInputStream(ctx, req.UserInput, req.UserID, streamCallback, controlCallback)
+	var fullContent string
+	var err error
+	
+	// 检查是否包含图片
+	if len(req.ImageURLs) > 0 || len(req.Base64Images) > 0 {
+		// 处理包含图片的请求
+		fullContent, err = s.chatService.ProcessUserInputStreamWithImages(ctx, req.UserInput, req.UserID, req.ImageURLs, req.Base64Images, streamCallback, controlCallback)
+	} else {
+		// 处理纯文本请求
+		fullContent, err = s.chatService.ProcessUserInputStream(ctx, req.UserInput, req.UserID, streamCallback, controlCallback)
+	}
+	
 	if err != nil && !strings.Contains(err.Error(), "context canceled") {
 		s.logger.Error("流式处理请求失败", zap.Error(err), zap.String("user_id", req.UserID))
 		response := ErrorResponse{

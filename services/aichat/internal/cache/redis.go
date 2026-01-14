@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,14 +42,20 @@ type RedisClient struct {
 
 // NewRedisClient 创建Redis客户端实例
 func NewRedisClient(ctx context.Context) (*RedisClient, error) {
-	// 从环境变量获取Redis配置
-	redisAddr := os.Getenv("REDIS_ADDR")
+	config := GetDefaultCacheConfig()
+	return NewRedisClientWithConfig(ctx, &config)
+}
+
+// NewRedisClientWithConfig 基于配置创建Redis客户端实例
+func NewRedisClientWithConfig(ctx context.Context, config *CacheConfig) (*RedisClient, error) {
+	// 使用配置值或默认值
+	redisAddr := config.RedisAddr
 	if redisAddr == "" {
 		redisAddr = "localhost:6379" // 默认地址
 	}
 
-	redisPassword := os.Getenv("REDIS_PASSWORD")
-	redisDB := 0
+	redisPassword := config.RedisPassword
+	redisDB := config.RedisDB
 
 	// 创建Redis客户端
 	client := redis.NewClient(&redis.Options{
@@ -256,6 +261,11 @@ func (rc *RedisClient) cleanupOldConversations(ctx context.Context) {
 			log.Printf("deleted old conversation %s to free up memory", keyTimes[i].key)
 		}
 	}
+}
+
+// GetRedisClient 获取底层的 Redis 客户端实例
+func (rc *RedisClient) GetRedisClient() *redis.Client {
+	return rc.client
 }
 
 // Close 关闭Redis连接
