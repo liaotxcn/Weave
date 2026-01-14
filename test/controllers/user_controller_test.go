@@ -69,10 +69,14 @@ func TestUserLogin_Success(t *testing.T) {
 		t.Fatalf("seed user error: %v", err)
 	}
 
-	// Seed verification code
+	// Seed verification code with hashed value
+	hashedCode, err := utils.HashPassword("123456")
+	if err != nil {
+		t.Fatalf("hash verification code error: %v", err)
+	}
 	verificationCode := models.EmailVerificationCode{
 		Email:     user.Email,
-		Code:      "123456",
+		Code:      hashedCode,
 		TenantID:  1,
 		ExpiresAt: time.Now().Add(10 * time.Minute),
 	}
