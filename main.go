@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,43 +18,69 @@ import (
 	"weave/pkg"
 	"weave/pkg/migrate/migration"
 	"weave/plugins"
-	"weave/plugins/core"
 	"weave/plugins/examples"
 	fc "weave/plugins/features/FormatConverter"
 	note "weave/plugins/features/Note"
 	"weave/routers"
-	"weave/services/llm"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
-// loadEnvFile 加载环境变量
+// loadEnvFile 从.env文件加载环境变量
 func loadEnvFile(filePath string) {
-	content, err := os.ReadFile(filePath)
+	// ioutil.ReadFile 读取整个文件，减少文件操作次数
+	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		pkg.Debug("Failed to read .env file", zap.Error(err), zap.String("path", filePath))
+		if os.IsNotExist(err) {
+			log.Printf("Warning: .env file not found at %s", filePath)
+		} else {
+			log.Printf("Warning: Failed to read .env file: %v", err)
+		}
 		return
 	}
 
-	for _, line := range strings.Split(string(content), "\n") {
+	// 按行分割内容
+	lines := strings.Split(string(content), "\n")
+	successCount := 0
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// 跳过注释和空行
+		if line == "" || line[0] == '#' {
+			continue
+		}
+
+		// 解析key=value格式
 		if idx := strings.Index(line, "="); idx > 0 {
 			key := strings.TrimSpace(line[:idx])
 			value := strings.TrimSpace(line[idx+1:])
-			if key != "" {
-				os.Setenv(key, value)
+
+			// 移除引号
+			if len(value) >= 2 {
+				switch {
+				case value[0] == '"' && value[len(value)-1] == '"':
+					value = value[1 : len(value)-1]
+				case value[0] == '\'' && value[len(value)-1] == '\'':
+					value = value[1 : len(value)-1]
+				}
+			}
+
+			// 设置环境变量
+			if err := os.Setenv(key, value); err != nil {
+				log.Printf("Warning: Failed to set %s: %v", key, err)
+			} else {
+				successCount++
 			}
 		}
 	}
+
+	log.Printf(".env file loaded successfully, set %d environment variables", successCount)
 }
 
 func main() {
+	// 加载.env 配置文件
 	loadEnvFile(".env")
-
-	// 加载配置
-	if err := config.LoadConfig(); err != nil {
-		pkg.Fatal("Failed to load configuration", zap.Error(err))
-	}
 
 	// 初始化日志系统
 	if err := pkg.InitLogger(pkg.Options{
@@ -61,64 +89,75 @@ func main() {
 		ErrorPath:   config.Config.Logger.ErrorPath,
 		Development: config.Config.Logger.Development,
 	}); err != nil {
-		pkg.Fatal("Failed to initialize logger", zap.Error(err))
+		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
 	}
 	defer pkg.Sync()
 
-	// PluginManager 日志记录器
+	// 设置PluginManager的日志记录器
 	plugins.PluginManager.SetLogger(pkg.GetLogger())
 
+	// 加载配置
+	if err := config.LoadConfig(); err != nil {
+		pkg.Fatal("Failed to load configuration", zap.Error(err))
+	}
+
+	// 输出清理后的配置信息（隐藏敏感数据）
 	pkg.Info("Configuration loaded successfully", zap.Any("config", config.SanitizeConfig()))
 
-	// 验证配置完整性
+	// 验证配置完整性（确保所有配置项都经过验证）
 	if err := config.ValidateConfig(); err != nil {
 		pkg.Fatal("Configuration validation failed", zap.Error(err))
 	}
 	pkg.Info("Configuration validation passed successfully")
 
-	// 初始化数据库
+	// 监控指标将在路由设置中初始化
+
+	// 初始化数据库（优化连接参数）
 	if err := pkg.InitDatabase(); err != nil {
 		pkg.Fatal("Failed to initialize database", zap.Error(err))
 	}
 	pkg.Info("Database initialized successfully")
 
-	// 数据库迁移(迁移完成 --> 启动服务)
-	pkg.Debug("AutoMigrate setting", zap.Bool("enabled", config.Config.AutoMigrate))
-	if !config.Config.AutoMigrate {
-		pkg.Info("Starting SQL migrations...")
-		mm := migration.NewMigrationManager()
-		if err := mm.Init(); err != nil {
-			pkg.Error("Failed to initialize migration manager", zap.Error(err))
-		} else {
-			if err := mm.Up(); err != nil {
-				pkg.Error("Migration errors", zap.Error(err))
+	// 数据库迁移（异步）
+	go func() {
+		if !config.Config.AutoMigrate {
+			log.Println("Starting SQL migrations...")
+			mm := migration.NewMigrationManager()
+			if err := mm.Init(); err != nil {
+				log.Printf("Warning: Failed to initialize migration manager: %v", err)
 			} else {
-				pkg.Info("SQL migrations completed successfully")
+				if err := mm.Up(); err != nil {
+					log.Printf("Warning: Migration errors: %v", err)
+				} else {
+					pkg.Info("SQL migrations completed successfully")
+				}
 			}
-		}
-	} else {
-		// 启用GORM自动迁移
-		pkg.Info("Starting GORM auto-migration...")
-		if pkg.DB == nil {
-			pkg.Error("Database connection is nil!")
 		} else {
+			// 仅当启用自动迁移时才使用GORM自动迁移
+			log.Println("Starting GORM auto-migration...")
 			if err := models.MigrateTables(pkg.DB); err != nil {
-				pkg.Error("Failed to migrate database tables", zap.Error(err))
+				pkg.Warn("Failed to migrate database tables", zap.Error(err))
 			} else {
 				pkg.Info("GORM auto-migration completed successfully")
 			}
 		}
-	}
+	}()
 
-	// 初始化路由(监控指标、中间件等已在路由设置中配置)
+	// 初始化路由
 	router := routers.SetupRouter()
 
 	// 添加错误处理中间件
 	errHandler := middleware.NewErrorHandler()
 	router.Use(errHandler.HandlerFunc())
 
+	// 监控指标和中间件已在路由设置中配置
+
 	// 注册插件
 	registerPlugins(router)
+
+	// Prometheus指标导出路由已在路由设置中注册
+
+	// 监控系统已在路由设置中初始化
 
 	// 初始化插件系统
 	if err := plugins.InitPluginSystem(); err != nil {
@@ -161,12 +200,13 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 关闭HTTP服务器
+	// 先关闭HTTP服务器
 	if err := srv.Shutdown(ctx); err != nil {
 		pkg.Fatal("Server forced to shutdown", zap.Error(err))
 	}
 
-	// 使用相同上下文优雅关闭数据库连接
+	// 然后使用相同上下文优雅关闭数据库连接
+	// 确保数据库连接在服务器停止接收新请求后有足够时间完成正在进行的操作
 	if err := pkg.CloseDatabaseWithContext(ctx); err != nil {
 		pkg.Error("Database shutdown error", zap.Error(err))
 	}
@@ -179,21 +219,49 @@ func registerPlugins(router *gin.Engine) {
 	// 设置路由引擎到PluginManager
 	plugins.PluginManager.SetRouter(router)
 
-	// 注册插件列表
-	pluginsToRegister := []core.Plugin{
-		&examples.HelloPlugin{},
-		&note.NotePlugin{},
-		&fc.FormatConverterPlugin{},
-		llm.NewLLMChatPlugin(),
-		examples.NewSampleOptimizedPlugin(),
-		examples.NewSampleDependentPlugin(),
+	// 注册Hello插件
+	helloPlugin := &examples.HelloPlugin{}
+	if err := plugins.PluginManager.Register(helloPlugin); err != nil {
+		pkg.Error("Failed to register plugin", zap.String("plugin", helloPlugin.Name()), zap.Error(err))
+	} else {
+		pkg.Info("Successfully registered plugin", zap.String("plugin", helloPlugin.Name()))
 	}
 
-	for _, plugin := range pluginsToRegister {
-		if err := plugins.PluginManager.Register(plugin); err != nil {
-			// 只记录错误，不记录成功的插件注册
-			pkg.Error("Failed to register plugin", zap.String("plugin", fmt.Sprintf("%T", plugin)), zap.Error(err))
-		}
+	// 注册Note插件
+	notePlugin := &note.NotePlugin{}
+	if err := plugins.PluginManager.Register(notePlugin); err != nil {
+		pkg.Error("Failed to register plugin", zap.String("plugin", notePlugin.Name()), zap.Error(err))
+	} else {
+		pkg.Info("Successfully registered plugin", zap.String("plugin", notePlugin.Name()))
+	}
+
+	// 注册FormatConverter插件
+	formatConverter := &fc.FormatConverterPlugin{}
+	if err := plugins.PluginManager.Register(formatConverter); err != nil {
+		pkg.Error("Failed to register plugin", zap.String("plugin", formatConverter.Name()), zap.Error(err))
+	} else {
+		pkg.Info("Successfully registered plugin", zap.String("plugin", formatConverter.Name()))
+	}
+
+	// 统一注册所有插件路由（可选）
+	// if err := plugins.PluginManager.RegisterAllRoutes(); err != nil {
+	// 	pkg.Error("Failed to register all plugin routes", zap.Error(err))
+	// }
+
+	// 注册优化插件
+	sampleOptimizedPlugin := examples.NewSampleOptimizedPlugin()
+	if err := plugins.PluginManager.Register(sampleOptimizedPlugin); err != nil {
+		pkg.Error("Failed to register plugin", zap.String("plugin", sampleOptimizedPlugin.Name()), zap.Error(err))
+	} else {
+		pkg.Info("Successfully registered plugin", zap.String("plugin", sampleOptimizedPlugin.Name()))
+	}
+
+	// 注册依赖插件
+	sampleDependentPlugin := examples.NewSampleDependentPlugin()
+	if err := plugins.PluginManager.Register(sampleDependentPlugin); err != nil {
+		pkg.Error("Failed to register plugin", zap.String("plugin", sampleDependentPlugin.Name()), zap.Error(err))
+	} else {
+		pkg.Info("Successfully registered plugin", zap.String("plugin", sampleDependentPlugin.Name()))
 	}
 
 	// 所有插件注册完成，输出确认日志
