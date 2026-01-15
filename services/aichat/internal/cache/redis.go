@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"weave/middleware"
+
 	"github.com/cloudwego/eino/schema"
 	"github.com/redis/go-redis/v9"
 )
@@ -34,10 +36,11 @@ import (
 type RedisClient struct {
 	client        *redis.Client
 	maxMessages   int
-	maxMemoryMB   int           // 最大内存使用限制（MB）
-	cleanupFreq   time.Duration // 定期清理频率
-	cleanupTicker *time.Ticker  // 定期清理定时器
-	stopChan      chan struct{} // 停止定期清理的通道
+	maxMemoryMB   int                 // 最大内存使用限制（MB）
+	cleanupFreq   time.Duration       // 定期清理频率
+	cleanupTicker *time.Ticker        // 定期清理定时器
+	stopChan      chan struct{}       // 停止定期清理的通道
+	retryer       *middleware.Retryer // 重试器
 }
 
 // NewRedisClient 创建Redis客户端实例
@@ -75,6 +78,12 @@ func NewRedisClientWithConfig(ctx context.Context, config *CacheConfig) (*RedisC
 	maxMemoryMB := 100             // 默认最大内存使用限制为100MB
 	cleanupFreq := 5 * time.Minute // 每5分钟检查一次内存使用
 
+	// 重试器配置
+	retryConfig := middleware.DefaultRetryConfig()
+	retryConfig.MaxRetries = 3
+	retryConfig.InitialDelay = 50 * time.Millisecond
+	retryConfig.MaxDelay = 2 * time.Second
+
 	log.Printf("redis connection established at %s", redisAddr)
 	cache := &RedisClient{
 		client:      client,
@@ -82,6 +91,7 @@ func NewRedisClientWithConfig(ctx context.Context, config *CacheConfig) (*RedisC
 		maxMemoryMB: maxMemoryMB,
 		cleanupFreq: cleanupFreq,
 		stopChan:    make(chan struct{}),
+		retryer:     middleware.NewRetryer(retryConfig),
 	}
 
 	// 启动定期内存检查
@@ -115,7 +125,9 @@ func (rc *RedisClient) SaveChatHistory(ctx context.Context, userID string, histo
 	}
 
 	// 保存到Redis，设置过期时间（例如7天）
-	err = rc.client.Set(ctx, GetChatHistoryKey(userID), data, 7*24*time.Hour).Err()
+	err = rc.retryer.Do(ctx, func() error {
+		return rc.client.Set(ctx, GetChatHistoryKey(userID), data, 7*24*time.Hour).Err()
+	})
 	if err != nil {
 		return fmt.Errorf("failed to save chat history to redis: %w", err)
 	}
@@ -126,7 +138,12 @@ func (rc *RedisClient) SaveChatHistory(ctx context.Context, userID string, histo
 // LoadChatHistory 从Redis加载对话历史
 func (rc *RedisClient) LoadChatHistory(ctx context.Context, userID string) ([]*schema.Message, error) {
 	// 从Redis获取对话历史
-	data, err := rc.client.Get(ctx, GetChatHistoryKey(userID)).Bytes()
+	var data []byte
+	err := rc.retryer.Do(ctx, func() error {
+		var err error
+		data, err = rc.client.Get(ctx, GetChatHistoryKey(userID)).Bytes()
+		return err
+	})
 	if err != nil {
 		if err == redis.Nil {
 			// 键不存在，返回空切片
@@ -180,7 +197,12 @@ func (rc *RedisClient) checkMemoryUsage() {
 	ctx := context.Background()
 
 	// 获取Redis内存使用情况
-	info, err := rc.client.Info(ctx, "memory").Result()
+	var info string
+	err := rc.retryer.Do(ctx, func() error {
+		var err error
+		info, err = rc.client.Info(ctx, "memory").Result()
+		return err
+	})
 	if err != nil {
 		log.Printf("failed to get redis memory info: %v", err)
 		return
@@ -215,7 +237,12 @@ func (rc *RedisClient) checkMemoryUsage() {
 // cleanupOldConversations 清理最旧对话
 func (rc *RedisClient) cleanupOldConversations(ctx context.Context) {
 	// 获取所有对话键
-	keys, err := rc.client.Keys(ctx, "chat:history:*").Result()
+	var keys []string
+	err := rc.retryer.Do(ctx, func() error {
+		var err error
+		keys, err = rc.client.Keys(ctx, "chat:history:*").Result()
+		return err
+	})
 	if err != nil {
 		log.Printf("failed to get chat history keys: %v", err)
 		return
@@ -235,8 +262,12 @@ func (rc *RedisClient) cleanupOldConversations(ctx context.Context) {
 	keyTimes := make([]keyWithTime, 0, len(keys))
 
 	for _, key := range keys {
-		ttl, err := rc.client.TTL(ctx, key).Result()
-		if err == nil {
+		var ttl time.Duration
+		if err := rc.retryer.Do(ctx, func() error {
+			var err error
+			ttl, err = rc.client.TTL(ctx, key).Result()
+			return err
+		}); err == nil {
 			// 计算过期时间
 			expiry := time.Now().Add(ttl)
 			keyTimes = append(keyTimes, keyWithTime{key: key, time: expiry})
@@ -255,7 +286,9 @@ func (rc *RedisClient) cleanupOldConversations(ctx context.Context) {
 	}
 
 	for i := 0; i < cleanupCount && i < len(keyTimes); i++ {
-		if err := rc.client.Del(ctx, keyTimes[i].key).Err(); err != nil {
+		if err := rc.retryer.Do(ctx, func() error {
+			return rc.client.Del(ctx, keyTimes[i].key).Err()
+		}); err != nil {
 			log.Printf("failed to delete old conversation %s: %v", keyTimes[i].key, err)
 		} else {
 			log.Printf("deleted old conversation %s to free up memory", keyTimes[i].key)
