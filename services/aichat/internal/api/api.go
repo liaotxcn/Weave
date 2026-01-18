@@ -80,6 +80,9 @@ func NewAPIServer(chatService service.ChatService, addr string) *APIServer {
 		logger:      pkg.GetLogger(),
 	}
 
+	// 添加CORS中间件
+	server.router.Use(middleware.CORSMiddleware())
+
 	// 注册路由
 	server.registerRoutes()
 
@@ -123,7 +126,7 @@ func (s *APIServer) handleChat(c *gin.Context) {
 	// 调用服务层处理
 	var content string
 	var err error
-	
+
 	// 检查是否包含图片
 	if len(req.ImageURLs) > 0 || len(req.Base64Images) > 0 {
 		// 处理包含图片的请求
@@ -132,7 +135,7 @@ func (s *APIServer) handleChat(c *gin.Context) {
 		// 处理纯文本请求
 		content, err = s.chatService.ProcessUserInput(c.Request.Context(), req.UserInput, req.UserID)
 	}
-	
+
 	if err != nil {
 		s.logger.Error("处理聊天请求失败", zap.Error(err), zap.String("user_id", req.UserID))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
@@ -211,7 +214,7 @@ func (s *APIServer) handleChatStream(c *gin.Context) {
 	// 使用服务层处理用户输入
 	var fullContent string
 	var err error
-	
+
 	// 检查是否包含图片
 	if len(req.ImageURLs) > 0 || len(req.Base64Images) > 0 {
 		// 处理包含图片的请求
@@ -220,7 +223,7 @@ func (s *APIServer) handleChatStream(c *gin.Context) {
 		// 处理纯文本请求
 		fullContent, err = s.chatService.ProcessUserInputStream(ctx, req.UserInput, req.UserID, streamCallback, controlCallback)
 	}
-	
+
 	if err != nil && !strings.Contains(err.Error(), "context canceled") {
 		s.logger.Error("流式处理请求失败", zap.Error(err), zap.String("user_id", req.UserID))
 		response := ErrorResponse{

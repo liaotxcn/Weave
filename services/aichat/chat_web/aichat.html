@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaiChat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f7fa;
+            line-height: 1.6;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background-color: #6366f1;
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .connection-status {
+            font-size: 0.9rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .connection-status.connected {
+            background-color: #10b981;
+        }
+
+        .connection-status.disconnected {
+            background-color: #ef4444;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: white;
+            border-left: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 80%;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message.user {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+
+        .message.assistant {
+            margin-right: auto;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background-color: #6366f1;
+            color: white;
+        }
+
+        .message.assistant .message-avatar {
+            background-color: #e0e7ff;
+            color: #6366f1;
+        }
+
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background-color: #6366f1;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-content {
+            background-color: #f1f5f9;
+            color: #1e293b;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.loading .message-content {
+            background-color: #f1f5f9;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .chat-input-container {
+            background-color: white;
+            padding: 20px;
+            border-left: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 0 0 8px 8px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            resize: none;
+            min-height: 40px;
+            max-height: 120px;
+            font-family: inherit;
+        }
+
+        #messageInput:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        #sendButton {
+            background-color: #6366f1;
+            color: white;
+        }
+
+        #sendButton:hover:not(:disabled) {
+            background-color: #4f46e5;
+        }
+
+        #sendButton:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        #clearButton {
+            background-color: #f8fafc;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+        }
+
+        #clearButton:hover {
+            background-color: #f1f5f9;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .loading-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #94a3b8;
+            margin: 0 2px;
+            animation: loadingDots 1.4s infinite ease-in-out;
+        }
+
+        .loading-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes loadingDots {
+            0%, 80%, 100% {
+                transform: scale(0);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                padding: 10px;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+
+            .chat-input-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .chat-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-title">PaiChat</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="connection-status" id="connectionStatus">连接中...</div>
+                <button 
+                    id="retryButton" 
+                    onclick="retryConnection()"
+                    style="
+                        background-color: rgba(255, 255, 255, 0.2);
+                        color: white;
+                        border: none;
+                        padding: 5px 10px;
+                        border-radius: 20px;
+                        cursor: pointer;
+                        font-size: 0.9rem;
+                        opacity: 0.8;
+                    "
+                >
+                    重试
+                </button>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">你好！我是AI智能助手，有什么可以帮助你的吗？</div>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <textarea 
+                id="messageInput" 
+                placeholder="输入你的问题..."
+                rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
+            ></textarea>
+            <div class="chat-actions">
+                <button id="sendButton" onclick="sendMessage()">发送</button>
+                <button id="clearButton" onclick="clearHistory()">清除历史</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        const config = {
+            apiBaseURL: 'http://localhost:8080', // aichat服务地址
+            userId: 'default_user',
+            streaming: true,
+            maxRetries: 3 // 连接重试次数
+        };
+
+        // DOM元素
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const clearButton = document.getElementById('clearButton');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        // 状态
+        let isLoading = false;
+        let isConnected = false;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 检查连接状态
+            await checkConnection();
+            // 加载聊天历史
+            await loadHistory();
+        });
+
+        // 检查连接状态
+        async function checkConnection() {
+            try {
+                // 创建AbortController用于超时控制
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                console.log('正在检查连接:', config.apiBaseURL + '/health');
+                
+                const response = await fetch(`${config.apiBaseURL}/health`, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                console.log('连接检查结果:', response.status, response.statusText);
+                
+                isConnected = response.ok;
+                updateConnectionStatus();
+                return isConnected;
+            } catch (error) {
+                console.error('连接检查失败:', error.message);
+                if (error.name === 'AbortError') {
+                    console.error('连接超时');
+                }
+                isConnected = false;
+                updateConnectionStatus();
+                return false;
+            }
+        }
+
+        // 更新连接状态显示
+        function updateConnectionStatus() {
+            connectionStatus.className = `connection-status ${isConnected ? 'connected' : 'disconnected'}`;
+            connectionStatus.textContent = isConnected ? '已连接' : '连接失败';
+        }
+
+        // 手动重试连接
+        async function retryConnection() {
+            connectionStatus.textContent = '正在重试...';
+            await checkConnection();
+        }
+
+        // 加载聊天历史
+        async function loadHistory() {
+            if (!isConnected && !await checkConnection()) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${config.apiBaseURL}/api/chat/history?user_id=${config.userId}`);
+                if (!response.ok) throw new Error('加载历史记录失败');
+                
+                const data = await response.json();
+                if (data.messages && data.messages.length > 0) {
+                    // 清空当前消息
+                    chatMessages.innerHTML = '';
+                    // 添加历史消息
+                    data.messages.forEach(msg => {
+                        addMessage(msg.Role.toLowerCase(), msg.Content);
+                    });
+                }
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+            }
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isLoading) return;
+
+            // 检查连接
+            if (!isConnected && !await checkConnection()) {
+                alert('无法连接到服务器，请稍后再试');
+                return;
+            }
+
+            // 添加用户消息
+            addMessage('user', message);
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            scrollToBottom();
+
+            isLoading = true;
+            sendButton.disabled = true;
+
+            try {
+                if (config.streaming) {
+                    await sendStreamMessage(message);
+                } else {
+                    await sendNonStreamMessage(message);
+                }
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                addMessage('assistant', '抱歉，处理请求时出现错误，请稍后再试');
+            } finally {
+                isLoading = false;
+                sendButton.disabled = false;
+            }
+        }
+
+        // 发送非流式消息
+        async function sendNonStreamMessage(message) {
+            const response = await fetch(`${config.apiBaseURL}/api/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_input: message,
+                    user_id: config.userId
+                })
+            });
+
+            if (!response.ok) throw new Error('API请求失败');
+            
+            const data = await response.json();
+            addMessage('assistant', data.content);
+        }
+
+        // 发送流式消息
+        async function sendStreamMessage(message) {
+            // 添加加载消息
+            const loadingMessage = addMessage('assistant', '', true);
+            let fullContent = '';
+
+            const response = await fetch(`${config.apiBaseURL}/api/chat/stream`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_input: message,
+                    user_id: config.userId
+                })
+            });
+
+            if (!response.ok) throw new Error('API请求失败');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6).trim();
+                            if (data) {
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.content) {
+                                        fullContent += parsed.content;
+                                        updateMessage(loadingMessage, fullContent);
+                                        scrollToBottom();
+
+                                        if (parsed.status === 'completed') {
+                                            return;
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('解析流式响应失败:', e);
+                                }
+                            }
+                        }
+                    }
+                }
+            } finally {
+                // 移除加载状态
+                if (loadingMessage) {
+                    loadingMessage.classList.remove('loading');
+                }
+            }
+        }
+
+        // 添加消息
+        function addMessage(role, content, isLoading = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role} ${isLoading ? 'loading' : ''}`;
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar';
+            avatarDiv.textContent = role === 'user' ? '👤' : '🤖';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (isLoading) {
+                contentDiv.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+            } else {
+                contentDiv.textContent = content;
+            }
+
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+
+            scrollToBottom();
+            return messageDiv;
+        }
+
+        // 更新消息内容
+        function updateMessage(messageElement, content) {
+            const contentElement = messageElement.querySelector('.message-content');
+            if (contentElement) {
+                contentElement.textContent = content;
+            }
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 清除聊天历史
+        async function clearHistory() {
+            if (!confirm('确定要清除所有聊天历史吗？')) return;
+
+            try {
+                const response = await fetch(`${config.apiBaseURL}/api/chat/history?user_id=${config.userId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('清除历史记录失败');
+
+                // 清空本地消息
+                chatMessages.innerHTML = '';
+                addMessage('assistant', '聊天历史已清除，有什么可以帮助你的吗？');
+            } catch (error) {
+                console.error('清除历史记录失败:', error);
+                alert('清除历史记录失败，请稍后再试');
+            }
+        }
+
+        // 自动调整输入框高度
+        messageInput.addEventListener('input', () => {
+            messageInput.style.height = 'auto';
+            messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+        });
+    </script>
+</body>
+</html>
