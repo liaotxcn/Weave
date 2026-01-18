@@ -158,6 +158,55 @@
             gap: 10px;
         }
 
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+
+        .control-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        #pauseButton {
+            background-color: #f59e0b;
+            color: white;
+        }
+
+        #pauseButton:hover:not(:disabled) {
+            background-color: #d97706;
+        }
+
+        #continueButton {
+            background-color: #10b981;
+            color: white;
+        }
+
+        #continueButton:hover:not(:disabled) {
+            background-color: #059669;
+        }
+
+        #stopButton {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        #stopButton:hover:not(:disabled) {
+            background-color: #dc2626;
+        }
+
+        .control-button:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+        }
+
         button {
             padding: 12px 20px;
             border: none;
@@ -287,6 +336,11 @@
                 <button id="sendButton" onclick="sendMessage()">发送</button>
                 <button id="clearButton" onclick="clearHistory()">清除历史</button>
             </div>
+            <div class="control-buttons">
+                <button id="pauseButton" class="control-button" onclick="controlChat('pause')" disabled>暂停</button>
+                <button id="continueButton" class="control-button" onclick="controlChat('continue')" disabled>继续</button>
+                <button id="stopButton" class="control-button" onclick="controlChat('stop')" disabled>停止</button>
+            </div>
         </div>
     </div>
 
@@ -305,10 +359,14 @@
         const sendButton = document.getElementById('sendButton');
         const clearButton = document.getElementById('clearButton');
         const connectionStatus = document.getElementById('connectionStatus');
+        const pauseButton = document.getElementById('pauseButton');
+        const continueButton = document.getElementById('continueButton');
+        const stopButton = document.getElementById('stopButton');
 
         // 状态
         let isLoading = false;
         let isConnected = false;
+        let isStreaming = false;
 
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
@@ -417,7 +475,9 @@
                 addMessage('assistant', '抱歉，处理请求时出现错误，请稍后再试');
             } finally {
                 isLoading = false;
+                isStreaming = false;
                 sendButton.disabled = false;
+                updateControlButtons();
             }
         }
 
@@ -445,6 +505,10 @@
             // 添加加载消息
             const loadingMessage = addMessage('assistant', '', true);
             let fullContent = '';
+
+            // 标记开始流式传输
+            isStreaming = true;
+            updateControlButtons();
 
             const response = await fetch(`${config.apiBaseURL}/api/chat/stream`, {
                 method: 'POST',
@@ -493,11 +557,48 @@
                     }
                 }
             } finally {
+                // 标记结束流式传输
+                isStreaming = false;
+                updateControlButtons();
+                
                 // 移除加载状态
                 if (loadingMessage) {
                     loadingMessage.classList.remove('loading');
                 }
             }
+        }
+
+        // 控制聊天流
+        async function controlChat(action) {
+            if (!isConnected || !isStreaming) return;
+
+            try {
+                const response = await fetch(`${config.apiBaseURL}/api/chat/control`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: config.userId,
+                        action: action
+                    })
+                });
+
+                if (!response.ok) throw new Error('控制请求失败');
+
+                const result = await response.json();
+                console.log('控制操作成功:', result);
+            } catch (error) {
+                console.error('控制操作失败:', error);
+                alert('控制操作失败，请稍后再试');
+            }
+        }
+
+        // 更新控制按钮状态
+        function updateControlButtons() {
+            pauseButton.disabled = !isStreaming;
+            continueButton.disabled = !isStreaming;
+            stopButton.disabled = !isStreaming;
         }
 
         // 添加消息
@@ -544,6 +645,11 @@
             if (!confirm('确定要清除所有聊天历史吗？')) return;
 
             try {
+                // 如果正在流式传输，先停止
+                if (isStreaming) {
+                    await controlChat('stop');
+                }
+
                 const response = await fetch(`${config.apiBaseURL}/api/chat/history?user_id=${config.userId}`, {
                     method: 'DELETE'
                 });
@@ -556,6 +662,9 @@
             } catch (error) {
                 console.error('清除历史记录失败:', error);
                 alert('清除历史记录失败，请稍后再试');
+            } finally {
+                isStreaming = false;
+                updateControlButtons();
             }
         }
 
