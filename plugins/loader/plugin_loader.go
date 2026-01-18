@@ -76,7 +76,7 @@ func (pl *PluginLoader) LoadPlugin(pluginPath string, pluginName string) (core.P
 
 	// 保存插件引用
 	pl.loadedPlugins[pluginName] = p
-	pl.logger.Info("插件加载成功", zap.String("plugin", pluginName), zap.String("path", pluginPath))
+	pl.logger.Debug("插件加载成功", zap.String("plugin", pluginName), zap.String("path", pluginPath))
 
 	return pluginInstance, nil
 }
@@ -97,7 +97,7 @@ func (pl *PluginLoader) UnloadPlugin(pluginName string) error {
 
 	// 从映射中删除
 	delete(pl.loadedPlugins, pluginName)
-	pl.logger.Info("插件卸载成功", zap.String("plugin", pluginName))
+	pl.logger.Debug("插件卸载成功", zap.String("plugin", pluginName))
 
 	return nil
 }

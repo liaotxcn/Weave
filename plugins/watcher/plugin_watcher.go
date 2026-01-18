@@ -112,7 +112,7 @@ func (pw *PluginWatcher) Start() error {
 		return fmt.Errorf("添加插件目录到监控失败: %w", err)
 	}
 
-	pw.logger.Info("插件文件监控器已启动", zap.String("pluginDir", pw.pluginDir))
+	pw.logger.Debug("插件文件监控器已启动", zap.String("pluginDir", pw.pluginDir))
 	return nil
 }
 
@@ -251,7 +251,7 @@ func (pw *PluginWatcher) scanPluginDir() {
 		pw.mu.RUnlock()
 
 		if !exists {
-			pw.logger.Info("发现新的插件文件", zap.String("path", path))
+			pw.logger.Debug("发现新的插件文件", zap.String("path", path))
 			pw.processChan <- path
 		}
 	}
@@ -260,7 +260,7 @@ func (pw *PluginWatcher) scanPluginDir() {
 	pw.mu.Lock()
 	for path := range pw.watchedFiles {
 		if !currentFiles[path] {
-			pw.logger.Info("检测到插件文件被删除", zap.String("path", path))
+			pw.logger.Debug("检测到插件文件被删除", zap.String("path", path))
 			pw.handlePluginRemoval(path)
 			delete(pw.watchedFiles, path)
 		}
@@ -273,9 +273,9 @@ func (pw *PluginWatcher) handlePluginChange(path string) {
 	// 简化处理，打印日志并调用插件管理器的重载方法
 	pluginName := getPluginNameFromPath(path)
 
-	pw.logger.Info("处理插件文件变更",
-		zap.String("path", path),
-		zap.String("pluginName", pluginName))
+	pw.logger.Debug("处理插件文件变更",
+			zap.String("path", path),
+			zap.String("pluginName", pluginName))
 
 	// 检查插件是否已注册
 	if _, exists := pw.manager.GetPlugin(pluginName); exists {
@@ -287,19 +287,19 @@ func (pw *PluginWatcher) handlePluginChange(path string) {
 					zap.Error(err))
 				metrics.RecordPluginError(pluginName, "hot_reload_failed")
 			} else {
-				pw.logger.Info("插件已成功重新加载", zap.String("pluginName", pluginName))
+				pw.logger.Debug("插件已成功重新加载", zap.String("pluginName", pluginName))
 				metrics.RecordPluginReload(pluginName, true)
 			}
 		} else {
-			pw.logger.Info("热重载功能已禁用", zap.String("pluginName", pluginName))
+			pw.logger.Debug("热重载功能已禁用", zap.String("pluginName", pluginName))
 		}
 	} else {
 		// 注册新插件
 		if config.Config.Plugins.HotReload {
-			pw.logger.Info("发现新插件，尝试动态加载", zap.String("pluginName", pluginName))
+			pw.logger.Debug("发现新插件，尝试动态加载", zap.String("pluginName", pluginName))
 			pw.tryLoadNewPlugin(pluginName)
 		} else {
-			pw.logger.Info("热重载功能已禁用，无法加载新插件", zap.String("pluginName", pluginName))
+			pw.logger.Debug("热重载功能已禁用，无法加载新插件", zap.String("pluginName", pluginName))
 		}
 	}
 
@@ -313,9 +313,9 @@ func (pw *PluginWatcher) handlePluginChange(path string) {
 func (pw *PluginWatcher) handlePluginRemoval(path string) {
 	pluginName := getPluginNameFromPath(path)
 
-	pw.logger.Info("处理插件文件删除",
-		zap.String("path", path),
-		zap.String("pluginName", pluginName))
+	pw.logger.Debug("处理插件文件删除",
+			zap.String("path", path),
+			zap.String("pluginName", pluginName))
 
 	// 检查插件是否已注册
 	if _, exists := pw.manager.GetPlugin(pluginName); exists {
@@ -325,7 +325,7 @@ func (pw *PluginWatcher) handlePluginRemoval(path string) {
 				zap.String("pluginName", pluginName),
 				zap.Error(err))
 		} else {
-			pw.logger.Info("插件已成功注销", zap.String("pluginName", pluginName))
+			pw.logger.Debug("插件已成功注销", zap.String("pluginName", pluginName))
 		}
 	}
 }
@@ -358,9 +358,9 @@ func (pw *PluginWatcher) tryLoadNewPlugin(pluginName string) {
 	// 检查.so文件是否存在
 	soPath := loader.GetPluginPath(pw.pluginDir, pluginName)
 	if _, err := os.Stat(soPath); os.IsNotExist(err) {
-		pw.logger.Warn("插件编译文件不存在，跳过加载",
-			zap.String("pluginName", pluginName),
-			zap.String("expectedPath", soPath))
+		pw.logger.Debug("插件编译文件不存在，跳过加载",
+				zap.String("pluginName", pluginName),
+				zap.String("expectedPath", soPath))
 		metrics.RecordPluginError(pluginName, "plugin_file_not_found")
 		return
 	}
@@ -386,7 +386,7 @@ func (pw *PluginWatcher) tryLoadNewPlugin(pluginName string) {
 		return
 	}
 
-	pw.logger.Info("插件已成功动态加载并注册", zap.String("pluginName", pluginName))
+	pw.logger.Debug("插件已成功动态加载并注册", zap.String("pluginName", pluginName))
 }
 
 // PluginManifest 插件清单结构，用于描述插件信息
