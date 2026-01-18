@@ -95,8 +95,8 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 		s.embedder = nil // 触发 FilterRelevantHistory 回退机制
 	}
 
-	// 创建模板
-	s.chatTemplate = template.CreateTemplate()
+	// 创建模板（单例模式）
+	s.chatTemplate = template.GetTemplate()
 
 	// 初始化敏感内容过滤器
 	s.filter = chat.NewSensitiveFilter()
@@ -143,14 +143,6 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 
 	// 过滤与当前问题相关的对话历史
 	filteredHistory := chat.FilterRelevantHistory(ctx, s.embedder, chatHistory, filteredInput, 50)
-
-	// 构造消息
-	messages := []*schema.Message{}
-
-	// 添加历史消息
-	for _, msg := range filteredHistory {
-		messages = append(messages, msg)
-	}
 
 	// 构造当前用户消息
 	userMessage := &schema.Message{
@@ -216,7 +208,27 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 		userMessage.Content = filteredInput
 	}
 
-	messages = append(messages, userMessage)
+	// 将历史消息格式化为字符串
+	var chatHistoryStr strings.Builder
+	for _, msg := range filteredHistory {
+		if msg.Role == schema.User {
+			chatHistoryStr.WriteString("user: " + msg.Content + "\n")
+		} else {
+			chatHistoryStr.WriteString("assistant: " + msg.Content + "\n")
+		}
+	}
+
+	// 使用模板包中的便捷方法格式化消息
+	messages, err := template.FormatMessage(ctx, "PaiChat", "积极、温暖且专业", chatHistoryStr.String(), filteredInput)
+	if err != nil {
+		s.logger.Error("模板格式化失败", zap.Error(err), zap.String("user_id", userID))
+		// 如果模板格式化失败，回退到直接使用消息
+		messages = []*schema.Message{}
+		for _, msg := range filteredHistory {
+			messages = append(messages, msg)
+		}
+		messages = append(messages, userMessage)
+	}
 
 	// 选择合适的agent
 	targetAgent := s.agent
@@ -303,14 +315,6 @@ func (s *chatServiceImpl) processUserInputStreamWithImages(ctx context.Context, 
 	// 过滤与当前问题相关的对话历史
 	filteredHistory := chat.FilterRelevantHistory(ctx, s.embedder, chatHistory, filteredInput, 50)
 
-	// 构造消息
-	messages := []*schema.Message{}
-
-	// 添加历史消息
-	for _, msg := range filteredHistory {
-		messages = append(messages, msg)
-	}
-
 	// 构造当前用户消息
 	userMessage := &schema.Message{
 		Role: schema.User,
@@ -375,7 +379,27 @@ func (s *chatServiceImpl) processUserInputStreamWithImages(ctx context.Context, 
 		userMessage.Content = filteredInput
 	}
 
-	messages = append(messages, userMessage)
+	// 将历史消息格式化为字符串
+	var chatHistoryStr strings.Builder
+	for _, msg := range filteredHistory {
+		if msg.Role == schema.User {
+			chatHistoryStr.WriteString("user: " + msg.Content + "\n")
+		} else {
+			chatHistoryStr.WriteString("assistant: " + msg.Content + "\n")
+		}
+	}
+
+	// 使用模板包中的便捷方法格式化消息
+	messages, err := template.FormatMessage(ctx, "PaiChat", "积极、温暖且专业", chatHistoryStr.String(), filteredInput)
+	if err != nil {
+		s.logger.Error("模板格式化失败", zap.Error(err), zap.String("user_id", userID))
+		// 如果模板格式化失败，回退到直接使用消息
+		messages = []*schema.Message{}
+		for _, msg := range filteredHistory {
+			messages = append(messages, msg)
+		}
+		messages = append(messages, userMessage)
+	}
 
 	// 选择合适的agent
 	targetAgent := s.agent

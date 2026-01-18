@@ -22,10 +22,10 @@ func NewSensitiveFilter() *SensitiveFilter {
 	}
 }
 
-// LoadSensitiveWords 加载敏感词列表
+// loadSensitiveWords 加载敏感词列表
 func loadSensitiveWords() map[string]bool {
 	// 从配置文件获取敏感词列表
-	sensitiveWordsList := viper.GetString("SENSITIVE_WORDS")
+	sensitiveWordsList := viper.GetString("AICHAT_SENSITIVE_WORDS")
 	sensitiveWords := make(map[string]bool)
 
 	// 解析配置文件中的敏感词列表
@@ -40,10 +40,10 @@ func loadSensitiveWords() map[string]bool {
 	return sensitiveWords
 }
 
-// LoadMaliciousPatterns 加载恶意输入模式
+// loadMaliciousPatterns 加载恶意输入模式
 func loadMaliciousPatterns() map[string]bool {
 	// 从配置文件获取恶意输入模式列表
-	maliciousPatternsList := viper.GetString("MALICIOUS_PATTERNS")
+	maliciousPatternsList := viper.GetString("AICHAT_MALICIOUS_PATTERNS")
 	maliciousPatterns := make(map[string]bool)
 
 	// 解析配置文件中的恶意输入模式列表
@@ -63,7 +63,7 @@ func loadInjectionPatterns() map[string]bool {
 	injectionPatterns := make(map[string]bool)
 
 	// 从配置文件获取自定义提示注入模式列表
-	injectionPatternsList := viper.GetString("INJECTION_PATTERNS")
+	injectionPatternsList := viper.GetString("AICHAT_INJECTION_PATTERNS")
 	if injectionPatternsList != "" {
 		for _, pattern := range strings.Split(injectionPatternsList, ",") {
 			if pattern = strings.TrimSpace(pattern); pattern != "" {

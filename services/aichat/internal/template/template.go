@@ -19,13 +19,33 @@ package template
 import (
 	"context"
 	"log"
+	"sync"
 
 	"github.com/cloudwego/eino/components/prompt"
 	"github.com/cloudwego/eino/schema"
 )
 
+// 模板缓存，避免重复创建
+var (
+	cachedTemplate prompt.ChatTemplate
+	templateOnce   = sync.Once{}
+)
+
 // CreateTemplate 创建模板函数
 func CreateTemplate() prompt.ChatTemplate {
+	return GetTemplate()
+}
+
+// GetTemplate 获取模板实例（单例模式）
+func GetTemplate() prompt.ChatTemplate {
+	templateOnce.Do(func() {
+		cachedTemplate = createTemplate()
+	})
+	return cachedTemplate
+}
+
+// createTemplate 创建模板函数（内部使用）
+func createTemplate() prompt.ChatTemplate {
 	// 创建模板
 	return prompt.FromMessages(schema.FString,
 		// 系统消息模板
@@ -53,17 +73,23 @@ func CreateTemplate() prompt.ChatTemplate {
 	)
 }
 
-func CreateMessagesFromTemplate() []*schema.Message {
-	template := CreateTemplate()
-
-	// 使用模板生成消息
-	messages, err := template.Format(context.Background(), map[string]any{
-		"role":     "PaiChat",
-		"style":    "积极、温暖且专业",
-		"question": "现在AI发展前景如何？",
-		// 对话历史(字符串格式）
-		"chat_history": "user: 你好\nassistant: 嘿！我是PaiChat智能助手！有什么我可以帮助你的吗？\nuser: 现在AI发展前景如何？\nassistant: AI发展前景非常广阔！从聊天机器人到智能助手，从虚拟助手到智能问答，AI技术正在改变我们的生活方式。未来，AI将继续发展，为我们提供更多便利和价值。\n",
+// FormatMessage 使用模板格式化消息
+func FormatMessage(ctx context.Context, role, style, chatHistory, question string) ([]*schema.Message, error) {
+	return GetTemplate().Format(ctx, map[string]any{
+		"role":         role,
+		"style":        style,
+		"chat_history": chatHistory,
+		"question":     question,
 	})
+}
+
+func CreateMessagesFromTemplate() []*schema.Message {
+	messages, err := FormatMessage(context.Background(),
+		"PaiChat",
+		"积极、温暖且专业",
+		"user: 你好\nassistant: 嘿！我是PaiChat智能助手！有什么我可以帮助你的吗？\nuser: 现在AI发展前景如何？\nassistant: AI发展前景非常广阔！从聊天机器人到智能助手，从虚拟助手到智能问答，AI技术正在改变我们的生活方式。未来，AI将继续发展，为我们提供更多便利和价值。\n",
+		"现在AI发展前景如何？",
+	)
 	if err != nil {
 		log.Fatalf("format template failed: %v\n", err)
 	}
