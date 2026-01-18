@@ -133,19 +133,107 @@
             border-bottom: 1px solid #e2e8f0;
             border-radius: 0 0 8px 8px;
             display: flex;
-            gap: 10px;
-            align-items: flex-end;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .image-upload-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #imageInput {
+            display: none;
+        }
+
+        #imageUploadButton {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 24px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            width: fit-content;
+        }
+
+        #imageUploadButton:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .selected-images {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 5px;
+        }
+
+        .selected-image {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+
+        .selected-image:hover {
+            border-color: #3b82f6;
+            transform: scale(1.05);
+        }
+
+        .selected-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .remove-image {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background-color: rgba(239, 68, 68, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .remove-image:hover {
+            background-color: rgba(239, 68, 68, 1);
+            transform: scale(1.1);
         }
 
         #messageInput {
             flex: 1;
-            padding: 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 20px;
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
             resize: none;
-            min-height: 40px;
-            max-height: 120px;
+            min-height: 50px;
+            max-height: 150px;
             font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        #messageInput:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
         #messageInput:focus {
@@ -155,24 +243,25 @@
 
         .chat-actions {
             display: flex;
-            gap: 10px;
+            gap: 15px;
+            justify-content: center;
         }
 
         .control-buttons {
             display: flex;
-            gap: 8px;
-            margin-top: 10px;
+            gap: 12px;
             justify-content: center;
         }
 
         .control-button {
-            padding: 8px 16px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 20px;
+            border-radius: 25px;
             cursor: pointer;
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             transition: all 0.2s ease;
+            min-width: 80px;
         }
 
         #pauseButton {
@@ -182,6 +271,7 @@
 
         #pauseButton:hover:not(:disabled) {
             background-color: #d97706;
+            transform: translateY(-1px);
         }
 
         #continueButton {
@@ -191,6 +281,7 @@
 
         #continueButton:hover:not(:disabled) {
             background-color: #059669;
+            transform: translateY(-1px);
         }
 
         #stopButton {
@@ -200,6 +291,7 @@
 
         #stopButton:hover:not(:disabled) {
             background-color: #dc2626;
+            transform: translateY(-1px);
         }
 
         .control-button:disabled {
@@ -210,7 +302,7 @@
         button {
             padding: 12px 20px;
             border: none;
-            border-radius: 20px;
+            border-radius: 25px;
             cursor: pointer;
             font-weight: 500;
             transition: all 0.2s ease;
@@ -219,10 +311,16 @@
         #sendButton {
             background-color: #6366f1;
             color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
 
         #sendButton:hover:not(:disabled) {
             background-color: #4f46e5;
+            transform: translateY(-1px);
         }
 
         #sendButton:disabled {
@@ -234,10 +332,16 @@
             background-color: #f8fafc;
             color: #334155;
             border: 1px solid #e2e8f0;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
 
         #clearButton:hover {
             background-color: #f1f5f9;
+            transform: translateY(-1px);
         }
 
         .loading-dots {
@@ -288,7 +392,24 @@
             }
 
             .chat-actions {
-                justify-content: center;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .control-buttons {
+                flex-wrap: wrap;
+            }
+
+            .control-button {
+                flex: 1;
+                min-width: 100px;
+            }
+
+            #sendButton,
+            #clearButton,
+            #imageUploadButton {
+                width: 100%;
+                max-width: 200px;
             }
         }
     </style>
@@ -332,6 +453,11 @@
                 rows="1"
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
             ></textarea>
+            <div class="image-upload-section">
+                <input type="file" id="imageInput" accept="image/*" multiple onchange="handleImageSelection(event)">
+                <button id="imageUploadButton" onclick="document.getElementById('imageInput').click()">📷 添加图片</button>
+            </div>
+            <div class="selected-images" id="selectedImages"></div>
             <div class="chat-actions">
                 <button id="sendButton" onclick="sendMessage()">发送</button>
                 <button id="clearButton" onclick="clearHistory()">清除历史</button>
@@ -362,11 +488,15 @@
         const pauseButton = document.getElementById('pauseButton');
         const continueButton = document.getElementById('continueButton');
         const stopButton = document.getElementById('stopButton');
+        const imageInput = document.getElementById('imageInput');
+        const imageUploadButton = document.getElementById('imageUploadButton');
+        const selectedImagesContainer = document.getElementById('selectedImages');
 
         // 状态
         let isLoading = false;
         let isConnected = false;
         let isStreaming = false;
+        let selectedImages = [];
 
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
@@ -447,7 +577,11 @@
         // 发送消息
         async function sendMessage() {
             const message = messageInput.value.trim();
-            if (!message || isLoading) return;
+            
+            // 如果没有消息内容且没有选中图片，则不发送
+            if (!message && selectedImages.length === 0) return;
+            
+            if (isLoading) return;
 
             // 检查连接
             if (!isConnected && !await checkConnection()) {
@@ -456,7 +590,7 @@
             }
 
             // 添加用户消息
-            addMessage('user', message);
+            addMessage('user', message, selectedImages);
             messageInput.value = '';
             messageInput.style.height = 'auto';
             scrollToBottom();
@@ -478,11 +612,85 @@
                 isStreaming = false;
                 sendButton.disabled = false;
                 updateControlButtons();
+                // 清空选中的图片
+                clearSelectedImages();
             }
+        }
+
+        // 处理图片选择
+        function handleImageSelection(event) {
+            const files = event.target.files;
+            if (files.length === 0) return;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (!file.type.startsWith('image/')) continue;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageData = {
+                        name: file.name,
+                        data: e.target.result,
+                        type: file.type
+                    };
+                    selectedImages.push(imageData);
+                    addImagePreview(imageData);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // 清空文件输入，以便可以重复选择相同的文件
+            event.target.value = '';
+        }
+
+        // 添加图片预览
+        function addImagePreview(imageData) {
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'selected-image';
+            imageContainer.dataset.name = imageData.name;
+
+            const img = document.createElement('img');
+            img.src = imageData.data;
+            img.alt = imageData.name;
+
+            const removeButton = document.createElement('button');
+            removeButton.className = 'remove-image';
+            removeButton.textContent = '×';
+            removeButton.onclick = function() {
+                removeImage(imageData.name);
+                imageContainer.remove();
+            };
+
+            imageContainer.appendChild(img);
+            imageContainer.appendChild(removeButton);
+            selectedImagesContainer.appendChild(imageContainer);
+        }
+
+        // 移除图片
+        function removeImage(name) {
+            selectedImages = selectedImages.filter(img => img.name !== name);
+        }
+
+        // 清空选中的图片
+        function clearSelectedImages() {
+            selectedImages = [];
+            selectedImagesContainer.innerHTML = '';
+        }
+
+        // 将图片转换为Base64（只保留图片数据部分）
+        function convertToBase64(imageData) {
+            // 移除data:image/xxx;base64,前缀
+            const base64Prefix = ';base64,';
+            const base64Index = imageData.indexOf(base64Prefix);
+            if (base64Index === -1) return '';
+            return imageData.substring(base64Index + base64Prefix.length);
         }
 
         // 发送非流式消息
         async function sendNonStreamMessage(message) {
+            // 准备图片数据
+            const base64Images = selectedImages.map(img => convertToBase64(img.data));
+
             const response = await fetch(`${config.apiBaseURL}/api/chat`, {
                 method: 'POST',
                 headers: {
@@ -490,7 +698,8 @@
                 },
                 body: JSON.stringify({
                     user_input: message,
-                    user_id: config.userId
+                    user_id: config.userId,
+                    base64_images: base64Images
                 })
             });
 
@@ -498,6 +707,9 @@
             
             const data = await response.json();
             addMessage('assistant', data.content);
+            
+            // 清空选中的图片
+            clearSelectedImages();
         }
 
         // 发送流式消息
@@ -510,6 +722,9 @@
             isStreaming = true;
             updateControlButtons();
 
+            // 准备图片数据
+            const base64Images = selectedImages.map(img => convertToBase64(img.data));
+
             const response = await fetch(`${config.apiBaseURL}/api/chat/stream`, {
                 method: 'POST',
                 headers: {
@@ -517,7 +732,8 @@
                 },
                 body: JSON.stringify({
                     user_input: message,
-                    user_id: config.userId
+                    user_id: config.userId,
+                    base64_images: base64Images
                 })
             });
 
@@ -602,9 +818,9 @@
         }
 
         // 添加消息
-        function addMessage(role, content, isLoading = false) {
+        function addMessage(role, content, images = []) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role} ${isLoading ? 'loading' : ''}`;
+            messageDiv.className = `message ${role}`;
 
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'message-avatar';
@@ -613,10 +829,32 @@
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
             
-            if (isLoading) {
-                contentDiv.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
-            } else {
-                contentDiv.textContent = content;
+            // 添加文本内容
+            if (content) {
+                const textDiv = document.createElement('div');
+                textDiv.textContent = content;
+                contentDiv.appendChild(textDiv);
+            }
+
+            // 添加图片
+            if (images && images.length > 0) {
+                const imagesContainer = document.createElement('div');
+                imagesContainer.style.display = 'flex';
+                imagesContainer.style.flexDirection = 'column';
+                imagesContainer.style.gap = '8px';
+                imagesContainer.style.marginTop = '8px';
+
+                images.forEach(imageData => {
+                    const img = document.createElement('img');
+                    img.src = imageData.data;
+                    img.alt = imageData.name;
+                    img.style.maxWidth = '200px';
+                    img.style.borderRadius = '8px';
+                    img.style.objectFit = 'cover';
+                    imagesContainer.appendChild(img);
+                });
+
+                contentDiv.appendChild(imagesContainer);
             }
 
             messageDiv.appendChild(avatarDiv);
@@ -659,6 +897,9 @@
                 // 清空本地消息
                 chatMessages.innerHTML = '';
                 addMessage('assistant', '聊天历史已清除，有什么可以帮助你的吗？');
+                
+                // 清空选中的图片
+                clearSelectedImages();
             } catch (error) {
                 console.error('清除历史记录失败:', error);
                 alert('清除历史记录失败，请稍后再试');
