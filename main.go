@@ -22,7 +22,6 @@ import (
 	fc "weave/plugins/features/FormatConverter"
 	note "weave/plugins/features/Note"
 	"weave/routers"
-	"weave/services/llm"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -242,14 +241,6 @@ func registerPlugins(router *gin.Engine) {
 		pkg.Error("Failed to register plugin", zap.String("plugin", formatConverter.Name()), zap.Error(err))
 	} else {
 		pkg.Info("Successfully registered plugin", zap.String("plugin", formatConverter.Name()))
-	}
-
-	// 注册LLM Service
-	llmChatPlugin := llm.NewLLMChatPlugin()
-	if err := plugins.PluginManager.Register(llmChatPlugin); err != nil {
-		pkg.Error("Failed to register plugin", zap.String("plugin", llmChatPlugin.Name()), zap.Error(err))
-	} else {
-		pkg.Info("Successfully registered plugin", zap.String("plugin", llmChatPlugin.Name()))
 	}
 
 	// 统一注册所有插件路由（可选）

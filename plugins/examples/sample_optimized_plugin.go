@@ -53,7 +53,6 @@ func (p *SampleOptimizedPlugin) SetPluginManager(manager *core.PluginManager) {
 
 // Init 初始化插件
 func (p *SampleOptimizedPlugin) Init() error {
-	log.Printf("%s: 插件已初始化，使用优化后的路由注册机制", p.Name())
 	return nil
 }
 

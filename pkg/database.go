@@ -10,6 +10,7 @@ import (
 	"weave/config"
 	"weave/pkg/metrics"
 
+	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -23,7 +24,10 @@ var DB *gorm.DB
 func InitDatabase() error {
 	// 加载配置
 	if config.Config.Database.Host == "" {
-		config.LoadConfig()
+		if err := config.LoadConfig(); err != nil {
+			Error("Failed to load config in InitDatabase", zap.Error(err))
+			return err
+		}
 	}
 
 	var dsn string
@@ -57,8 +61,8 @@ func InitDatabase() error {
 	}
 
 	// 根据环境设置日志级别
-	logLevel := logger.Info
-	if !config.Config.Logger.Development {
+	logLevel := logger.Error
+	if config.Config.Logger.Development {
 		logLevel = logger.Warn // 生产环境使用Warn级别
 	}
 
@@ -92,8 +96,7 @@ func InitDatabase() error {
 			metrics.RecordDatabaseQuery("connect", "system", 0)
 			break
 		}
-		log.Printf("Database connection attempt failed, retrying... attempt=%d/%d, error=%v",
-			i+1, maxRetries, lastErr)
+		Debug("Database connection attempt failed, retrying...", zap.Int("attempt", i+1), zap.Int("max_attempts", maxRetries), zap.Error(lastErr))
 		time.Sleep(1 * time.Second) // 等待一秒后重试
 	}
 	if lastErr != nil {
@@ -127,10 +130,7 @@ func InitDatabase() error {
 		ticker := time.NewTicker(monitorInterval)
 		for range ticker.C {
 			stats := sqlDB.Stats()
-			idle := stats.Idle
-			open := stats.OpenConnections
-			metrics.UpdateDatabaseConnections(open)
-			log.Printf("Database connection stats: idle=%d, open=%d", idle, open)
+			metrics.UpdateDatabaseConnections(stats.OpenConnections)
 		}
 	}()
 
@@ -139,13 +139,7 @@ func InitDatabase() error {
 	if config.Config.Database.Driver == "postgres" {
 		dbType = "PostgreSQL"
 	}
-	log.Printf("数据库连接成功 - database_type: %s, driver: %s, host: %s, port: %d, database: %s",
-		dbType,
-		config.Config.Database.Driver,
-		config.Config.Database.Host,
-		config.Config.Database.Port,
-		config.Config.Database.DBName,
-	)
+	Info("Database connection established successfully", zap.String("type", dbType), zap.String("host", config.Config.Database.Host), zap.Int("port", config.Config.Database.Port), zap.String("database", config.Config.Database.DBName))
 	return nil
 }
 
@@ -158,27 +152,19 @@ func CloseDatabase() error {
 }
 
 // CloseDatabaseWithContext 使用上下文控制的方式优雅关闭数据库连接
-// 支持超时控制，等待正在进行的事务完成
 func CloseDatabaseWithContext(ctx context.Context) error {
 	if DB == nil {
-		log.Printf("Database connection already closed or not initialized")
 		return nil
 	}
 
 	sqlDB, err := DB.DB()
 	if err != nil {
-		log.Printf("Failed to get database instance during shutdown: %v", err)
 		return fmt.Errorf("failed to get database instance: %w", err)
 	}
 
 	// 记录关闭前的连接状态
 	stats := sqlDB.Stats()
-	log.Printf("Starting database graceful shutdown - idle_connections: %d, open_connections: %d, in_use: %d, idle_closed: %d",
-		stats.Idle,
-		stats.OpenConnections,
-		stats.InUse,
-		stats.MaxIdleClosed,
-	)
+	Info("Starting database graceful shutdown", zap.Int("idle_connections", stats.Idle), zap.Int("open_connections", stats.OpenConnections))
 
 	// 开始关闭过程
 	startTime := time.Now()
@@ -187,21 +173,18 @@ func CloseDatabaseWithContext(ctx context.Context) error {
 	sqlDB.SetMaxIdleConns(0)
 
 	// 设置最大打开连接数为当前活跃连接数的估计值，允许现有连接完成但不接受新连接
-	// 注意：Go的sql.DBStats没有Active字段，我们使用OpenConnections作为上限
 	sqlDB.SetMaxOpenConns(stats.OpenConnections)
-
-	log.Printf("Waiting for active database connections to complete")
 
 	// 关闭数据库连接
 	err = sqlDB.Close()
 
 	elapsed := time.Since(startTime)
 	if err != nil {
-		log.Printf("Database connection close failed after %v: %v", elapsed, err)
+		Error("Database connection close failed", zap.Duration("elapsed", elapsed), zap.Error(err))
 		return fmt.Errorf("database close failed after %v: %w", elapsed, err)
 	}
 
-	log.Printf("Database connections closed successfully after %v", elapsed)
+	Info("Database connections closed successfully", zap.Duration("elapsed", elapsed))
 
 	// 清除全局DB变量
 	DB = nil
