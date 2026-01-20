@@ -11,66 +11,341 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary-color: #3b82f6;
+            --secondary-dark: #2563eb;
+            --success-color: #10b981;
+            --success-dark: #059669;
+            --danger-color: #ef4444;
+            --danger-dark: #dc2626;
+            --warning-color: #f59e0b;
+            --warning-dark: #d97706;
+            --background-light: #f9fafb;
+            --background-white: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border-color: #e2e8f0;
+            --border-radius: 12px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-lg: 1.125rem;
+            --font-size-xl: 1.25rem;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --touch-target-min: 44px;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f7fa;
+            background-color: var(--background-light);
             line-height: 1.6;
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            touch-action: manipulation;
         }
 
         .chat-container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: var(--spacing-md);
             height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
+        /* 确保在移动设备上使用视口高度 */
+        @media (max-width: 768px) {
+            .chat-container {
+                height: 100vh;
+                height: 100dvh; /* 动态视口高度，考虑浏览器UI */
+                padding: var(--spacing-sm);
+            }
+        }
+
         .chat-header {
-            background-color: #6366f1;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
             color: white;
-            padding: 15px;
-            border-radius: 8px 8px 0 0;
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2px;
+            min-height: 70px;
+        }
+
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .history-button {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            transition: all 0.3s ease;
+            min-height: 32px;
+            min-width: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+
+
+        /* 历史记录弹窗 */
+        .history-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .history-modal-content {
+            background-color: var(--background-white);
+            margin: 5% auto;
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .history-title {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-button:hover {
+            background-color: var(--background-light);
+            color: var(--text-primary);
+        }
+
+        .history-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+            background-color: var(--background-light);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .history-message {
+            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            background-color: var(--background-white);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .history-message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+        }
+
+        .history-message-content {
+            line-height: 1.5;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: flex-end;
+        }
+
+        .history-action-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            transition: all 0.3s ease;
+        }
+
+        .history-action-button.primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            color: white;
+        }
+
+        .history-action-button.secondary {
+            background-color: var(--background-light);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .history-action-button:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
         }
 
         .chat-title {
-            font-size: 1.5rem;
+            font-size: var(--font-size-xl);
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .chat-title::before {
+            content: '🤖';
+            font-size: 1.2rem;
         }
 
         .connection-status {
-            font-size: 0.9rem;
-            padding: 5px 10px;
+            font-size: var(--font-size-sm);
+            padding: 6px 12px;
             border-radius: 20px;
             background-color: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            min-height: 32px;
+        }
+
+        .connection-status::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
         }
 
         .connection-status.connected {
-            background-color: #10b981;
+            background-color: var(--success-color);
+            color: white;
         }
 
         .connection-status.disconnected {
-            background-color: #ef4444;
+            background-color: var(--danger-color);
+            color: white;
         }
+
+        #retryButton {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            transition: all 0.3s ease;
+            min-height: 32px;
+            min-width: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
 
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
-            background-color: white;
-            border-left: 1px solid #e2e8f0;
-            border-right: 1px solid #e2e8f0;
+            padding: var(--spacing-lg);
+            background-color: var(--background-white);
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            box-shadow: var(--shadow-sm);
+            scroll-behavior: smooth;
+            min-height: 300px;
         }
 
+
+
         .message {
-            margin-bottom: 15px;
+            margin-bottom: var(--spacing-lg);
             max-width: 80%;
             display: flex;
-            gap: 10px;
+            gap: var(--spacing-sm);
         }
+
+
 
         .message.user {
             margin-left: auto;
@@ -82,65 +357,78 @@
         }
 
         .message-avatar {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.3s ease;
+            min-width: 44px;
+            min-height: 44px;
         }
 
+
+
         .message.user .message-avatar {
-            background-color: #6366f1;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
             color: white;
         }
 
         .message.assistant .message-avatar {
-            background-color: #e0e7ff;
-            color: #6366f1;
+            background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+            color: var(--primary-color);
         }
 
         .message-content {
-            padding: 12px 16px;
-            border-radius: 18px;
+            padding: 14px 18px;
+            border-radius: 20px;
             word-wrap: break-word;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            line-height: 1.5;
         }
 
         .message.user .message-content {
-            background-color: #6366f1;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
             color: white;
-            border-bottom-right-radius: 4px;
+            border-bottom-right-radius: 6px;
         }
 
         .message.assistant .message-content {
-            background-color: #f1f5f9;
-            color: #1e293b;
-            border-bottom-left-radius: 4px;
+            background-color: #f8fafc;
+            color: var(--text-primary);
+            border-bottom-left-radius: 6px;
+            border: 1px solid #e2e8f0;
         }
 
         .message.loading .message-content {
-            background-color: #f1f5f9;
-            color: #64748b;
+            background-color: #f8fafc;
+            color: var(--text-secondary);
             font-style: italic;
+            border: 1px solid #e2e8f0;
         }
 
+
+
         .chat-input-container {
-            background-color: white;
-            padding: 20px;
-            border-left: 1px solid #e2e8f0;
-            border-right: 1px solid #e2e8f0;
-            border-bottom: 1px solid #e2e8f0;
-            border-radius: 0 0 8px 8px;
+            background-color: var(--background-white);
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
         }
 
         .image-upload-section {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
         }
 
         #imageInput {
@@ -148,44 +436,47 @@
         }
 
         #imageUploadButton {
-            background-color: #3b82f6;
+            background: linear-gradient(135deg, var(--secondary-color), var(--secondary-dark));
             color: white;
             border: none;
             border-radius: 25px;
             padding: 10px 24px;
             cursor: pointer;
             font-weight: 500;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
+            font-size: var(--font-size-sm);
+            transition: all 0.3s ease;
             width: fit-content;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--shadow-sm);
+            min-height: 44px;
+            min-width: 120px;
         }
 
         #imageUploadButton:hover {
-            background-color: #2563eb;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
         .selected-images {
             display: flex;
-            gap: 15px;
+            gap: var(--spacing-md);
             flex-wrap: wrap;
-            justify-content: center;
-            margin-top: 5px;
+            justify-content: flex-start;
+            margin-top: var(--spacing-xs);
         }
 
         .selected-image {
             position: relative;
             width: 100px;
             height: 100px;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
             border: 2px solid #e2e8f0;
-            transition: all 0.2s ease;
-        }
-
-        .selected-image:hover {
-            border-color: #3b82f6;
-            transform: scale(1.05);
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+            background-color: #f8fafc;
         }
 
         .selected-image img {
@@ -196,62 +487,52 @@
 
         .remove-image {
             position: absolute;
-            top: 6px;
-            right: 6px;
-            background-color: rgba(239, 68, 68, 0.8);
+            top: 8px;
+            right: 8px;
+            background-color: rgba(239, 68, 68, 0.9);
             color: white;
             border: none;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            font-size: 14px;
+            width: 26px;
+            height: 26px;
+            font-size: 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+            min-width: 26px;
+            min-height: 26px;
         }
 
-        .remove-image:hover {
-            background-color: rgba(239, 68, 68, 1);
-            transform: scale(1.1);
-        }
+
 
         #messageInput {
             flex: 1;
-            padding: 15px 20px;
+            padding: 16px 20px;
             border: 2px solid #e2e8f0;
-            border-radius: 25px;
+            border-radius: 28px;
             resize: none;
-            min-height: 50px;
+            min-height: 56px;
             max-height: 150px;
             font-family: inherit;
-            font-size: 1rem;
-            transition: all 0.2s ease;
+            font-size: var(--font-size-base);
+            transition: all 0.3s ease;
+            background-color: #f8fafc;
         }
 
-        #messageInput:focus {
-            outline: none;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
 
-        #messageInput:focus {
-            outline: none;
-            border-color: #6366f1;
-        }
 
-        .chat-actions {
+        .all-buttons-container {
             display: flex;
-            gap: 15px;
+            gap: var(--spacing-sm);
             justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
-        .control-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
+
 
         .control-button {
             padding: 10px 20px;
@@ -259,102 +540,100 @@
             border-radius: 25px;
             cursor: pointer;
             font-weight: 500;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
+            font-size: var(--font-size-sm);
+            transition: all 0.3s ease;
             min-width: 80px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 44px;
+            justify-content: center;
         }
+
+
 
         #pauseButton {
-            background-color: #f59e0b;
+            background: linear-gradient(135deg, var(--warning-color), var(--warning-dark));
             color: white;
-        }
-
-        #pauseButton:hover:not(:disabled) {
-            background-color: #d97706;
-            transform: translateY(-1px);
         }
 
         #continueButton {
-            background-color: #10b981;
+            background: linear-gradient(135deg, var(--success-color), var(--success-dark));
             color: white;
-        }
-
-        #continueButton:hover:not(:disabled) {
-            background-color: #059669;
-            transform: translateY(-1px);
         }
 
         #stopButton {
-            background-color: #ef4444;
+            background: linear-gradient(135deg, var(--danger-color), var(--danger-dark));
             color: white;
-        }
-
-        #stopButton:hover:not(:disabled) {
-            background-color: #dc2626;
-            transform: translateY(-1px);
         }
 
         .control-button:disabled {
             background-color: #94a3b8;
             cursor: not-allowed;
-        }
-
-        button {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s ease;
+            transform: none;
+            box-shadow: none;
         }
 
         #sendButton {
-            background-color: #6366f1;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
             color: white;
-            padding: 12px 30px;
+            padding: 12px 32px;
             border-radius: 25px;
-            font-size: 1rem;
+            font-size: var(--font-size-base);
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 48px;
+            min-width: 100px;
+            justify-content: center;
         }
 
-        #sendButton:hover:not(:disabled) {
-            background-color: #4f46e5;
-            transform: translateY(-1px);
-        }
+
 
         #sendButton:disabled {
             background-color: #94a3b8;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         #clearButton {
             background-color: #f8fafc;
-            color: #334155;
+            color: var(--text-secondary);
             border: 1px solid #e2e8f0;
-            padding: 12px 30px;
+            padding: 12px 32px;
             border-radius: 25px;
-            font-size: 1rem;
+            font-size: var(--font-size-base);
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            min-height: 48px;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        #clearButton:hover {
-            background-color: #f1f5f9;
-            transform: translateY(-1px);
-        }
+
 
         .loading-dots {
             display: inline-flex;
             align-items: center;
+            gap: 4px;
         }
 
         .loading-dots span {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background-color: #94a3b8;
-            margin: 0 2px;
+            background-color: var(--text-muted);
             animation: loadingDots 1.4s infinite ease-in-out;
         }
 
@@ -368,48 +647,12 @@
 
         @keyframes loadingDots {
             0%, 80%, 100% {
-                transform: scale(0);
+                transform: scale(0.6);
                 opacity: 0.5;
             }
             40% {
                 transform: scale(1);
                 opacity: 1;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .chat-container {
-                padding: 10px;
-            }
-
-            .message {
-                max-width: 90%;
-            }
-
-            .chat-input-container {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .chat-actions {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .control-buttons {
-                flex-wrap: wrap;
-            }
-
-            .control-button {
-                flex: 1;
-                min-width: 100px;
-            }
-
-            #sendButton,
-            #clearButton,
-            #imageUploadButton {
-                width: 100%;
-                max-width: 200px;
             }
         }
     </style>
@@ -418,24 +661,25 @@
     <div class="chat-container">
         <div class="chat-header">
             <div class="chat-title">PaiChat</div>
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="header-buttons">
+                <button class="history-button" onclick="showHistory()">📋 历史记录</button>
                 <div class="connection-status" id="connectionStatus">连接中...</div>
-                <button 
-                    id="retryButton" 
-                    onclick="retryConnection()"
-                    style="
-                        background-color: rgba(255, 255, 255, 0.2);
-                        color: white;
-                        border: none;
-                        padding: 5px 10px;
-                        border-radius: 20px;
-                        cursor: pointer;
-                        font-size: 0.9rem;
-                        opacity: 0.8;
-                    "
-                >
-                    重试
-                </button>
+                <button id="retryButton" onclick="retryConnection()">重试</button>
+            </div>
+        </div>
+
+        <!-- 历史记录弹窗 -->
+        <div id="historyModal" class="history-modal">
+            <div class="history-modal-content">
+                <div class="history-header">
+                    <h2 class="history-title">聊天历史记录</h2>
+                    <button class="close-button" onclick="hideHistory()">&times;</button>
+                </div>
+                <div class="history-messages" id="historyMessages"></div>
+                <div class="history-actions">
+                    <button class="history-action-button secondary" onclick="hideHistory()">关闭</button>
+                    <button class="history-action-button primary" onclick="loadHistoryToModal()">刷新记录</button>
+                </div>
             </div>
         </div>
 
@@ -458,14 +702,22 @@
                 <button id="imageUploadButton" onclick="document.getElementById('imageInput').click()">📷 添加图片</button>
             </div>
             <div class="selected-images" id="selectedImages"></div>
-            <div class="chat-actions">
-                <button id="sendButton" onclick="sendMessage()">发送</button>
-                <button id="clearButton" onclick="clearHistory()">清除历史</button>
-            </div>
-            <div class="control-buttons">
-                <button id="pauseButton" class="control-button" onclick="controlChat('pause')" disabled>暂停</button>
-                <button id="continueButton" class="control-button" onclick="controlChat('continue')" disabled>继续</button>
-                <button id="stopButton" class="control-button" onclick="controlChat('stop')" disabled>停止</button>
+            <div class="all-buttons-container">
+                <div class="button-item">
+                    <button id="sendButton" onclick="sendMessage()">发送</button>
+                </div>
+                <div class="button-item">
+                    <button id="clearButton" onclick="clearHistory()">清除历史</button>
+                </div>
+                <div class="button-item">
+                    <button id="pauseButton" class="control-button" onclick="controlChat('pause')" disabled>暂停</button>
+                </div>
+                <div class="button-item">
+                    <button id="continueButton" class="control-button" onclick="controlChat('continue')" disabled>继续</button>
+                </div>
+                <div class="button-item">
+                    <button id="stopButton" class="control-button" onclick="controlChat('stop')" disabled>停止</button>
+                </div>
             </div>
         </div>
     </div>
@@ -473,10 +725,10 @@
     <script>
         // 配置
         const config = {
-            apiBaseURL: 'http://localhost:8080', // aichat服务地址
+            apiBaseURL: 'http://localhost:8080',
             userId: 'default_user',
             streaming: true,
-            maxRetries: 3 // 连接重试次数
+            maxImagesPerRequest: 5
         };
 
         // DOM元素
@@ -489,8 +741,9 @@
         const continueButton = document.getElementById('continueButton');
         const stopButton = document.getElementById('stopButton');
         const imageInput = document.getElementById('imageInput');
-        const imageUploadButton = document.getElementById('imageUploadButton');
         const selectedImagesContainer = document.getElementById('selectedImages');
+        const historyModal = document.getElementById('historyModal');
+        const historyMessages = document.getElementById('historyMessages');
 
         // 状态
         let isLoading = false;
@@ -500,20 +753,15 @@
 
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
-            // 检查连接状态
             await checkConnection();
-            // 加载聊天历史
             await loadHistory();
         });
 
         // 检查连接状态
         async function checkConnection() {
             try {
-                // 创建AbortController用于超时控制
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000);
-                
-                console.log('正在检查连接:', config.apiBaseURL + '/health');
                 
                 const response = await fetch(`${config.apiBaseURL}/health`, {
                     method: 'GET',
@@ -522,16 +770,11 @@
                 
                 clearTimeout(timeoutId);
                 
-                console.log('连接检查结果:', response.status, response.statusText);
-                
                 isConnected = response.ok;
                 updateConnectionStatus();
                 return isConnected;
             } catch (error) {
                 console.error('连接检查失败:', error.message);
-                if (error.name === 'AbortError') {
-                    console.error('连接超时');
-                }
                 isConnected = false;
                 updateConnectionStatus();
                 return false;
@@ -550,7 +793,7 @@
             await checkConnection();
         }
 
-        // 加载聊天历史
+        // 加载聊天历史到主窗口
         async function loadHistory() {
             if (!isConnected && !await checkConnection()) {
                 return;
@@ -562,15 +805,103 @@
                 
                 const data = await response.json();
                 if (data.messages && data.messages.length > 0) {
-                    // 清空当前消息
                     chatMessages.innerHTML = '';
-                    // 添加历史消息
                     data.messages.forEach(msg => {
                         addMessage(msg.Role.toLowerCase(), msg.Content);
                     });
                 }
             } catch (error) {
                 console.error('加载历史记录失败:', error);
+                addMessage('assistant', '加载聊天历史失败，请稍后再试');
+            }
+        }
+
+        // 显示历史记录
+        function showHistory() {
+            document.getElementById('historyModal').style.display = 'block';
+            loadHistoryToModal();
+        }
+
+        // 隐藏历史记录
+        function hideHistory() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+
+        // 加载历史记录到弹窗
+        async function loadHistoryToModal() {
+            const historyMessages = document.getElementById('historyMessages');
+            historyMessages.innerHTML = '<div style="text-align: center; padding: 20px;">加载中...</div>';
+
+            try {
+                const response = await fetch(`${config.apiBaseURL}/api/chat/history?user_id=${config.userId}`);
+                if (!response.ok) {
+                    throw new Error('获取历史记录失败');
+                }
+
+                const data = await response.json();
+                
+                if (data.messages && data.messages.length > 0) {
+                    historyMessages.innerHTML = '';
+                    
+                    // 按对话分组
+                    const conversations = groupMessagesByConversation(data.messages);
+                    
+                    conversations.forEach((messages, index) => {
+                        const conversationElement = document.createElement('div');
+                        conversationElement.className = 'history-message';
+                        
+                        const header = document.createElement('div');
+                        header.className = 'history-message-header';
+                        header.innerHTML = `<span>对话 ${conversations.length - index}</span><span>${new Date().toLocaleDateString()}</span>`;
+                        
+                        const content = document.createElement('div');
+                        content.className = 'history-message-content';
+                        
+                        messages.forEach((msg, msgIndex) => {
+                            const msgElement = document.createElement('div');
+                            msgElement.style.marginBottom = '8px';
+                            msgElement.innerHTML = `<strong>${msg.role === 'user' ? '你' : 'AI'}:</strong> ${msg.content || '(图片消息)'}`;
+                            content.appendChild(msgElement);
+                        });
+                        
+                        conversationElement.appendChild(header);
+                        conversationElement.appendChild(content);
+                        historyMessages.appendChild(conversationElement);
+                    });
+                } else {
+                    historyMessages.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">暂无历史记录</div>';
+                }
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+                historyMessages.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger-color);">加载失败，请重试</div>';
+            }
+        }
+
+        // 按对话分组消息
+        function groupMessagesByConversation(messages) {
+            const conversations = [];
+            let currentConversation = [];
+            
+            messages.forEach(msg => {
+                if (msg.role === 'user' && currentConversation.length > 0) {
+                    conversations.unshift([...currentConversation]);
+                    currentConversation = [];
+                }
+                currentConversation.push(msg);
+            });
+            
+            if (currentConversation.length > 0) {
+                conversations.unshift(currentConversation);
+            }
+            
+            return conversations;
+        }
+
+        // 点击弹窗外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('historyModal');
+            if (event.target === modal) {
+                hideHistory();
             }
         }
 
@@ -578,18 +909,19 @@
         async function sendMessage() {
             const message = messageInput.value.trim();
             
-            // 如果没有消息内容且没有选中图片，则不发送
             if (!message && selectedImages.length === 0) return;
-            
             if (isLoading) return;
 
-            // 检查连接
+            if (selectedImages.length > config.maxImagesPerRequest) {
+                alert(`图片数量超过限制，最多允许 ${config.maxImagesPerRequest} 张图片`);
+                return;
+            }
+
             if (!isConnected && !await checkConnection()) {
                 alert('无法连接到服务器，请稍后再试');
                 return;
             }
 
-            // 添加用户消息
             addMessage('user', message, selectedImages);
             messageInput.value = '';
             messageInput.style.height = 'auto';
@@ -612,7 +944,6 @@
                 isStreaming = false;
                 sendButton.disabled = false;
                 updateControlButtons();
-                // 清空选中的图片
                 clearSelectedImages();
             }
         }
@@ -621,6 +952,12 @@
         function handleImageSelection(event) {
             const files = event.target.files;
             if (files.length === 0) return;
+
+            if (selectedImages.length + files.length > config.maxImagesPerRequest) {
+                alert(`图片数量超过限制，最多允许 ${config.maxImagesPerRequest} 张图片`);
+                event.target.value = '';
+                return;
+            }
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -639,7 +976,6 @@
                 reader.readAsDataURL(file);
             }
 
-            // 清空文件输入，以便可以重复选择相同的文件
             event.target.value = '';
         }
 
@@ -677,18 +1013,110 @@
             selectedImagesContainer.innerHTML = '';
         }
 
-        // 将图片转换为Base64（只保留图片数据部分）
+        // 显示历史记录
+        function showHistory() {
+            document.getElementById('historyModal').style.display = 'block';
+            loadHistory();
+        }
+
+        // 隐藏历史记录
+        function hideHistory() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+
+        // 加载历史记录
+        async function loadHistory() {
+            const historyMessages = document.getElementById('historyMessages');
+            historyMessages.innerHTML = '<div style="text-align: center; padding: 20px;">加载中...</div>';
+
+            try {
+                const response = await fetch(`${config.apiBaseURL}/api/chat/history?user_id=${config.userId}`);
+                if (!response.ok) {
+                    throw new Error('获取历史记录失败');
+                }
+
+                const data = await response.json();
+                
+                if (data.messages && data.messages.length > 0) {
+                    historyMessages.innerHTML = '';
+                    
+                    // 按对话分组
+                    const conversations = groupMessagesByConversation(data.messages);
+                    
+                    conversations.forEach((messages, index) => {
+                        const conversationElement = document.createElement('div');
+                        conversationElement.className = 'history-message';
+                        
+                        const header = document.createElement('div');
+                        header.className = 'history-message-header';
+                        header.innerHTML = `<span>对话 ${conversations.length - index}</span><span>${new Date().toLocaleDateString()}</span>`;
+                        
+                        const content = document.createElement('div');
+                        content.className = 'history-message-content';
+                        
+                        messages.forEach((msg, msgIndex) => {
+                            const msgElement = document.createElement('div');
+                            msgElement.style.marginBottom = '8px';
+                            msgElement.innerHTML = `<strong>${msg.role === 'user' ? '你' : 'AI'}:</strong> ${msg.content || '(图片消息)'}`;
+                            content.appendChild(msgElement);
+                        });
+                        
+                        conversationElement.appendChild(header);
+                        conversationElement.appendChild(content);
+                        historyMessages.appendChild(conversationElement);
+                    });
+                } else {
+                    historyMessages.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">暂无历史记录</div>';
+                }
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+                historyMessages.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger-color);">加载失败，请重试</div>';
+            }
+        }
+
+        // 按对话分组消息
+        function groupMessagesByConversation(messages) {
+            const conversations = [];
+            let currentConversation = [];
+            
+            messages.forEach(msg => {
+                if (msg.role === 'user' && currentConversation.length > 0) {
+                    conversations.unshift([...currentConversation]);
+                    currentConversation = [];
+                }
+                currentConversation.push(msg);
+            });
+            
+            if (currentConversation.length > 0) {
+                conversations.unshift(currentConversation);
+            }
+            
+            return conversations;
+        }
+
+        // 点击弹窗外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('historyModal');
+            if (event.target === modal) {
+                hideHistory();
+            }
+        }
+
+        // 将图片转换为Base64
         function convertToBase64(imageData) {
-            // 移除data:image/xxx;base64,前缀
             const base64Prefix = ';base64,';
             const base64Index = imageData.indexOf(base64Prefix);
             if (base64Index === -1) return '';
-            return imageData.substring(base64Index + base64Prefix.length);
+            let base64Str = imageData.substring(base64Index + base64Prefix.length);
+            base64Str = base64Str.replace(/\s/g, '');
+            while (base64Str.length % 4 !== 0) {
+                base64Str += '=';
+            }
+            return base64Str;
         }
 
         // 发送非流式消息
         async function sendNonStreamMessage(message) {
-            // 准备图片数据
             const base64Images = selectedImages.map(img => convertToBase64(img.data));
 
             const response = await fetch(`${config.apiBaseURL}/api/chat`, {
@@ -699,30 +1127,32 @@
                 body: JSON.stringify({
                     user_input: message,
                     user_id: config.userId,
-                    base64_images: base64Images
+                    base64_images: base64Images,
+                    image_urls: []
                 })
             });
 
-            if (!response.ok) throw new Error('API请求失败');
+            if (!response.ok) {
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'API请求失败');
+                } catch (e) {
+                    throw new Error('API请求失败');
+                }
+            }
             
             const data = await response.json();
             addMessage('assistant', data.content);
-            
-            // 清空选中的图片
-            clearSelectedImages();
         }
 
         // 发送流式消息
         async function sendStreamMessage(message) {
-            // 添加加载消息
             const loadingMessage = addMessage('assistant', '', true);
             let fullContent = '';
 
-            // 标记开始流式传输
             isStreaming = true;
             updateControlButtons();
 
-            // 准备图片数据
             const base64Images = selectedImages.map(img => convertToBase64(img.data));
 
             const response = await fetch(`${config.apiBaseURL}/api/chat/stream`, {
@@ -733,11 +1163,19 @@
                 body: JSON.stringify({
                     user_input: message,
                     user_id: config.userId,
-                    base64_images: base64Images
+                    base64_images: base64Images,
+                    image_urls: []
                 })
             });
 
-            if (!response.ok) throw new Error('API请求失败');
+            if (!response.ok) {
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'API请求失败');
+                } catch (e) {
+                    throw new Error('API请求失败');
+                }
+            }
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -756,6 +1194,11 @@
                             if (data) {
                                 try {
                                     const parsed = JSON.parse(data);
+                                    if (parsed.error) {
+                                        updateMessage(loadingMessage, `错误: ${parsed.error}`);
+                                        scrollToBottom();
+                                        return;
+                                    }
                                     if (parsed.content) {
                                         fullContent += parsed.content;
                                         updateMessage(loadingMessage, fullContent);
@@ -773,11 +1216,9 @@
                     }
                 }
             } finally {
-                // 标记结束流式传输
                 isStreaming = false;
                 updateControlButtons();
                 
-                // 移除加载状态
                 if (loadingMessage) {
                     loadingMessage.classList.remove('loading');
                 }
@@ -800,13 +1241,17 @@
                     })
                 });
 
-                if (!response.ok) throw new Error('控制请求失败');
-
-                const result = await response.json();
-                console.log('控制操作成功:', result);
+                if (!response.ok) {
+                    try {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || '控制请求失败');
+                    } catch (e) {
+                        throw new Error('控制请求失败');
+                    }
+                }
             } catch (error) {
                 console.error('控制操作失败:', error);
-                alert('控制操作失败，请稍后再试');
+                alert(`控制操作失败: ${error.message}`);
             }
         }
 
@@ -829,28 +1274,21 @@
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
             
-            // 添加文本内容
             if (content) {
                 const textDiv = document.createElement('div');
                 textDiv.textContent = content;
                 contentDiv.appendChild(textDiv);
             }
 
-            // 添加图片
             if (images && images.length > 0) {
                 const imagesContainer = document.createElement('div');
-                imagesContainer.style.display = 'flex';
-                imagesContainer.style.flexDirection = 'column';
-                imagesContainer.style.gap = '8px';
-                imagesContainer.style.marginTop = '8px';
+                imagesContainer.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:8px;';
 
                 images.forEach(imageData => {
                     const img = document.createElement('img');
                     img.src = imageData.data;
                     img.alt = imageData.name;
-                    img.style.maxWidth = '200px';
-                    img.style.borderRadius = '8px';
-                    img.style.objectFit = 'cover';
+                    img.style.cssText = 'max-width:200px;border-radius:8px;object-fit:cover;';
                     imagesContainer.appendChild(img);
                 });
 
@@ -883,7 +1321,6 @@
             if (!confirm('确定要清除所有聊天历史吗？')) return;
 
             try {
-                // 如果正在流式传输，先停止
                 if (isStreaming) {
                     await controlChat('stop');
                 }
@@ -894,11 +1331,8 @@
 
                 if (!response.ok) throw new Error('清除历史记录失败');
 
-                // 清空本地消息
                 chatMessages.innerHTML = '';
                 addMessage('assistant', '聊天历史已清除，有什么可以帮助你的吗？');
-                
-                // 清空选中的图片
                 clearSelectedImages();
             } catch (error) {
                 console.error('清除历史记录失败:', error);
@@ -906,6 +1340,95 @@
             } finally {
                 isStreaming = false;
                 updateControlButtons();
+            }
+        }
+
+        // 显示历史记录
+        function showHistory() {
+            document.getElementById('historyModal').style.display = 'block';
+            loadHistory();
+        }
+
+        // 隐藏历史记录
+        function hideHistory() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+
+        // 加载历史记录
+        async function loadHistory() {
+            const historyMessages = document.getElementById('historyMessages');
+            historyMessages.innerHTML = '<div style="text-align: center; padding: 20px;">加载中...</div>';
+
+            try {
+                const response = await fetch(`${config.apiBaseURL}/api/chat/history?user_id=${config.userId}`);
+                if (!response.ok) {
+                    throw new Error('获取历史记录失败');
+                }
+
+                const data = await response.json();
+                
+                if (data.messages && data.messages.length > 0) {
+                    historyMessages.innerHTML = '';
+                    
+                    // 按对话分组
+                    const conversations = groupMessagesByConversation(data.messages);
+                    
+                    conversations.forEach((messages, index) => {
+                        const conversationElement = document.createElement('div');
+                        conversationElement.className = 'history-message';
+                        
+                        const header = document.createElement('div');
+                        header.className = 'history-message-header';
+                        header.innerHTML = `<span>对话 ${conversations.length - index}</span><span>${new Date().toLocaleDateString()}</span>`;
+                        
+                        const content = document.createElement('div');
+                        content.className = 'history-message-content';
+                        
+                        messages.forEach((msg, msgIndex) => {
+                            const msgElement = document.createElement('div');
+                            msgElement.style.marginBottom = '8px';
+                            msgElement.innerHTML = `<strong>${msg.role === 'user' ? '你' : 'AI'}:</strong> ${msg.content || '(图片消息)'}`;
+                            content.appendChild(msgElement);
+                        });
+                        
+                        conversationElement.appendChild(header);
+                        conversationElement.appendChild(content);
+                        historyMessages.appendChild(conversationElement);
+                    });
+                } else {
+                    historyMessages.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">暂无历史记录</div>';
+                }
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+                historyMessages.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger-color);">加载失败，请重试</div>';
+            }
+        }
+
+        // 按对话分组消息
+        function groupMessagesByConversation(messages) {
+            const conversations = [];
+            let currentConversation = [];
+            
+            messages.forEach(msg => {
+                if (msg.role === 'user' && currentConversation.length > 0) {
+                    conversations.unshift([...currentConversation]);
+                    currentConversation = [];
+                }
+                currentConversation.push(msg);
+            });
+            
+            if (currentConversation.length > 0) {
+                conversations.unshift(currentConversation);
+            }
+            
+            return conversations;
+        }
+
+        // 点击弹窗外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('historyModal');
+            if (event.target === modal) {
+                hideHistory();
             }
         }
 
