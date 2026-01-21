@@ -21,20 +21,18 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/cloudwego/eino/schema"
 )
 
 // Cache 接口定义了对话历史缓存的基本操作
 type Cache interface {
-	// SaveChatHistory 保存对话历史
-	SaveChatHistory(ctx context.Context, userID string, history []*schema.Message) error
+	// SaveConversation 保存对话
+	SaveConversation(ctx context.Context, conversation interface{}) error
 
-	// LoadChatHistory 加载对话历史
-	LoadChatHistory(ctx context.Context, userID string) ([]*schema.Message, error)
+	// LoadConversation 加载对话
+	LoadConversation(ctx context.Context, conversationID string) (interface{}, error)
 
-	// AddMessageToHistory 添加消息到对话历史
-	AddMessageToHistory(ctx context.Context, userID string, messages ...*schema.Message) error
+	// LoadUserConversations 加载用户的所有对话
+	LoadUserConversations(ctx context.Context, userID string) ([]interface{}, error)
 
 	// Close 关闭缓存连接
 	Close() error
