@@ -20,7 +20,7 @@ import (
 	"context"
 	"strings"
 
-	"weave/services/aichat/internal/chat"
+	"weave/services/aichat/pkg"
 
 	"github.com/cloudwego/eino/schema"
 )
@@ -35,16 +35,19 @@ type SummaryGenerator interface {
 
 // SimpleSummaryGenerator 摘要生成器实现
 type SimpleSummaryGenerator struct {
-	// 可配置参数
-	maxSummaryLength int // 摘要最大长度
-	minMessageCount  int // 生成摘要的最小消息数
+	maxSummaryLength int                  // 摘要最大长度
+	minMessageCount  int                  // 生成摘要的最小消息数
+	tfidfCalculator  *pkg.TFIDFCalculator // TF-IDF计算器
 }
 
-// NewSimpleSummaryGenerator 创建简单摘要生成器
-func NewSimpleSummaryGenerator() *SimpleSummaryGenerator {
+// NewTFIDFSummaryGenerator 创建TF-IDF摘要生成器
+func NewTFIDFSummaryGenerator(conversationHistory []string) *SimpleSummaryGenerator {
+	tfidfCalculator := pkg.NewTFIDFCalculator(conversationHistory)
+
 	return &SimpleSummaryGenerator{
-		maxSummaryLength: 200, // 摘要最大长度为200个字符
-		minMessageCount:  3,   // 至少3条消息才生成摘要
+		maxSummaryLength: 200,
+		minMessageCount:  3,
+		tfidfCalculator:  tfidfCalculator,
 	}
 }
 
@@ -77,15 +80,7 @@ func (sg *SimpleSummaryGenerator) GenerateSummary(ctx context.Context, messages 
 
 	// 包含用户的主要问题
 	if len(userQuestions) > 0 {
-		// 合并所有问题提取关键词
-		var allQuestions strings.Builder
-		for _, q := range userQuestions {
-			allQuestions.WriteString(q)
-			allQuestions.WriteString(" ")
-		}
-
-		// 提取问题的关键词
-		keywords := extractKeywords(allQuestions.String())
+		keywords := sg.extractKeywords(userQuestions)
 		if keywords != "" {
 			summaryBuilder.WriteString("用户询问了关于")
 			summaryBuilder.WriteString(keywords)
@@ -127,28 +122,35 @@ func (sg *SimpleSummaryGenerator) GenerateSummary(ctx context.Context, messages 
 
 // UpdateSummary 更新对话摘要
 func (sg *SimpleSummaryGenerator) UpdateSummary(ctx context.Context, existingSummary string, newMessages []*schema.Message) (string, error) {
-	// 如果没有新消息，返回现有摘要
 	if len(newMessages) == 0 {
 		return existingSummary, nil
 	}
 
-	// 生成新摘要
+	// 增量更新TF-IDF词汇表
+	for _, msg := range newMessages {
+		if msg.Content != "" {
+			sg.tfidfCalculator.AddDocument(msg.Content)
+		}
+	}
+
 	return sg.GenerateSummary(ctx, newMessages)
 }
 
-// extractKeywords 提取文本中的关键词
-func extractKeywords(text string) string {
-	words := chat.SegmentText(text)
-
-	// 过滤停用词
-	filteredWords := filterKeywords(words)
-
-	// 限制关键词数量，避免摘要过长
-	if len(filteredWords) > 5 {
-		filteredWords = filteredWords[:5]
+// extractKeywords TF-IDF提取关键词
+func (sg *SimpleSummaryGenerator) extractKeywords(userQuestions []string) string {
+	if len(userQuestions) == 0 {
+		return ""
 	}
 
-	return strings.Join(filteredWords, " ")
+	// 使用最近的问题进行关键词提取
+	recentQuestion := userQuestions[len(userQuestions)-1]
+	keywords := sg.tfidfCalculator.ExtractKeywords(recentQuestion, 5)
+
+	if len(keywords) > 0 {
+		return strings.Join(keywords, " ")
+	}
+
+	return ""
 }
 
 // filterKeywords 过滤关键词，去除停用词和无效词

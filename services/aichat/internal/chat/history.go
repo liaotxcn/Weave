@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"weave/services/aichat/pkg"
+
 	"github.com/cloudwego/eino/components/embedding"
 	"github.com/cloudwego/eino/schema"
 	"github.com/go-ego/gse"
@@ -119,6 +121,50 @@ func selectAndOrderMessages(scoredMessages []scoredMessage, maxHistory int, chat
 	return relevant
 }
 
+// FilterRelevantHistoryWithTFIDF 使用TF-IDF关键词匹配的对话历史过滤
+func FilterRelevantHistoryWithTFIDF(chatHistory []*schema.Message, currentQuestion string, maxHistory int, tfidfCalculator *pkg.TFIDFCalculator) []*schema.Message {
+	// 基本参数检查
+	if len(chatHistory) == 0 || maxHistory <= 0 || tfidfCalculator == nil {
+		return []*schema.Message{}
+	}
+
+	if maxHistory > len(chatHistory) {
+		maxHistory = len(chatHistory)
+	}
+
+	// 使用TF-IDF提取当前问题的关键词
+	keywords := tfidfCalculator.ExtractKeywords(currentQuestion, 3)
+	if len(keywords) == 0 {
+		return []*schema.Message{}
+	}
+
+	var scoredMessages []scoredMessage
+
+	// 为每条历史消息计算TF-IDF关键词匹配分数
+	for i, msg := range chatHistory {
+		if msg.Content == "" {
+			continue
+		}
+
+		// TF-IDF关键词匹配分数
+		keywordScore := calculateKeywordMatchScore(msg.Content, keywords, tfidfCalculator)
+
+		// 时间权重
+		recencyWeight := calculateRecencyWeight(chatHistory, i)
+
+		// 综合分数 = TF-IDF关键词分数 + 时间权重
+		finalScore := keywordScore + recencyWeight
+
+		scoredMessages = append(scoredMessages, scoredMessage{
+			message: msg,
+			score:   finalScore,
+			index:   i,
+		})
+	}
+
+	return selectAndOrderMessages(scoredMessages, maxHistory, chatHistory, 0)
+}
+
 // FilterRelevantHistory 过滤与当前问题相关的对话历史，支持中英文混合
 func FilterRelevantHistory(ctx context.Context, embedder embedding.Embedder, chatHistory []*schema.Message, currentQuestion string, maxHistory int) []*schema.Message {
 	// 如果历史记录为空或最大保留数量为0，返回空切片
@@ -211,7 +257,48 @@ func FilterRelevantHistory(ctx context.Context, embedder embedding.Embedder, cha
 	return selectAndOrderMessages(scoredMessages, maxHistory, chatHistory, startIndex)
 }
 
-// filterRelevantHistoryByKeywords 使用关键词匹配过滤相关历史消息
+// calculateKeywordMatchScore 计算TF-IDF关键词匹配分数
+func calculateKeywordMatchScore(content string, keywords []string, calculator *pkg.TFIDFCalculator) float64 {
+	if len(keywords) == 0 {
+		return 0.0
+	}
+
+	// 计算内容的关键词分数
+	contentScores := calculator.Calculate(content)
+
+	matchScore := 0.0
+	for _, keyword := range keywords {
+		if score, exists := contentScores[keyword]; exists {
+			matchScore += score
+		}
+	}
+
+	// 归一化处理
+	return matchScore / float64(len(keywords))
+}
+
+// EnhanceHistorySelection 基于TF-IDF关键词重新排序历史
+func EnhanceHistorySelection(chatHistory []*schema.Message, currentQuestion string, calculator *pkg.TFIDFCalculator) []*schema.Message {
+	if calculator == nil || len(chatHistory) <= 5 {
+		return chatHistory
+	}
+
+	keywords := calculator.ExtractKeywords(currentQuestion, 3)
+	if len(keywords) == 0 {
+		return chatHistory
+	}
+
+	// 基于TF-IDF关键词重新排序历史
+	sort.Slice(chatHistory, func(i, j int) bool {
+		scoreI := calculateKeywordMatchScore(chatHistory[i].Content, keywords, calculator)
+		scoreJ := calculateKeywordMatchScore(chatHistory[j].Content, keywords, calculator)
+		return scoreI > scoreJ
+	})
+
+	return chatHistory
+}
+
+// filterRelevantHistoryByKeywords 基于关键词匹配过滤相关历史
 func filterRelevantHistoryByKeywords(chatHistory []*schema.Message, currentQuestion string, maxHistory int) []*schema.Message {
 	// 确保maxHistory不超过历史记录总数
 	if maxHistory > len(chatHistory) {

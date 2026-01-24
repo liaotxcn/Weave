@@ -113,7 +113,7 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	s.logger.Info("活跃对话管理器初始化完成")
 
 	// 初始化摘要生成器
-	s.summaryGenerator = summary.NewSimpleSummaryGenerator()
+	s.summaryGenerator = s.initializeSummaryGenerator()
 	s.logger.Info("摘要生成器初始化完成")
 
 	return nil
@@ -122,6 +122,32 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 // ProcessUserInput 处理用户输入并生成回复
 func (s *chatServiceImpl) ProcessUserInput(ctx context.Context, userInput string, userID string) (string, error) {
 	return s.processUserInputWithImages(ctx, userInput, userID, nil, nil)
+}
+
+// initializeSummaryGenerator 初始化TF-IDF摘要生成器
+func (s *chatServiceImpl) initializeSummaryGenerator() *summary.SimpleSummaryGenerator {
+	// 使用示例对话历史初始化TF-IDF
+	sampleHistory := []string{
+		"人工智能技术发展迅速",
+		"机器学习是人工智能的重要分支",
+		"深度学习推动人工智能进步",
+		"自然语言处理应用广泛",
+		"计算机视觉技术不断创新",
+	}
+
+	return summary.NewTFIDFSummaryGenerator(sampleHistory)
+}
+
+// updateSummaryGenerator 更新TF-IDF摘要生成器（增量学习）
+func (s *chatServiceImpl) updateSummaryGenerator(conversation *model.Conversation) {
+	if s.summaryGenerator != nil && len(conversation.Messages) > 0 {
+		// 增量添加新对话内容到TF-IDF词汇表
+		for _, msg := range conversation.Messages {
+			if msg.Content != "" {
+				s.summaryGenerator.UpdateSummary(context.Background(), "", []*schema.Message{msg})
+			}
+		}
+	}
 }
 
 // ProcessUserInputWithImages 处理用户输入（包含图片）并生成回复
@@ -315,6 +341,9 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 				s.logger.Info("生成对话摘要成功", zap.String("user_id", userID), zap.Int("message_count", len(conversation.Messages)))
 			}
 		}
+
+		// 增量更新TF-IDF词汇表
+		s.updateSummaryGenerator(conversation)
 	}
 
 	// 保存结构化对话到缓存
