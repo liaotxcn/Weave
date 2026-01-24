@@ -45,7 +45,7 @@ func NewTFIDFSummaryGenerator(conversationHistory []string) *SimpleSummaryGenera
 	tfidfCalculator := pkg.NewTFIDFCalculator(conversationHistory)
 
 	return &SimpleSummaryGenerator{
-		maxSummaryLength: 200,
+		maxSummaryLength: 260,
 		minMessageCount:  3,
 		tfidfCalculator:  tfidfCalculator,
 	}
@@ -85,6 +85,15 @@ func (sg *SimpleSummaryGenerator) GenerateSummary(ctx context.Context, messages 
 			summaryBuilder.WriteString("用户询问了关于")
 			summaryBuilder.WriteString(keywords)
 			summaryBuilder.WriteString("的问题。")
+		} else if len(userQuestions) > 0 {
+			// 若没有提取到关键词，使用最近问题核心内容
+			recentQuestion := userQuestions[len(userQuestions)-1]
+			if len(recentQuestion) > 50 {
+				recentQuestion = recentQuestion[:50] + "..."
+			}
+			summaryBuilder.WriteString("用户提问：")
+			summaryBuilder.WriteString(recentQuestion)
+			summaryBuilder.WriteString("。")
 		}
 	}
 
@@ -142,15 +151,37 @@ func (sg *SimpleSummaryGenerator) extractKeywords(userQuestions []string) string
 		return ""
 	}
 
-	// 使用最近的问题进行关键词提取
-	recentQuestion := userQuestions[len(userQuestions)-1]
-	keywords := sg.tfidfCalculator.ExtractKeywords(recentQuestion, 5)
+	// 综合所有问题进行关键词提取
+	combinedQuestions := strings.Join(userQuestions, " ")
+	keywords := sg.ExtractKeywords(combinedQuestions, 5)
 
 	if len(keywords) > 0 {
 		return strings.Join(keywords, " ")
 	}
 
+	// 若综合提取失败，使用最近问题
+	if len(userQuestions) > 0 {
+		recentQuestion := userQuestions[len(userQuestions)-1]
+		keywords := sg.ExtractKeywords(recentQuestion, 5)
+		if len(keywords) > 0 {
+			return strings.Join(keywords, " ")
+		}
+	}
+
 	return ""
+}
+
+// ExtractKeywords 提取关键词
+func (sg *SimpleSummaryGenerator) ExtractKeywords(text string, topN int) []string {
+	if text == "" {
+		return []string{}
+	}
+
+	// 使用TF-IDF计算器提取关键词
+	keywords := sg.tfidfCalculator.ExtractKeywords(text, topN)
+
+	// 过滤关键词
+	return filterKeywords(keywords)
 }
 
 // filterKeywords 过滤关键词，去除停用词和无效词
@@ -160,7 +191,7 @@ func filterKeywords(words []string) []string {
 	stopwords := getStopwords()
 
 	for _, word := range words {
-		// 过滤停用词、单字词、过短词
+		// 过滤停用词，保留长度大于1的词
 		if !isStopword(word, stopwords) && len(word) > 1 {
 			filtered = append(filtered, word)
 		}

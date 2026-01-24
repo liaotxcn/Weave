@@ -126,16 +126,8 @@ func (s *chatServiceImpl) ProcessUserInput(ctx context.Context, userInput string
 
 // initializeSummaryGenerator 初始化TF-IDF摘要生成器
 func (s *chatServiceImpl) initializeSummaryGenerator() *summary.SimpleSummaryGenerator {
-	// 使用示例对话历史初始化TF-IDF
-	sampleHistory := []string{
-		"人工智能技术发展迅速",
-		"机器学习是人工智能的重要分支",
-		"深度学习推动人工智能进步",
-		"自然语言处理应用广泛",
-		"计算机视觉技术不断创新",
-	}
-
-	return summary.NewTFIDFSummaryGenerator(sampleHistory)
+	// 初始化TF-IDF，后续通过增量更新添加用户对话历史
+	return summary.NewTFIDFSummaryGenerator([]string{})
 }
 
 // updateSummaryGenerator 更新TF-IDF摘要生成器（增量学习）
@@ -170,6 +162,15 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 		s.logger.Info("已过滤用户输入中的敏感内容", zap.String("user_id", userID), zap.String("original_input", userInput), zap.String("filtered_input", filteredInput))
 	}
 
+	// 提取关键词
+	var keywords []string
+	if s.summaryGenerator != nil {
+		keywords = s.summaryGenerator.ExtractKeywords(filteredInput, 5)
+		if len(keywords) > 0 {
+			s.logger.Info("提取到关键词", zap.String("user_id", userID), zap.Strings("keywords", keywords))
+		}
+	}
+
 	// 获取或创建用户的活跃对话
 	conversation := s.getOrCreateConversation(userID)
 
@@ -199,6 +200,17 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 	} else {
 		// 过滤相关历史消息
 		filteredHistory = chat.FilterRelevantHistory(ctx, s.embedder, chatHistory, filteredInput, 50)
+	}
+
+	// 添加关键词上下文
+	if len(keywords) > 0 {
+		keywordContext := "关键词: " + strings.Join(keywords, ", ")
+		keywordMsg := &schema.Message{
+			Role:    schema.System,
+			Content: keywordContext,
+		}
+		filteredHistory = append(filteredHistory, keywordMsg)
+		s.logger.Info("添加关键词上下文", zap.String("user_id", userID))
 	}
 
 	// 构造当前用户消息
@@ -389,6 +401,15 @@ func (s *chatServiceImpl) processUserInputStreamWithImages(ctx context.Context, 
 		s.logger.Info("已过滤用户输入中的敏感内容", zap.String("user_id", userID), zap.String("original_input", userInput), zap.String("filtered_input", filteredInput))
 	}
 
+	// 提取关键词
+	var keywords []string
+	if s.summaryGenerator != nil {
+		keywords = s.summaryGenerator.ExtractKeywords(filteredInput, 5)
+		if len(keywords) > 0 {
+			s.logger.Info("提取到关键词", zap.String("user_id", userID), zap.Strings("keywords", keywords))
+		}
+	}
+
 	// 获取或创建用户的活跃对话
 	conversation := s.getOrCreateConversation(userID)
 
@@ -397,6 +418,17 @@ func (s *chatServiceImpl) processUserInputStreamWithImages(ctx context.Context, 
 
 	// 过滤与当前问题相关的对话历史
 	filteredHistory := chat.FilterRelevantHistory(ctx, s.embedder, chatHistory, filteredInput, 50)
+
+	// 添加关键词上下文
+	if len(keywords) > 0 {
+		keywordContext := "关键词: " + strings.Join(keywords, ", ")
+		keywordMsg := &schema.Message{
+			Role:    schema.System,
+			Content: keywordContext,
+		}
+		filteredHistory = append(filteredHistory, keywordMsg)
+		s.logger.Info("添加关键词上下文", zap.String("user_id", userID))
+	}
 
 	// 构造当前用户消息
 	userMessage := &schema.Message{
