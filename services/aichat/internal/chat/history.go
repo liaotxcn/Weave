@@ -5,9 +5,19 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
+
+	"weave/services/aichat/pkg"
 
 	"github.com/cloudwego/eino/components/embedding"
 	"github.com/cloudwego/eino/schema"
+	"github.com/go-ego/gse"
+)
+
+// 全局分词器，sync.Once线程安全初始化
+var (
+	gseSegmenter  gse.Segmenter
+	segmenterOnce sync.Once
 )
 
 // 中英文停用词表
@@ -32,49 +42,40 @@ type scoredMessage struct {
 	index   int // 原始索引用于保持时间顺序
 }
 
-// addWord 处理并添加单词到结果列表
-func addWord(wordBuilder *strings.Builder, words *[]string) {
-	if wordBuilder.Len() > 0 {
-		word := wordBuilder.String()
-		wordBuilder.Reset()
-		if word != "" && !stopwords[word] {
-			*words = append(*words, word)
+// initGse 初始化分词器
+func initGse() {
+	segmenterOnce.Do(func() {
+		var err error
+		gseSegmenter, err = gse.New("zh", "alpha")
+		if err != nil {
+			// 兜底回退
+			gseSegmenter = gse.Segmenter{}
 		}
-	}
+	})
 }
 
 // segmentText 对文本进行分词处理，支持中英文混合
-func segmentText(text string) []string {
+func SegmentText(text string) []string {
 	if text == "" {
 		return []string{}
 	}
 
+	// 初始化分词器
+	initGse()
+
 	// 转换为小写
 	lowerText := strings.ToLower(text)
 
-	// 按字符拆分中文，按空格拆分英文
-	var words []string
-	var currentWord strings.Builder
+	// gse智能分词
+	segments := gseSegmenter.Cut(lowerText)
 
-	for _, r := range lowerText {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			// 英文字母或数字，继续构建当前单词
-			currentWord.WriteRune(r)
-		} else if r >= 0x4e00 && r <= 0x9fff {
-			// 中文字符，先处理当前单词，然后添加中文字符
-			addWord(&currentWord, &words)
-			char := string(r)
-			if char != "" && !stopwords[char] {
-				words = append(words, char)
-			}
-		} else {
-			// 其他字符（如标点符号）作为分隔符
-			addWord(&currentWord, &words)
+	// 过滤停用词
+	var words []string
+	for _, word := range segments {
+		if word != "" && !stopwords[word] {
+			words = append(words, word)
 		}
 	}
-
-	// 处理最后一个单词
-	addWord(&currentWord, &words)
 
 	return words
 }
@@ -118,6 +119,50 @@ func selectAndOrderMessages(scoredMessages []scoredMessage, maxHistory int, chat
 	}
 
 	return relevant
+}
+
+// FilterRelevantHistoryWithTFIDF 使用TF-IDF关键词匹配的对话历史过滤
+func FilterRelevantHistoryWithTFIDF(chatHistory []*schema.Message, currentQuestion string, maxHistory int, tfidfCalculator *pkg.TFIDFCalculator) []*schema.Message {
+	// 基本参数检查
+	if len(chatHistory) == 0 || maxHistory <= 0 || tfidfCalculator == nil {
+		return []*schema.Message{}
+	}
+
+	if maxHistory > len(chatHistory) {
+		maxHistory = len(chatHistory)
+	}
+
+	// 使用TF-IDF提取当前问题的关键词
+	keywords := tfidfCalculator.ExtractKeywords(currentQuestion, 3)
+	if len(keywords) == 0 {
+		return []*schema.Message{}
+	}
+
+	var scoredMessages []scoredMessage
+
+	// 为每条历史消息计算TF-IDF关键词匹配分数
+	for i, msg := range chatHistory {
+		if msg.Content == "" {
+			continue
+		}
+
+		// TF-IDF关键词匹配分数
+		keywordScore := calculateKeywordMatchScore(msg.Content, keywords, tfidfCalculator)
+
+		// 时间权重
+		recencyWeight := calculateRecencyWeight(chatHistory, i)
+
+		// 综合分数 = TF-IDF关键词分数 + 时间权重
+		finalScore := keywordScore + recencyWeight
+
+		scoredMessages = append(scoredMessages, scoredMessage{
+			message: msg,
+			score:   finalScore,
+			index:   i,
+		})
+	}
+
+	return selectAndOrderMessages(scoredMessages, maxHistory, chatHistory, 0)
 }
 
 // FilterRelevantHistory 过滤与当前问题相关的对话历史，支持中英文混合
@@ -212,7 +257,48 @@ func FilterRelevantHistory(ctx context.Context, embedder embedding.Embedder, cha
 	return selectAndOrderMessages(scoredMessages, maxHistory, chatHistory, startIndex)
 }
 
-// filterRelevantHistoryByKeywords 使用关键词匹配过滤相关历史消息
+// calculateKeywordMatchScore 计算TF-IDF关键词匹配分数
+func calculateKeywordMatchScore(content string, keywords []string, calculator *pkg.TFIDFCalculator) float64 {
+	if len(keywords) == 0 {
+		return 0.0
+	}
+
+	// 计算内容的关键词分数
+	contentScores := calculator.Calculate(content)
+
+	matchScore := 0.0
+	for _, keyword := range keywords {
+		if score, exists := contentScores[keyword]; exists {
+			matchScore += score
+		}
+	}
+
+	// 归一化处理
+	return matchScore / float64(len(keywords))
+}
+
+// EnhanceHistorySelection 基于TF-IDF关键词重新排序历史
+func EnhanceHistorySelection(chatHistory []*schema.Message, currentQuestion string, calculator *pkg.TFIDFCalculator) []*schema.Message {
+	if calculator == nil || len(chatHistory) <= 5 {
+		return chatHistory
+	}
+
+	keywords := calculator.ExtractKeywords(currentQuestion, 3)
+	if len(keywords) == 0 {
+		return chatHistory
+	}
+
+	// 基于TF-IDF关键词重新排序历史
+	sort.Slice(chatHistory, func(i, j int) bool {
+		scoreI := calculateKeywordMatchScore(chatHistory[i].Content, keywords, calculator)
+		scoreJ := calculateKeywordMatchScore(chatHistory[j].Content, keywords, calculator)
+		return scoreI > scoreJ
+	})
+
+	return chatHistory
+}
+
+// filterRelevantHistoryByKeywords 基于关键词匹配过滤相关历史
 func filterRelevantHistoryByKeywords(chatHistory []*schema.Message, currentQuestion string, maxHistory int) []*schema.Message {
 	// 确保maxHistory不超过历史记录总数
 	if maxHistory > len(chatHistory) {
@@ -228,7 +314,7 @@ func filterRelevantHistoryByKeywords(chatHistory []*schema.Message, currentQuest
 	var scoredMessages []scoredMessage
 
 	// 分词当前问题
-	questionWords := segmentText(currentQuestion)
+	questionWords := SegmentText(currentQuestion)
 	if len(questionWords) == 0 {
 		// 如果问题分词后为空，返回最近的消息
 		return chatHistory[startIndex:]
@@ -247,7 +333,7 @@ func filterRelevantHistoryByKeywords(chatHistory []*schema.Message, currentQuest
 		}
 
 		// 分词历史消息
-		msgWords := segmentText(msg.Content)
+		msgWords := SegmentText(msg.Content)
 		if len(msgWords) == 0 {
 			continue
 		}
