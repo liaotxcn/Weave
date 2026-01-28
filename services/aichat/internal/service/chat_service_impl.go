@@ -124,12 +124,6 @@ func (s *chatServiceImpl) ProcessUserInput(ctx context.Context, userInput string
 	return s.processUserInputWithImages(ctx, userInput, userID, nil, nil)
 }
 
-// initializeSummaryGenerator 初始化BM25摘要生成器
-func (s *chatServiceImpl) initializeSummaryGenerator() *summary.SimpleSummaryGenerator {
-	// 初始化BM25，后续通过增量更新添加用户对话历史
-	return summary.NewBM25SummaryGenerator([]string{})
-}
-
 // updateSummaryGenerator 更新BM25摘要生成器（增量学习）
 func (s *chatServiceImpl) updateSummaryGenerator(conversation *model.Conversation) {
 	if s.summaryGenerator != nil && len(conversation.Messages) > 0 {
