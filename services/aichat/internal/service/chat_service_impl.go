@@ -348,7 +348,7 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 			}
 		}
 
-		// 增量更新TF-IDF词汇表
+		// 增量更新BM25词汇表
 		s.updateSummaryGenerator(conversation)
 	}
 

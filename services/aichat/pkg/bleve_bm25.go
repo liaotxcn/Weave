@@ -3,7 +3,6 @@ package pkg
 import (
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -22,6 +21,8 @@ type BleveBM25Calculator struct {
 	docs         map[string]string // 文档ID到内容的映射
 	gseSegmenter gse.Segmenter     // GSE分词器
 	mu           sync.RWMutex
+	searchCache  map[string]map[string]float64 // 搜索结果缓存
+	cacheMutex   sync.RWMutex                  // 缓存锁
 }
 
 // 全局GSE分词器，用于线程安全初始化
@@ -74,6 +75,7 @@ func NewBleveBM25Calculator(documents []string) *BleveBM25Calculator {
 		index:        index,
 		docs:         make(map[string]string),
 		gseSegmenter: globalGseSegmenter,
+		searchCache:  make(map[string]map[string]float64),
 	}
 
 	// 批量添加文档
@@ -183,9 +185,23 @@ func (calc *BleveBM25Calculator) extractSmartKeywords(text string, topN int) []s
 	// 3. 词频统计分析
 	wordStats := calc.analyzeWordStatistics(filteredWords)
 
-	// 4. BM25权重计算
+	// 4. 使用 Bleve BM25 计算权重
 	if calc.index != nil && len(calc.docs) > 0 {
-		wordStats = calc.calculateBM25Weights(wordStats)
+		// 提取所有需要计算 BM25 得分的词
+		words := make([]string, 0, len(wordStats))
+		for word := range wordStats {
+			words = append(words, word)
+		}
+
+		// 批量计算关键词的 BM25 得分
+		wordScores := calc.batchSearchKeywords(words)
+
+		// 将计算结果应用到词统计信息中
+		for word, score := range wordScores {
+			if stat, exists := wordStats[word]; exists {
+				stat.BM25Score = score
+			}
+		}
 	}
 
 	// 5. 智能排序选择
@@ -327,61 +343,10 @@ func (calc *BleveBM25Calculator) analyzeWordStatistics(words []string) map[strin
 	return stats
 }
 
-// calculateBM25Weights BM25权重计算
+// calculateBM25Weights BM25权重计算（已使用 Bleve 内置实现替代）
 func (calc *BleveBM25Calculator) calculateBM25Weights(wordStats map[string]*WordStat) map[string]*WordStat {
-	totalDocs := float64(len(calc.docs))
-
-	// 计算平均文档长度
-	var totalLength int
-	docLengths := make(map[string]int)
-	for docID, doc := range calc.docs {
-		docLength := len(strings.Fields(doc)) // 使用词数作为文档长度
-		docLengths[docID] = docLength
-		totalLength += docLength
-	}
-	avgDocLength := float64(totalLength) / totalDocs
-
-	for word, stat := range wordStats {
-		// 计算包含该词的文档数
-		docCount := 0
-		var totalTermFreqInDocs int
-
-		for _, doc := range calc.docs {
-			if strings.Contains(strings.ToLower(doc), word) {
-				docCount++
-				// 计算该词在当前文档中的频率
-				words := strings.Fields(strings.ToLower(doc))
-				for _, w := range words {
-					if w == word {
-						totalTermFreqInDocs++
-					}
-				}
-			}
-		}
-
-		// BM25参数
-		k1 := 1.2 // 词频饱和度参数
-		b := 0.75 // 文档长度归一化参数
-
-		// 避免除零错误
-		if docCount == 0 {
-			stat.BM25Score = 0.0
-			continue
-		}
-
-		// BM25 IDF计算
-		idf := math.Log((totalDocs-float64(docCount)+0.5)/(float64(docCount)+0.5) + 1.0)
-
-		// 计算平均词频
-		avgTermFreq := float64(totalTermFreqInDocs) / float64(docCount)
-
-		// TF归一化
-		tfNorm := (avgTermFreq * (k1 + 1)) / (avgTermFreq + k1*(1-b+b*(avgDocLength/avgDocLength)))
-
-		// BM25得分
-		stat.BM25Score = idf * tfNorm
-	}
-
+	// 此函数已被 Bleve 内置实现替代
+	// 保留此函数以保持接口兼容性
 	return wordStats
 }
 
@@ -420,19 +385,42 @@ func (calc *BleveBM25Calculator) Calculate(text string) map[string]float64 {
 		return result
 	}
 
+	// 检查缓存
+	calc.cacheMutex.RLock()
+	if cachedResult, exists := calc.searchCache[text]; exists {
+		calc.cacheMutex.RUnlock()
+		// 深拷贝缓存结果
+		for k, v := range cachedResult {
+			result[k] = v
+		}
+		return result
+	}
+	calc.cacheMutex.RUnlock()
+
+	// 创建搜索请求
 	searchRequest := bleve.NewSearchRequest(bleve.NewQueryStringQuery(text))
 	searchRequest.Size = len(calc.docs)
 
+	// 执行搜索
 	searchResult, err := calc.index.Search(searchRequest)
 	if err != nil {
 		return result
 	}
 
+	// 处理搜索结果
 	for _, hit := range searchResult.Hits {
 		if doc, exists := calc.docs[hit.ID]; exists {
 			result[doc] = hit.Score
 		}
 	}
+
+	// 缓存结果
+	calc.cacheMutex.Lock()
+	calc.searchCache[text] = make(map[string]float64)
+	for k, v := range result {
+		calc.searchCache[text][k] = v
+	}
+	calc.cacheMutex.Unlock()
 
 	return result
 }
@@ -454,6 +442,30 @@ func (calc *BleveBM25Calculator) GetVocabularySize() int {
 func (calc *BleveBM25Calculator) SetParameters(k1, b float64) {
 	// Bleve 内部使用优化过的 BM25 参数
 	// 这里作为兼容接口，不实际修改参数
+}
+
+// batchSearchKeywords 批量搜索关键词的 BM25 得分
+func (calc *BleveBM25Calculator) batchSearchKeywords(words []string) map[string]float64 {
+	results := make(map[string]float64)
+
+	// 对每个词执行搜索
+	for _, word := range words {
+		// 使用词作为查询，计算与所有文档的相似度
+		searchRequest := bleve.NewSearchRequest(bleve.NewMatchQuery(word))
+		searchRequest.Size = len(calc.docs)
+
+		searchResult, err := calc.index.Search(searchRequest)
+		if err == nil && len(searchResult.Hits) > 0 {
+			// 使用平均得分作为词的 BM25 权重
+			totalScore := 0.0
+			for _, hit := range searchResult.Hits {
+				totalScore += hit.Score
+			}
+			results[word] = totalScore / float64(len(searchResult.Hits))
+		}
+	}
+
+	return results
 }
 
 // Close 关闭索引
