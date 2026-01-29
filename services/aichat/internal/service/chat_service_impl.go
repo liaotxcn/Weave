@@ -113,7 +113,7 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	s.logger.Info("活跃对话管理器初始化完成")
 
 	// 初始化摘要生成器
-	s.summaryGenerator = s.initializeSummaryGenerator()
+	s.summaryGenerator = summary.NewBM25SummaryGenerator([]string{})
 	s.logger.Info("摘要生成器初始化完成")
 
 	return nil
@@ -124,16 +124,10 @@ func (s *chatServiceImpl) ProcessUserInput(ctx context.Context, userInput string
 	return s.processUserInputWithImages(ctx, userInput, userID, nil, nil)
 }
 
-// initializeSummaryGenerator 初始化TF-IDF摘要生成器
-func (s *chatServiceImpl) initializeSummaryGenerator() *summary.SimpleSummaryGenerator {
-	// 初始化TF-IDF，后续通过增量更新添加用户对话历史
-	return summary.NewTFIDFSummaryGenerator([]string{})
-}
-
-// updateSummaryGenerator 更新TF-IDF摘要生成器（增量学习）
+// updateSummaryGenerator 更新BM25摘要生成器（增量学习）
 func (s *chatServiceImpl) updateSummaryGenerator(conversation *model.Conversation) {
 	if s.summaryGenerator != nil && len(conversation.Messages) > 0 {
-		// 增量添加新对话内容到TF-IDF词汇表
+		// 增量添加新对话内容到BM25词汇表
 		for _, msg := range conversation.Messages {
 			if msg.Content != "" {
 				s.summaryGenerator.UpdateSummary(context.Background(), "", []*schema.Message{msg})
@@ -354,7 +348,7 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 			}
 		}
 
-		// 增量更新TF-IDF词汇表
+		// 增量更新BM25词汇表
 		s.updateSummaryGenerator(conversation)
 	}
 

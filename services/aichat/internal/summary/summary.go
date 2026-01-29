@@ -35,19 +35,32 @@ type SummaryGenerator interface {
 
 // SimpleSummaryGenerator 摘要生成器实现
 type SimpleSummaryGenerator struct {
-	maxSummaryLength int                  // 摘要最大长度
-	minMessageCount  int                  // 生成摘要的最小消息数
-	tfidfCalculator  *pkg.TFIDFCalculator // TF-IDF计算器
+	maxSummaryLength int                      // 摘要最大长度
+	minMessageCount  int                      // 生成摘要的最小消息数
+	bm25Calculator   *pkg.BleveBM25Calculator // Bleve BM25计算器
+	updateStrategy   *UpdateStrategy          // 智能更新策略
 }
 
-// NewTFIDFSummaryGenerator 创建TF-IDF摘要生成器
-func NewTFIDFSummaryGenerator(conversationHistory []string) *SimpleSummaryGenerator {
-	tfidfCalculator := pkg.NewTFIDFCalculator(conversationHistory)
+// UpdateStrategy 摘要更新策略
+type UpdateStrategy struct {
+	MinRoundsForUpdate int // 最少对话轮次才更新（默认：2）
+	MaxRoundsInterval  int // 最大更新间隔轮次（默认：5）
+	LastUpdateRound    int // 上次更新的轮次
+}
+
+// NewBM25SummaryGenerator 创建BM25摘要生成器
+func NewBM25SummaryGenerator(conversationHistory []string) *SimpleSummaryGenerator {
+	bm25Calculator := pkg.NewBleveBM25Calculator(conversationHistory)
 
 	return &SimpleSummaryGenerator{
-		maxSummaryLength: 260,
+		maxSummaryLength: 400,
 		minMessageCount:  3,
-		tfidfCalculator:  tfidfCalculator,
+		bm25Calculator:   bm25Calculator,
+		updateStrategy: &UpdateStrategy{
+			MinRoundsForUpdate: 2, // 最少2轮对话才更新
+			MaxRoundsInterval:  5, // 每5轮对话更新一次
+			LastUpdateRound:    0, // 初始为0
+		},
 	}
 }
 
@@ -78,46 +91,12 @@ func (sg *SimpleSummaryGenerator) GenerateSummary(ctx context.Context, messages 
 	var summaryBuilder strings.Builder
 	summaryBuilder.WriteString("对话摘要：")
 
-	// 包含用户的主要问题
-	if len(userQuestions) > 0 {
-		keywords := sg.extractKeywords(userQuestions)
-		if keywords != "" {
-			summaryBuilder.WriteString("用户询问了关于")
-			summaryBuilder.WriteString(keywords)
-			summaryBuilder.WriteString("的问题。")
-		} else if len(userQuestions) > 0 {
-			// 若没有提取到关键词，使用最近问题核心内容
-			recentQuestion := userQuestions[len(userQuestions)-1]
-			if len(recentQuestion) > 50 {
-				recentQuestion = recentQuestion[:50] + "..."
-			}
-			summaryBuilder.WriteString("用户提问：")
-			summaryBuilder.WriteString(recentQuestion)
-			summaryBuilder.WriteString("。")
-		}
-	}
+	// 智能选择对话轮次（最多保留2轮）
+	selectedRounds := sg.selectConversationRounds(messages, 2)
 
-	// 包含助手的主要回答
-	if len(assistantAnswers) > 0 {
-		// 选择最近的2个回答
-		recentAnswers := getRecentAnswers(assistantAnswers, 2)
-		// 提取回答的核心内容
-		var answersContent strings.Builder
-		for i, answer := range recentAnswers {
-			coreContent := extractCoreContent(answer)
-			if coreContent != "" {
-				if i > 0 {
-					answersContent.WriteString("；")
-				}
-				answersContent.WriteString(coreContent)
-			}
-		}
-
-		if answersContent.Len() > 0 {
-			summaryBuilder.WriteString("助手的回答是：")
-			summaryBuilder.WriteString(answersContent.String())
-			summaryBuilder.WriteString("。")
-		}
+	// 生成基于多轮对话的摘要
+	if len(selectedRounds) > 0 {
+		sg.generateMultiRoundSummary(&summaryBuilder, selectedRounds)
 	}
 
 	// 限制摘要长度
@@ -129,46 +108,31 @@ func (sg *SimpleSummaryGenerator) GenerateSummary(ctx context.Context, messages 
 	return summary, nil
 }
 
-// UpdateSummary 更新对话摘要
+// UpdateSummary 智能更新对话摘要
 func (sg *SimpleSummaryGenerator) UpdateSummary(ctx context.Context, existingSummary string, newMessages []*schema.Message) (string, error) {
 	if len(newMessages) == 0 {
 		return existingSummary, nil
 	}
 
-	// 增量更新TF-IDF词汇表
+	// 计算当前对话轮次
+	currentRound := sg.calculateCurrentRound(newMessages)
+
+	// 智能判断是否需要更新
+	if !sg.shouldUpdateSummary(currentRound, newMessages) {
+		return existingSummary, nil // 不满足更新条件，返回原摘要
+	}
+
+	// 增量更新BM25词汇表
 	for _, msg := range newMessages {
 		if msg.Content != "" {
-			sg.tfidfCalculator.AddDocument(msg.Content)
+			sg.bm25Calculator.AddDocument(msg.Content)
 		}
 	}
+
+	// 更新策略记录
+	sg.updateStrategy.LastUpdateRound = currentRound
 
 	return sg.GenerateSummary(ctx, newMessages)
-}
-
-// extractKeywords TF-IDF提取关键词
-func (sg *SimpleSummaryGenerator) extractKeywords(userQuestions []string) string {
-	if len(userQuestions) == 0 {
-		return ""
-	}
-
-	// 综合所有问题进行关键词提取
-	combinedQuestions := strings.Join(userQuestions, " ")
-	keywords := sg.ExtractKeywords(combinedQuestions, 5)
-
-	if len(keywords) > 0 {
-		return strings.Join(keywords, " ")
-	}
-
-	// 若综合提取失败，使用最近问题
-	if len(userQuestions) > 0 {
-		recentQuestion := userQuestions[len(userQuestions)-1]
-		keywords := sg.ExtractKeywords(recentQuestion, 5)
-		if len(keywords) > 0 {
-			return strings.Join(keywords, " ")
-		}
-	}
-
-	return ""
 }
 
 // ExtractKeywords 提取关键词
@@ -177,95 +141,177 @@ func (sg *SimpleSummaryGenerator) ExtractKeywords(text string, topN int) []strin
 		return []string{}
 	}
 
-	// 使用TF-IDF计算器提取关键词
-	keywords := sg.tfidfCalculator.ExtractKeywords(text, topN)
+	// 使用BM25计算器提取关键词
+	keywords := sg.bm25Calculator.ExtractKeywords(text, topN)
 
 	// 过滤关键词
 	return filterKeywords(keywords)
+}
+
+// selectConversationRounds 智能选择对话轮次
+func (sg *SimpleSummaryGenerator) selectConversationRounds(messages []*schema.Message, maxRounds int) []ConversationRound {
+	var rounds []ConversationRound
+	var currentRound ConversationRound
+
+	for _, msg := range messages {
+		if msg.Content == "" {
+			continue
+		}
+
+		if msg.Role == schema.User {
+			// 如果是新的一轮对话，保存当前轮次
+			if currentRound.AssistantAnswer != "" {
+				rounds = append(rounds, currentRound)
+				currentRound = ConversationRound{}
+			}
+			currentRound.UserQuestion = msg.Content
+		} else if msg.Role == schema.Assistant && currentRound.UserQuestion != "" {
+			currentRound.AssistantAnswer = msg.Content
+		}
+	}
+
+	// 添加最后一轮（如果完整）
+	if currentRound.UserQuestion != "" && currentRound.AssistantAnswer != "" {
+		rounds = append(rounds, currentRound)
+	}
+
+	// 返回最近的maxRounds轮
+	if len(rounds) > maxRounds {
+		return rounds[len(rounds)-maxRounds:]
+	}
+	return rounds
+}
+
+// generateMultiRoundSummary 生成多轮对话摘要
+func (sg *SimpleSummaryGenerator) generateMultiRoundSummary(builder *strings.Builder, rounds []ConversationRound) {
+	if len(rounds) == 0 {
+		return
+	}
+
+	// 单轮对话
+	if len(rounds) == 1 {
+		round := rounds[0]
+		builder.WriteString("用户提问：")
+		builder.WriteString(sg.truncateText(round.UserQuestion, 60))
+		builder.WriteString("。助手回答：")
+		builder.WriteString(sg.truncateText(round.AssistantAnswer, 100))
+		builder.WriteString("。")
+		return
+	}
+
+	// 多轮对话
+	builder.WriteString("多轮对话摘要：")
+	for i, round := range rounds {
+		if i > 0 {
+			builder.WriteString("；")
+		}
+
+		// 提取每轮的核心内容
+		questionKeywords := sg.ExtractKeywords(round.UserQuestion, 3)
+		if len(questionKeywords) > 0 {
+			builder.WriteString("用户询问")
+			builder.WriteString(strings.Join(questionKeywords, "、"))
+			builder.WriteString("，助手提供相关解答")
+		} else {
+			builder.WriteString("用户讨论")
+			builder.WriteString(sg.truncateText(round.UserQuestion, 30))
+			builder.WriteString("等话题")
+		}
+	}
+	builder.WriteString("。")
+}
+
+// truncateText 截断文本
+func (sg *SimpleSummaryGenerator) truncateText(text string, maxLength int) string {
+	if len(text) <= maxLength {
+		return text
+	}
+	return text[:maxLength] + "..."
+}
+
+// calculateCurrentRound 计算当前对话轮次
+func (sg *SimpleSummaryGenerator) calculateCurrentRound(messages []*schema.Message) int {
+	rounds := sg.selectConversationRounds(messages, 100) // 获取所有轮次
+	return len(rounds)
+}
+
+// shouldUpdateSummary 智能判断是否需要更新摘要
+func (sg *SimpleSummaryGenerator) shouldUpdateSummary(currentRound int, newMessages []*schema.Message) bool {
+	strategy := sg.updateStrategy
+
+	// 规则1：至少完成最少轮次对话才更新
+	if currentRound < strategy.MinRoundsForUpdate {
+		return false
+	}
+
+	// 规则2：达到最大间隔轮次时更新
+	if currentRound-strategy.LastUpdateRound >= strategy.MaxRoundsInterval {
+		return true
+	}
+
+	// 规则3：检测到话题切换时更新
+	if sg.isTopicChanged(newMessages) {
+		return true
+	}
+
+	// 规则4：长时间对话后恢复时更新
+	if sg.isLongPauseResumed(newMessages) {
+		return true
+	}
+
+	return false
+}
+
+// isTopicChanged 检测话题是否切换
+func (sg *SimpleSummaryGenerator) isTopicChanged(newMessages []*schema.Message) bool {
+	if len(newMessages) < 2 {
+		return false
+	}
+
+	// 话题切换检测：比较最近消息的关键词差异
+	lastMsg := newMessages[len(newMessages)-1]
+	secondLastMsg := newMessages[len(newMessages)-2]
+
+	lastKeywords := sg.ExtractKeywords(lastMsg.Content, 3)
+	secondLastKeywords := sg.ExtractKeywords(secondLastMsg.Content, 3)
+
+	// 如果关键词完全不同，认为话题切换
+	keywordOverlap := 0
+	for _, kw1 := range lastKeywords {
+		for _, kw2 := range secondLastKeywords {
+			if kw1 == kw2 {
+				keywordOverlap++
+				break
+			}
+		}
+	}
+
+	// 重叠关键词少于1个，认为话题切换
+	return keywordOverlap < 1
+}
+
+// isLongPauseResumed 检测长时间暂停后恢复
+func (sg *SimpleSummaryGenerator) isLongPauseResumed(newMessages []*schema.Message) bool {
+	// 如果新消息数量较多（>3），认为可能是长时间暂停后恢复
+	return len(newMessages) > 3
+}
+
+// ConversationRound 对话轮次结构
+type ConversationRound struct {
+	UserQuestion    string
+	AssistantAnswer string
 }
 
 // filterKeywords 过滤关键词，去除停用词和无效词
 func filterKeywords(words []string) []string {
 	var filtered []string
 
-	stopwords := getStopwords()
-
 	for _, word := range words {
-		// 过滤停用词，保留长度大于1的词
-		if !isStopword(word, stopwords) && len(word) > 1 {
+		// 保留长度大于1的词（BM25已处理停用词过滤）
+		if len(word) > 1 {
 			filtered = append(filtered, word)
 		}
 	}
 
 	return filtered
-}
-
-// getStopwords 停用词表
-func getStopwords() map[string]bool {
-	return map[string]bool{
-		// 中文常用停用词
-		"的": true, "了": true, "是": true, "在": true, "我": true, "有": true, "和": true,
-		"就": true, "不": true, "人": true, "都": true, "一": true, "一个": true, "上": true,
-		"也": true, "很": true, "到": true, "说": true, "要": true, "去": true, "你": true,
-		"会": true, "着": true, "没有": true, "看": true, "好": true, "自己": true, "这": true,
-		"那": true, "他": true, "她": true, "它": true, "们": true, "来": true, "做": true,
-		// 英文常用停用词
-		"the": true, "a": true, "an": true, "and": true, "or": true, "but": true, "is": true,
-		"are": true, "was": true, "were": true, "in": true, "on": true, "at": true, "to": true,
-		"for": true, "of": true, "with": true, "by": true, "this": true, "that": true, "i": true,
-		"you": true, "he": true, "she": true, "it": true, "we": true, "they": true,
-	}
-}
-
-// isStopword 判断是否为停用词
-func isStopword(word string, stopwords map[string]bool) bool {
-	return stopwords[word]
-}
-
-// getRecentAnswers 获取最近的N个回答
-func getRecentAnswers(answers []string, count int) []string {
-	if len(answers) <= count {
-		return answers
-	}
-	return answers[len(answers)-count:]
-}
-
-// extractCoreContent 提取文本的核心内容
-func extractCoreContent(text string) string {
-	// 分割句子（支持多种标点）
-	sentences := splitSentences(text)
-	if len(sentences) > 2 {
-		sentences = sentences[:2]
-	}
-	coreContent := strings.Join(sentences, "。")
-	// 限制长度
-	if len(coreContent) > 100 {
-		coreContent = coreContent[:100-3] + "..."
-	}
-	return coreContent
-}
-
-// splitSentences 分割句子
-func splitSentences(text string) []string {
-	var sentences []string
-	var currentSentence strings.Builder
-
-	for _, r := range text {
-		if r == '。' || r == '！' || r == '？' || r == '.' || r == '!' || r == '?' {
-			// 句子结束符
-			if currentSentence.Len() > 0 {
-				sentences = append(sentences, strings.TrimSpace(currentSentence.String()))
-				currentSentence.Reset()
-			}
-		} else {
-			currentSentence.WriteRune(r)
-		}
-	}
-
-	// 处理最后一个句子
-	if currentSentence.Len() > 0 {
-		sentences = append(sentences, strings.TrimSpace(currentSentence.String()))
-	}
-
-	return sentences
 }
