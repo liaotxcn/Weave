@@ -13,6 +13,7 @@ import (
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/standard"
 	"github.com/go-ego/gse"
+	"github.com/spf13/viper"
 )
 
 // BleveBM25Calculator 基于 Bleve 的 BM25 计算器
@@ -261,9 +262,23 @@ func (calc *BleveBM25Calculator) loadStopWords() {
 
 // fetchStopWordsFromRepository 从专业停用词库获取停用词
 func (calc *BleveBM25Calculator) fetchStopWordsFromRepository() []string {
-	// 停用词库
-	url := "https://raw.githubusercontent.com/goto456/stopwords/master/cn_stopwords.txt"
+	var stopWords []string
 
+	cnStopWordsURL := viper.GetString("STOPWORDS_CN_URL")
+	enStopWordsURL := viper.GetString("STOPWORDS_EN_URL")
+
+	cnStopWords := calc.fetchStopWordsFromURL(cnStopWordsURL)
+	enStopWords := calc.fetchStopWordsFromURL(enStopWordsURL)
+
+	// 合并停用词
+	stopWords = append(stopWords, cnStopWords...)
+	stopWords = append(stopWords, enStopWords...)
+
+	return stopWords
+}
+
+// fetchStopWordsFromURL 从URL获取停用词
+func (calc *BleveBM25Calculator) fetchStopWordsFromURL(url string) []string {
 	resp, err := http.Get(url)
 	if err != nil {
 		return []string{}
@@ -316,25 +331,52 @@ func (calc *BleveBM25Calculator) analyzeWordStatistics(words []string) map[strin
 func (calc *BleveBM25Calculator) calculateBM25Weights(wordStats map[string]*WordStat) map[string]*WordStat {
 	totalDocs := float64(len(calc.docs))
 
+	// 计算平均文档长度
+	var totalLength int
+	docLengths := make(map[string]int)
+	for docID, doc := range calc.docs {
+		docLength := len(strings.Fields(doc)) // 使用词数作为文档长度
+		docLengths[docID] = docLength
+		totalLength += docLength
+	}
+	avgDocLength := float64(totalLength) / totalDocs
+
 	for word, stat := range wordStats {
 		// 计算包含该词的文档数
 		docCount := 0
+		var totalTermFreqInDocs int
+
 		for _, doc := range calc.docs {
 			if strings.Contains(strings.ToLower(doc), word) {
 				docCount++
+				// 计算该词在当前文档中的频率
+				words := strings.Fields(strings.ToLower(doc))
+				for _, w := range words {
+					if w == word {
+						totalTermFreqInDocs++
+					}
+				}
 			}
 		}
 
 		// BM25参数
-		k1 := 1.2             // 词频饱和度参数
-		b := 0.75             // 文档长度归一化参数
-		avgDocLength := 100.0 // 平均文档长度（估算）
+		k1 := 1.2 // 词频饱和度参数
+		b := 0.75 // 文档长度归一化参数
 
-		// IDF计算
-		idf := math.Log((totalDocs - float64(docCount) + 0.5) / (float64(docCount) + 0.5))
+		// 避免除零错误
+		if docCount == 0 {
+			stat.BM25Score = 0.0
+			continue
+		}
+
+		// BM25 IDF计算
+		idf := math.Log((totalDocs-float64(docCount)+0.5)/(float64(docCount)+0.5) + 1.0)
+
+		// 计算平均词频
+		avgTermFreq := float64(totalTermFreqInDocs) / float64(docCount)
 
 		// TF归一化
-		tfNorm := (stat.TF * (k1 + 1)) / (stat.TF + k1*(1-b+b*(avgDocLength/avgDocLength)))
+		tfNorm := (avgTermFreq * (k1 + 1)) / (avgTermFreq + k1*(1-b+b*(avgDocLength/avgDocLength)))
 
 		// BM25得分
 		stat.BM25Score = idf * tfNorm
