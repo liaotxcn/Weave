@@ -6,6 +6,8 @@
   <img src="https://img.shields.io/badge/LLM--Agent--MCP-74AA9C?style=for-the-badge&logo=brain&logoColor=white" alt="LLM-Agent-MCP">
   <img src="https://img.shields.io/badge/AIChat--RAG-FF6F00?style=for-the-badge&logo=ai&logoColor=white" alt="AIChat-RAG">
   <img src="https://img.shields.io/badge/Cloud_Native-3371E3?style=for-the-badge&logo=Docker&logoColor=white" alt="Cloud Native">
+  
+  **Language Options:** [中文](README.zh-CN.md) | [English](README.md)
 </div>
 
 ## 📋 Project Introduction
@@ -394,3 +396,4 @@ Contributions to the project are welcome! Thank you!
 ---
 
 ### <div align="center"> <strong>✨ Continuously updating and improving... ✨</strong> </div>
+
