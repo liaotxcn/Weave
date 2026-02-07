@@ -558,14 +558,31 @@ func (s *chatServiceImpl) processUserInputStreamWithImages(ctx context.Context, 
 			isToolCall := len(message.ToolCalls) > 0
 			if isToolCall {
 				for _, toolCall := range message.ToolCalls {
+					// 过滤空工具调用和重复调用
+					if toolCall.Function.Name == "" || strings.TrimSpace(toolCall.Function.Name) == "" {
+						s.logger.Debug("检测到空工具调用，跳过", zap.String("user_id", userID))
+						continue
+					}
+
+					// 检查是否重复调用工具
 					toolContent := "[调用工具: " + toolCall.Function.Name + "]"
+					if strings.Contains(fullContent.String(), toolContent) {
+						s.logger.Debug("检测到重复工具调用，跳过", zap.String("user_id", userID), zap.String("tool_name", toolCall.Function.Name))
+						continue
+					}
+
+					// 记录工具调用
+					s.logger.Info("检测到工具调用", zap.String("user_id", userID), zap.String("tool_name", toolCall.Function.Name))
+
 					if callbackErr := streamCallback(toolContent, true); callbackErr != nil {
 						return "", callbackErr
 					}
 					fullContent.WriteString(toolContent)
 				}
-			} else {
-				// 输出当前片段
+			}
+
+			// 处理消息内容（包括工具执行结果）
+			if message.Content != "" {
 				if callbackErr := streamCallback(message.Content, false); callbackErr != nil {
 					return "", callbackErr
 				}

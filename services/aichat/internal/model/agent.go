@@ -26,6 +26,7 @@ import (
 
 	"weave/pkg"
 	"weave/services/aichat/internal/tool"
+	"weave/services/aichat/internal/tool/mcp/pool"
 
 	einomcp "github.com/cloudwego/eino-ext/components/tool/mcp"
 	einomodel "github.com/cloudwego/eino/components/model"
@@ -37,6 +38,12 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
+
+// 全局MCP连接池
+var mcpConnectionPool *pool.MCPConnectionPool
+
+// 全局工具健康监控器
+var ToolHealthMonitor *tool.ToolHealthMonitor
 
 // 模型支持工具调用的配置映射
 var (
@@ -101,6 +108,11 @@ func createAgent(ctx context.Context, useVisionModel bool) (*react.Agent, error)
 
 	// 初始化模型支持配置
 	initModelSupportConfig()
+
+	// 初始化工具健康监控器
+	if ToolHealthMonitor == nil {
+		initToolHealthMonitor()
+	}
 
 	// 初始化模型
 	var llm einomodel.ToolCallingChatModel
@@ -257,23 +269,32 @@ func loadMCPTools(ctx context.Context) []einotool.BaseTool {
 					// 标准化路径
 					mcpPathAbs = filepath.Clean(mcpPathAbs)
 
-					// MCP客户端初始化添加超时控制
+					// 使用连接池获取MCP连接
+					if mcpConnectionPool == nil {
+						initMCPConnectionPool()
+					}
+
 					timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 					defer cancel()
 
-					// 初始化MCP客户端
-					cli, err := client.NewStdioMCPClient(mcpPathAbs, nil, "")
+					conn, err := mcpConnectionPool.GetConnection(timeoutCtx, mcpPathAbs)
 					if err != nil {
-						logger.Error("初始化MCP客户端失败", zap.String("service", serviceName), zap.Error(err))
+						logger.Error("获取MCP连接失败", zap.String("service", serviceName), zap.Error(err))
 						continue
 					}
 
 					// 获取MCP工具
-					tools, err := loadMCPToolsFromClient(timeoutCtx, cli, &initRequest)
+					tools, err := loadMCPToolsFromClient(timeoutCtx, conn.Client, &initRequest)
 					if err != nil {
 						logger.Error("获取MCP工具失败", zap.String("service", serviceName), zap.Error(err))
+						// 标记连接为不健康
+						mcpConnectionPool.MarkConnectionUnhealthy(mcpPathAbs)
 						continue
 					}
+
+					// 释放连接回连接池
+					mcpConnectionPool.ReleaseConnection(conn)
+
 					// 跳过重名的tool
 					mergeToolsFn("local", serviceName, tools)
 				}
@@ -296,11 +317,26 @@ func loadMCPTools(ctx context.Context) []einotool.BaseTool {
 			timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 			defer cancel()
 
-			tools, err := loadHttpMcpClient(timeoutCtx, url, &initRequest)
+			// 使用连接池获取HTTP MCP连接
+			if mcpConnectionPool == nil {
+				initMCPConnectionPool()
+			}
+
+			conn, err := mcpConnectionPool.GetConnection(timeoutCtx, url)
 			if err != nil {
-				logger.Error("加载HTTP MCP失败", zap.String("name", name), zap.String("url", url), zap.Error(err))
+				logger.Error("获取HTTP MCP连接失败", zap.String("name", name), zap.String("url", url), zap.Error(err))
 				continue
 			}
+
+			tools, err := loadMCPToolsFromClient(timeoutCtx, conn.Client, &initRequest)
+			if err != nil {
+				logger.Error("加载HTTP MCP失败", zap.String("name", name), zap.String("url", url), zap.Error(err))
+				mcpConnectionPool.MarkConnectionUnhealthy(url)
+				continue
+			}
+
+			mcpConnectionPool.ReleaseConnection(conn)
+
 			mergeToolsFn("http", name, tools)
 		}
 	}
@@ -318,11 +354,26 @@ func loadMCPTools(ctx context.Context) []einotool.BaseTool {
 			timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 			defer cancel()
 
-			tools, err := loadSSEMcpClient(timeoutCtx, url, &initRequest)
+			// 使用连接池获取SSE MCP连接
+			if mcpConnectionPool == nil {
+				initMCPConnectionPool()
+			}
+
+			conn, err := mcpConnectionPool.GetConnection(timeoutCtx, url)
 			if err != nil {
-				logger.Error("加载SSE MCP失败", zap.String("name", name), zap.String("url", url), zap.Error(err))
+				logger.Error("获取SSE MCP连接失败", zap.String("name", name), zap.String("url", url), zap.Error(err))
 				continue
 			}
+
+			tools, err := loadMCPToolsFromClient(timeoutCtx, conn.Client, &initRequest)
+			if err != nil {
+				logger.Error("加载SSE MCP失败", zap.String("name", name), zap.String("url", url), zap.Error(err))
+				mcpConnectionPool.MarkConnectionUnhealthy(url)
+				continue
+			}
+
+			mcpConnectionPool.ReleaseConnection(conn)
+
 			mergeToolsFn("sse", name, tools)
 		}
 	}
@@ -354,22 +405,42 @@ func loadMCPToolsFromClient(ctx context.Context, cli *client.Client, initRequest
 	return tools, nil
 }
 
-// loadHttpMcpClient 加载并初始化 HTTP MCP 客户端，返回工具列表
-func loadHttpMcpClient(ctx context.Context, url string, initRequest *mcp.InitializeRequest) ([]einotool.BaseTool, error) {
-	cli, err := client.NewStreamableHttpClient(url)
-	if err != nil {
-		return nil, fmt.Errorf("创建HTTP MCP客户端失败: %w", err)
+// initMCPConnectionPool 初始化MCP连接池
+func initMCPConnectionPool() {
+	logger := pkg.GetLogger()
+
+	// 从配置获取连接池参数
+	maxSize := viper.GetInt("AICHAT_MCP_POOL_MAX_SIZE")
+	if maxSize == 0 {
+		maxSize = 50 // 默认最大连接数
 	}
-	return loadMCPToolsFromClient(ctx, cli, initRequest)
+
+	idleTimeout := viper.GetDuration("AICHAT_MCP_POOL_IDLE_TIMEOUT")
+	if idleTimeout == 0 {
+		idleTimeout = 5 * time.Minute // 默认空闲超时时间
+	}
+
+	mcpConnectionPool = pool.NewMCPConnectionPool(maxSize, idleTimeout, logger.Logger)
+	logger.Info("MCP连接池初始化完成",
+		zap.Int("max_size", maxSize),
+		zap.Duration("idle_timeout", idleTimeout))
 }
 
-// loadSSEMcpClient 加载并初始化 SSE MCP 客户端，返回工具列表
-func loadSSEMcpClient(ctx context.Context, url string, initRequest *mcp.InitializeRequest) ([]einotool.BaseTool, error) {
-	cli, err := client.NewSSEMCPClient(url)
-	if err != nil {
-		return nil, fmt.Errorf("创建SSE MCP客户端失败: %w", err)
+// initToolHealthMonitor 初始化工具健康监控器
+func initToolHealthMonitor() {
+	logger := pkg.GetLogger()
+
+	// 从配置获取健康检查间隔
+	checkInterval := viper.GetDuration("AICHAT_TOOL_HEALTH_CHECK_INTERVAL")
+	if checkInterval == 0 {
+		checkInterval = 5 * time.Minute // 默认5分钟检查一次
 	}
-	return loadMCPToolsFromClient(ctx, cli, initRequest)
+
+	ToolHealthMonitor = tool.NewToolHealthMonitor(checkInterval, logger.Logger)
+	// 确保全局监控器被设置
+	tool.SetGlobalToolHealthMonitor(ToolHealthMonitor)
+	logger.Info("工具健康监控器初始化完成",
+		zap.Duration("check_interval", checkInterval))
 }
 
 // isModelSupportToolCall 检查模型是否支持工具调用

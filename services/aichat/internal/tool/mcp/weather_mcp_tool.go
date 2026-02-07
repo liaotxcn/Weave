@@ -121,7 +121,7 @@ func handleListTools(req *MCPRequest) string {
 	toolsInfo := map[string]interface{}{
 		"tools": []map[string]interface{}{
 			{
-				"name":        "get_weather",
+				"name":        "weather_query",
 				"description": "查询指定城市的天气信息",
 				"parameters": map[string]interface{}{
 					"type": "object",
@@ -147,7 +147,7 @@ func handleInvoke(req *MCPRequest) string {
 		return formatError(req.ID, "InvalidParams", "无效的调用参数")
 	}
 
-	if invokeParams.Tool != "get_weather" {
+	if invokeParams.Tool != "weather_query" {
 		return formatError(req.ID, "ToolNotFound", "工具不存在")
 	}
 

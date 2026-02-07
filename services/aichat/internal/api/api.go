@@ -27,6 +27,7 @@ import (
 
 	"weave/middleware"
 	"weave/pkg"
+	"weave/services/aichat/internal/model"
 	"weave/services/aichat/internal/service"
 
 	"github.com/cloudwego/eino/schema"
@@ -217,6 +218,13 @@ func (s *APIServer) registerRoutes() {
 
 		// 聊天控制接口
 		chat.POST("/control", s.handleChatControl)
+	}
+
+	// 工具健康检查路由
+	tool := api.Group("/tool")
+	{
+		tool.GET("/health", s.handleToolHealthCheck)
+		tool.GET("/health/:tool_name", s.handleToolHealthCheck)
 	}
 
 	// 健康检查
@@ -461,6 +469,41 @@ func (s *APIServer) handleHealthCheck(c *gin.Context) {
 		"status":  "ok",
 		"service": "aichat",
 	})
+}
+
+// handleToolHealthCheck 处理工具健康检查请求
+func (s *APIServer) handleToolHealthCheck(c *gin.Context) {
+	// 获取工具名称参数
+	toolName := c.Param("tool_name")
+
+	// 检查工具健康监控器是否初始化
+	if model.ToolHealthMonitor == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":  "error",
+			"message": "工具健康监控器未初始化",
+		})
+		return
+	}
+
+	// 根据是否指定工具名称返回响应
+	if toolName != "" {
+		// 获取单个工具健康状态
+		status := model.ToolHealthMonitor.GetToolStatus(toolName)
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+			"tool":   status,
+		})
+	} else {
+		// 获取所有工具健康状态
+		allStatus := model.ToolHealthMonitor.GetAllToolStatus()
+		// 获取健康统计信息
+		stats := model.ToolHealthMonitor.GetHealthStats()
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+			"stats":  stats,
+			"tools":  allStatus,
+		})
+	}
 }
 
 // Start 启动API服务器
