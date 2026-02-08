@@ -1,177 +1,173 @@
-# Weave - A microkernel and layered architecture plugin/service development aggregation platform designed to provide high-performance, highly scalable, secure, and reliable plugin/service development
+# A highly efficient, secure, and stable application development platform with excellent performance, easy scalability, and deep integration of AI capabilities such as LLM, AI Chat, RAG, and Agents.
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version">
+  <img src="https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version">
   <img src="https://img.shields.io/badge/Microkernel-Layered-6BA539?style=for-the-badge" alt="Architecture">
-  <img src="https://img.shields.io/badge/AI--LLM-74AA9C?style=for-the-badge&logo=brain&logoColor=white" alt="AI-LLM">
-  <img src="https://img.shields.io/badge/Plugin%20and Service-FF6F00?style=for-the-badge&logo=ai&logoColor=white" alt="Plugin and Service">
+  <img src="https://img.shields.io/badge/LLM--Agent--MCP-74AA9C?style=for-the-badge&logo=brain&logoColor=white" alt="LLM-Agent-MCP">
+  <img src="https://img.shields.io/badge/AIChat--RAG-FF6F00?style=for-the-badge&logo=ai&logoColor=white" alt="AIChat-RAG">
   <img src="https://img.shields.io/badge/Cloud_Native-3371E3?style=for-the-badge&logo=Docker&logoColor=white" alt="Cloud Native">
-
+  
   **Language Options:** [中文](README.zh-CN.md) | [English](README.md)
 </div>
 
-
 ## 📋 Project Introduction
 
-Weave from a simple thread to a complex tapestry, weaving is the creative process from simplicity to complexity. Developers can use Weave to develop various plugins or services, and through connection and integration, plugins and services can be seamlessly integrated and deeply fused, thereby building efficient and stable application systems. Weave, crafting infinite possibilities.
+Weave (meaning "to weave") – from a simple thread to a complex tapestry, weaving is the creative process from simplicity to complexity. A high-performance, high-efficiency, easily extensible **empowerment tool/AI application development platform** built with Golang, designed for efficiently constructing stable and reliable intelligent applications. It employs a microkernel + layered architecture, allowing developers to develop efficiently and integrate/manage various tools/services with ease, while maintaining high system performance and scalability.
 
-<img width="2590" height="1200" alt="Weaving" src="https://github.com/user-attachments/assets/5dfaa7bd-9817-42f8-847c-446d2f03ce05" />
+<img width="660" height="265" alt="image" src="https://github.com/user-attachments/assets/1c4b8e34-aa4b-496a-8a27-ec7f212e0cc7" />
 
-A high-performance, high-efficiency, pluggable, and easily extensible tool/service development platform based on Golang. It adopts a microkernel + layered architecture design, allowing developers to efficiently develop and easily integrate and manage various tools/services while maintaining system high performance and scalability.
+Weave's core strength lies in its stable and reliable **AI feature development stack + plugin/tool system**, deeply integrating core AI capabilities such as LLM (Large Language Models), AIChat (Intelligent Chat), Agent (Intelligent Agent), RAG (Retrieval-Augmented Generation), and more. It provides a unified development framework and standardized interfaces, enabling developers to rapidly build powerful intelligent applications without needing to focus on underlying complex implementations.
 
-Main application scenarios include:
-- Tool development and integration
-- Service development and aggregation
-- Data/service flow middleware platform
-- API gateway and service orchestration
-- Efficient development and prototyping platform
+Primary application scenarios include:
+- Tool/Application Development Aggregation
+- Data/Service Flow Middle Platform
+- API Gateway and Service Orchestration
+- AI Application Development - Building LLM, AIChat, Agent, and RAG intelligent applications
+- Automated Workflows - Complex task automation combining ETL, DevOps, and Agent
 
 ---
 
 ## 🏗️ Overall Architecture
 
-<img width="1640" height="626" alt="image" src="https://github.com/user-attachments/assets/ad521b7a-4aab-4cc4-8e73-33542a8d7f6c" />
+<img width="1562" height="545" alt="image" src="https://github.com/user-attachments/assets/e56f5d3b-b9e4-417a-992e-2997991aa2ad" />
 
-Weave adopts a **microkernel + layered architecture** design pattern, fully leveraging the advantages of both architectures to ensure system availability and achieve high flexibility, scalability, and good performance.
+Weave adopts a microkernel + layered architectural design pattern, fully leveraging the advantages of both to ensure system availability, achieving high flexibility, scalability, and excellent performance.
 
-### Fusion of Microkernel and Layered Architecture
+### Integration of Microkernel and Layered Architecture
 
-Weave integrates the design philosophy of layered architecture on the basis of the microkernel architecture, forming a complete, efficient, and flexible architectural system:
+Weave incorporates the design philosophy of layered architecture on top of a microkernel architecture, forming a complete, efficient, and flexible architectural system:
 
-1. **Microkernel Architecture (Plugin System)**: Provides plugin management, lifecycle control, and inter-plugin communication mechanisms.
-2. **Layered Architecture (Core System)**: Separates core functions by concerns, forming a clear hierarchical structure.
+- Microkernel Architecture (Plugin System): Provides plugin management, lifecycle control, and inter-plugin communication mechanisms.
+- Layered Architecture (Core System): Separates core functionalities by concerns, forming a clear hierarchical structure.
 
 ### Microkernel Architecture Components
 
-1. **Core Kernel**: Provides basic runtime environment, plugin management, configuration management, logging services, security mechanisms, and other basic functions.
-2. **Plugin System**: The plugin manager is responsible for plugin registration, lifecycle management, dependency resolution, and conflict detection.
-3. **Extension Plugins**: Integrated into the core system through plugin interfaces to implement various business functions.
+- Core Kernel: Provides fundamental runtime environment, plugin management, configuration management, logging services, security mechanisms, and other basic functionalities.
+- Plugin System: The plugin manager handles plugin registration, lifecycle management, dependency resolution, and conflict detection.
+- Extension Plugins: Integrated into the core system through plugin interfaces, implementing various business functionalities.
 
 ### Layered Architecture Components
 
-1. **Interface Layer**: Handles HTTP requests, including route management and controllers.
-2. **Business Layer**: Contains core business logic and the plugin system.
-3. **Data Layer**: Responsible for data storage and access.
-4. **Infrastructure Layer**: Provides services such as logging, configuration, and security.
+- Interface Layer: Handles HTTP requests, including routing management and controllers.
+- Business Layer: Contains core business logic and the plugin system.
+- Data Layer: Responsible for data storage and access.
+- Infrastructure Layer: Provides services such as logging, configuration, and security.
 
-### Architectural Features
+### Architectural Characteristics
 
-**Loose Coupling Design**: The core system and plugins communicate through well-defined interfaces, reducing inter-module dependencies.
+- Loosely Coupled Design: The core system and plugins communicate through well-defined interfaces, reducing inter-module dependencies.
+- Hot-Plug Capability: Plugins can be dynamically loaded and unloaded at runtime without system restart.
+- Feature Isolation: Each plugin independently encapsulates functionality, with its own namespace and route prefix.
+- Dependency & Conflict Management: Built-in dependency resolution and conflict detection mechanisms ensure harmonious coexistence among plugins.
+- Unified Interface: All plugins implement the same `Plugin` interface, standardizing the development process.
+- Extensibility: System functionalities can be extended on-demand without modifying kernel code.
+- Clear Hierarchy: The core system uses layered design for rational code organization, making it easy to maintain and extend.
+- High Performance: The layered design optimizes request processing flow, improving system response speed.
 
-**Hot-Plug Capability**: Plugins can be dynamically loaded and unloaded at runtime without restarting the system.
-
-**Functional Isolation**: Each plugin independently encapsulates functionality, having its own namespace and route prefix.
-
-**Dependency and Conflict Management**: Built-in dependency resolution and conflict detection mechanisms ensure harmonious coexistence among plugins.
-
-**Unified Interface**: All plugins implement the same `Plugin` interface, standardizing the development process.
-
-**Extensibility**: System functions can be extended on demand without modifying the kernel code.
-
-**Clear Hierarchy**: The core system uses a layered design, with reasonable code organization, making it easy to maintain and extend.
-
-**High Performance**: The layered design optimizes the request processing flow, improving system response speed.
-
-The core of the system is an efficient and stable plugin mechanism and service aggregation, allowing functional modules to be independently developed and deployed as plugins/services, while interacting through unified interfaces. The overall architectural design emphasizes modularity, scalability, and high performance.
+The system's core is an efficient and stable plugin mechanism and service aggregation, allowing functional modules to be independently developed and deployed as plugins/services, while interacting through unified interfaces. The overall architectural design emphasizes modularity, scalability, and high performance.
 
 ---
 
 ## 🌟 Project Features
 
 ### 🏗️ Microkernel + Layered Architecture
-- **Stable Core & Clear Hierarchy**: The core system remains minimal, and the layered design makes code organization reasonable, easy to maintain, and extend.
-- **Flexible Functional Extension**: Extend system functions on demand through the plugin mechanism without modifying the kernel code.
-- **Low Coupling & High Cohesion**: Loose coupling between system components facilitates maintenance and upgrades.
+- **Stable Core & Clear Hierarchy**: The core system remains minimal, and the layered design ensures rational code organization, making it easy to maintain and extend.
+- **Flexible Functional Extension**: Extend system functionalities on-demand through the plugin mechanism without modifying kernel code.
+- **Low Coupling, High Cohesion**: System components are loosely coupled, facilitating maintenance and upgrades.
 - **Hot-Plug Capability**: Plugins can be dynamically loaded and unloaded at runtime without restarting the system.
-- **Functional Isolation & Unified Management**: Each plugin independently encapsulates functionality, has its own namespace and route prefix, while core services are uniformly managed through the layered architecture.
-- **Dependency and Conflict Management**: Built-in dependency resolution and conflict detection mechanisms ensure harmonious coexistence among plugins.
+- **Feature Isolation & Unified Management**: Each plugin independently encapsulates functionality, with its own namespace and route prefix, while core services are uniformly managed through the layered architecture.
+- **Dependency & Conflict Management**: Built-in dependency resolution and conflict detection mechanisms ensure harmonious plugin coexistence.
 - **Unified Interface**: All plugins implement the same `Plugin` interface, standardizing the development process.
 - **High Performance**: The layered design optimizes the request processing flow, improving system response speed.
 
 ### 🚀 High Performance/Efficiency
-- Built based on the Gin framework, offering fast request processing and strong concurrency capabilities.
-- Optimized database connection pool supporting high concurrent access.
-- Modular architecture design with clear code structure, easy to maintain and extend.
+- Built on the Gin framework, offering high performance and strong concurrency capabilities.
+- Optimized database connection pool supporting high-concurrency access.
+- Modular architectural design with a clear code structure, making it easy to maintain and extend.
 - Supports environment variable overrides for easy configuration across different environments.
-- Efficient route management supporting dynamic routing and parameter binding.
-- The layered architecture optimizes the request processing flow, improving system response speed.
+- Efficient routing management supporting dynamic routes and parameter binding.
+- The layered architecture optimizes request processing flow, enhancing system response speed.
 
-### 🔌 Pluggable & Easy to Extend
+### 🔌 Plug-in Easy Extensibility
 - Unified plugin interface design supporting hot-plugging.
 - Plugin manager uniformly registers, manages, and executes plugins.
-- Plugins can independently register routes and have independent namespaces.
+- Plugins can independently register routes with their own namespace.
 - Plugin dependency and conflict detection mechanisms.
 - Scaffolding tool for conveniently generating plugin framework code.
 - Example plugins demonstrating the complete plugin development process.
 
-### 🧠 Deep Service Integration
-- Seamlessly integrated with the microkernel architecture, highly extensible, and can be used as service aggregation/plugins.
-- For example, integrating services like LLM, RAG, etc., providing intelligent Q&A and document retrieval functions.
-- Efficient text retrieval based on RedisSearch.
-- Supports embedding, indexing, custom embedding models, and retrieval parameters for various document formats.
-- Provides flexible retrieval APIs for easy plugin integration.
+### 🧠 Deep AI Integration
+Weave provides a complete AI development functional stack, deeply integrating core AI technologies such as LLM, AIChat, Agent, and RAG, offering developers a one-stop intelligent application development experience.
+
+- **Complete AI Functional Stack**: Integrates core AI capabilities like LLM (Large Language Models), AIChat (Intelligent Chat), Agent (Intelligent Agent), and RAG (Retrieval-Augmented Generation), covering the entire process from basic model invocation to complex intelligent application development.
+- **Multi-Model Support**: Compatible with mainstream LLM platforms like OpenAI, Ollama, ModelScope, etc., supporting dynamic switching of models and platforms to meet different scenario needs.
+- **Comprehensive AIChat Services**: Multi-platform, multi-model, multimodal support, streaming response, context optimization, summary extraction, conversation management, and other features.
+- **Intelligent Agent Framework**: Provides a complete Agent development framework supporting tool calling, task planning, complex workflow automation, and multi-turn conversation management.
+- **Efficient RAG System**: Implements high-performance vector search based on RedisSearch, supports multi-format document processing (text, PDF, Markdown, etc.), improving the accuracy and relevance of generated content.
+- **Flexible Embedding Models**: Supports custom embedding models and retrieval parameters to adapt to different business scenarios' vector representation needs.
+- **Seamless Architectural Integration**: AI capabilities can be used as service aggregates or plugins, facilitating rapid construction and extension of intelligent applications.
 
 ### 🔒 Secure & Reliable
 - JWT-based authentication and authorization system.
 - Comprehensive CSRF protection mechanism.
-- Rate limiting middleware based on the token bucket algorithm.
+- Rate-limiting middleware based on the token bucket algorithm.
 - Password hashing storage and verification.
 - Detailed login history records.
 - Unified error handling middleware.
-- Supports HTTPS (can be enabled in configuration).
-- The layered architecture encapsulates security mechanisms uniformly in the infrastructure layer, facilitating unified management and maintenance.
+- HTTPS support (can be enabled in configuration).
+- The layered architecture encapsulates security mechanisms uniformly in the infrastructure layer for easy unified management and maintenance.
 
 ### 📊 Observability
 - Integrated structured logging system (zap).
-- Health check interface for monitoring system status.
+- Health check endpoint for monitoring system status.
 - Detailed request/response logging.
-- Supports custom monitoring metrics.
-- The layered architecture independently encapsulates monitoring functions, ensuring observability of the operational status of each system layer.
+- Support for custom monitoring metrics.
+- The layered architecture independently encapsulates monitoring functionalities, ensuring the observability of each layer's operational state.
 - Integrated Prometheus and Grafana monitoring system providing visual dashboards.
 - Supports custom alert rule configuration.
 
-### 🚀 Developer Friendly
+### 🚀 Developer-Friendly
 - Complete plugin development documentation and examples.
 - Plugin scaffolding tool for quickly generating plugin templates.
 - Supports local development and Docker deployment.
-- Clear project structure and code specifications.
+- Project structure and code standards.
+- Clear modules and standardized interfaces, facilitating development and maintenance.
 
 ---
 
 ## 📂 Project Structure
 
-Weave adopts a microkernel + layered architecture, and the project structure clearly reflects this design philosophy. The core system is organized in layers, while functional extensions are achieved through the plugin mechanism/service aggregation.
+Weave adopts a microkernel + layered architecture, and its project structure clearly reflects this design philosophy. The core system is organized in layers, while functional extensions are achieved through the plugin mechanism/service aggregation.
 
-```
-├── .github/
-├── .gitignore
+```bash
 ├── Dockerfile           # Docker build file
 ├── Makefile             # Build scripts
-├── README.md
 ├── config/              # Configuration management
 ├── controllers/         # API controllers [Interface Layer]
 ├── docker-compose.yaml  # Docker Compose configuration
 ├── docs/                # Project documentation
-├── go.mod
-├── go.sum
 ├── main.go
 ├── middleware/          # Middleware
 ├── models/              # Data models [Data Layer]
 ├── pkg/                 # Common packages [Infrastructure Layer]
 ├── plugins/             # Plugin system [Core of Microkernel Architecture]
-│   ├── core/              # Core plugin functionality
-│   ├── doc.go             # Plugin package documentation
-│   ├── examples/          # Example plugins
-│   ├── features/          # Feature plugins (extensible)
-│   ├── init.go            # Plugin initialization
-│   ├── loader/            # Plugin loader
-│   ├── templates/         # Plugin templates
-│   └── watcher/           # Plugin watcher
+│ ├── core/              # Core plugin functionalities
+│ ├── examples/          # Example plugins
+│ ├── features/          # Feature plugins (extensible)
+│ ├── init.go            # Plugin initialization
+│ ├── loader/            # Plugin loader
+│ ├── templates/         # Plugin templates
+│ └── watcher/           # Plugin watcher
 ├── routers/             # Route definition and registration
 ├── services/            # Service aggregation
-│   ├── llm/               # LLM Service
-│   ├── rag/               # RAG Service  
-│   └── extended/          # Extensible services
+│ ├── aichat/            # aichat service
+│   ├── chat_web/
+│   ├── cmd/               # Entry point
+│   ├── internal/          # Core implementation
+│   ├── pkg/
+│ ├── rag/               # RAG service
+│ ├── email/             # Email service
+│ └── extended...        # Extensible services
 ├── test/                # Unit/Integration tests
 ├── tools/               # Development tools
 ├── utils/               # Utility functions
@@ -182,108 +178,95 @@ Weave adopts a microkernel + layered architecture, and the project structure cle
 
 ## 🧩 Core Components
 
-### 🔌 Plugin System - Core Implementation of Microkernel Architecture
-The plugin system is an important component of Weave, responsible for plugin registration, loading, unloading, and lifecycle management. It implements a complete plugin mechanism, enabling the system to extend functionality in the form of plugins. In the microkernel + layered architecture, the plugin system connects the core kernel with various business extensions.
+### 🔌 Plugin System - The Core Implementation of Microkernel Architecture
+The plugin system is a vital component of Weave, responsible for plugin registration, loading, unloading, and lifecycle management. It implements a complete plugin mechanism, enabling the system to extend functionalities in the form of plugins. In the microkernel + layered architecture, the plugin system connects the core kernel with various business extensions.
 
-Under the microkernel architecture, the plugin system has the following characteristics:
 - **Complete Lifecycle Management**: Full lifecycle management from plugin initialization, registration, activation to shutdown.
 - **Automatic Dependency Resolution**: Automatically resolves dependencies between plugins via the `GetDependencies()` method.
 - **Conflict Detection Mechanism**: Avoids functional conflicts between plugins via the `GetConflicts()` method.
-- **Automatic Route Registration**: Supports two methods of route registration; the recommended `GetRoutes()` method aligns better with the microkernel architecture design philosophy.
-- **Namespace Isolation**: Each plugin has an independent namespace to avoid resource conflicts.
-- **Unified Middleware Management**: Supports global and plugin-level middleware configuration.
+- **Automatic Route Registration**: Supports two route registration methods, with the recommended `GetRoutes()` method particularly aligned with microkernel architectural design principles.
+- **Namespace Isolation**: Each plugin has an independent namespace, avoiding resource conflicts.
+- **Unified Middleware Management**: Supports both global and plugin-level middleware configuration.
 
-```go
-// Plugin interface definition
-type Plugin interface {
-    Name() string              // Plugin name
-    Description() string       // Plugin description
-    Version() string           // Plugin version
-    Init() error               // Initialize plugin
-    Shutdown() error           // Shutdown plugin
-    
-    // Route management (new way) - Recommended
-    GetRoutes() []Route
-    GetDefaultMiddlewares() []gin.HandlerFunc
-    
-    // Route management (old way) - Retained for compatibility
-    RegisterRoutes(*gin.Engine) // Register routes
-    
-    Execute(map[string]interface{}) (interface{}, error) // Execute function
-}
+#### Comparison of Two Route Registration Methods
+| Feature | `GetRoutes` Method (Recommended) | `RegisterRoutes` Method (Kept for Compatibility) |
+|------|-----------------------|-----------------------------------|
+| Route Definition | Uses an array of `Route` structs | Directly operates on the `gin.Engine` object |
+| Metadata Support | ✅ Full support | ❌ Not supported |
+| Automatic Route Groups | ✅ Automatically created | ❌ Manual creation required |
+| Middleware Management | ✅ Supports global and route-level | ❌ Manual addition required |
+| Documentation Generation | ✅ Supports automatic API documentation generation | ❌ Not supported |
 
-// The Route struct defines route metadata and handler functions.
-// This is the core of the new route definition method.
-type Route struct {
-    Path         string                 // Route path
-    Method       string                 // HTTP method (GET, POST, PUT, DELETE, etc.)
-    Handler      gin.HandlerFunc        // Request handler function
-    Middlewares  []gin.HandlerFunc      // Route-specific middlewares
-    Description  string                 // Route description
-    AuthRequired bool                   // Whether authentication is required
-    Tags         []string               // Route tags, for documentation generation
-    Params       map[string]string      // Parameter descriptions, for documentation generation
-    Metadata     map[string]interface{} // Custom metadata
-}
-```
-
-The plugin manager is responsible for the entire lifecycle management of plugins, including registration, deregistration, querying, and executing plugin functions.
+The plugin manager handles the entire lifecycle of plugins, including registration, deregistration, querying, and executing plugin functionalities.
 
 ### 🧩 Service Aggregation
-Service aggregation is an important extension capability of Weave based on the microkernel + layered architecture, providing a mechanism for unified management and invocation of various services, data sources, and functions. For example, the LLM-RAG service aggregation.
+Service aggregation is a significant extension capability of Weave based on the microkernel + layered architecture, providing mechanisms for unified management and invocation of various services, data sources, and functionalities. It enhances AI service aggregation capabilities, offering a complete LLM, AIChat, Agent, and RAG service system.
 
-- **LLM-RAG Retrieval-Augmented Generation Service**, as one of Weave's service aggregations, provides intelligent text retrieval and enhanced generation functions.
-- **Efficient Vector Retrieval**: High-performance vector similarity search based on RedisSearch.
-- **Multi-format Document Support**: Supports parsing, chunking, and vectorization of various document formats.
-- **Flexible Retrieval API**: Provides rich retrieval interfaces supporting multiple retrieval strategies.
-- **Configurable Embedding Models**: Supports switching different embedding models to adapt to different scenario requirements.
-- **Integration with Plugin System**: Can be used as infrastructure called by various plugins, enhancing plugin intelligence capabilities.
-- **Independent Deployment Option**: Supports running as an independent service or integrating into the main application.
+#### 🧠 LLM/AIChat Service
+Weave's LLM service provides unified large language model access and management capabilities, allowing developers to easily invoke and switch between different platform models without needing to focus on underlying implementation details.
+- **Multi-Platform Compatibility, Dynamic Model Switching**: Supports mainstream LLM platforms like OpenAI, Ollama, ModelScope, etc., allowing quick switching between different LLM models and platforms.
+- **Standardized Interface**: Provides unified API interfaces, easy to develop and maintain.
+- **Streaming Response Support**: Supports real-time streaming responses, enhancing user interaction experience.
+- **Context Optimization**: Optimizes context preservation and management, improving conversation coherence.
+- **Summary Extraction**: Automatically extracts conversation summaries for quick access to key information.
+- **Multimodal Support**: Some models support multimodal input/output (text, images, etc.).
+- **Model Caching Mechanism**: Built-in caching mechanism reduces duplicate requests, improving performance and lowering costs.
 
-The service aggregation design enhances system functional flexibility, allowing the system to extend and integrate various services and data sources, providing stronger underlying capability support.
+#### 🤖 Agent Service
+Weave's Agent service provides a complete intelligent agent development and runtime framework, supporting tool calling, task planning, memory management, and complex workflow automation, enabling developers to quickly build intelligent applications with autonomous decision-making capabilities.
+- **Tool Calling Capability**: Supports Agents calling various internal tools and external services, expanding the boundaries of intelligent capabilities.
+- **Intelligent Task Planning**: Possesses automatic task decomposition, subtask planning, and execution path optimization capabilities.
+- **Flexible Memory Management**: Supports short-term memory (session context) and long-term memory (knowledge base) management, improving decision-making continuity.
+- **Complex Multi-turn Dialogue**: Supports complex multi-turn dialogue interactions, understanding and maintaining dialogue context.
+- **Workflow Automation**: Enables the automation of complex business processes, improving work efficiency.
+- **Personalization Customization**: Supports customizing Agent behavior patterns and decision logic based on business scenarios.
+- **Deep Integration with LLM**: Implements natural language understanding and generation capabilities based on LLM, supporting flexible Agent role definition.
+
+#### 📚 RAG Service
+Weave's RAG (Retrieval-Augmented Generation) service provides efficient vector retrieval and augmented generation capabilities, combining external knowledge bases with LLMs to improve the accuracy, relevance, and timeliness of generated content.
+- **High-Performance Vector Retrieval**: Implements millisecond-level vector similarity search based on RedisSearch, supporting large-scale vector databases.
+- **Multi-Format Document Support**: Supports parsing, chunking, and vectorization of various document formats like text, PDF, Markdown, Word, etc.
+- **Intelligent Document Processing**: Automatically performs document chunking, metadata extraction, and content structuring to optimize retrieval effectiveness.
+- **Flexible Retrieval Strategies**: Supports hybrid retrieval (vector + keyword), semantic retrieval, similarity threshold filtering, and various other retrieval algorithms and parameter configurations.
+- **Custom Embedding Models**: Supports switching different embedding models (e.g., OpenAI Embeddings, BGE, etc.) to adapt to different scenario needs for vector representation.
+- **Seamless Integration with LLM**: Automatically combines retrieval results with LLM-generated content to produce accurate, authoritative responses.
+- **Knowledge Base Management**: Provides complete knowledge base management functionalities, supporting document addition, deletion, update, and version control.
+- **Explainable Retrieval Results**: Provides relevance scores and source information for retrieval results, enhancing the explainability of generated content.
+
+The design of service aggregation enhances system flexibility, allowing the integration of various services and data sources to provide more powerful underlying capability support.
 
 ### 🔐 Authentication System
-The authentication system is located in the infrastructure layer of the layered architecture, providing comprehensive identity authentication and authorization mechanisms, supporting multiple authentication methods. The authentication system is closely integrated with the plugin system, ensuring secure access to plugins, while achieving unified management of security mechanisms through layered design.
-
+Located in the infrastructure layer of the layered architecture, the authentication system provides a comprehensive identity verification and authorization mechanism, supporting multiple authentication methods. It is tightly integrated with the plugin system to ensure secure access to plugins, while achieving unified management of security mechanisms through layered design.
 - JWT-based token authentication.
 - Supports access token and refresh token mechanisms.
-- Password hashing storage enhances security.
-- Login history records facilitate auditing and tracking.
+- Password hashing storage for enhanced security.
+- Login history records for easy auditing and tracking.
 - Role-based access control.
 
 ### 🔄 Middleware System
-The middleware system is located between the interface layer and the business layer of the layered architecture, supporting global middleware and plugin-level middleware. It can be used for scenarios such as logging, request validation, and performance monitoring. The middleware system adopts a chain invocation pattern, flexibly combining various functions, reflecting the request processing optimization of the layered architecture.
-
-- **Authentication Middleware**: Verifies user identity.
-- **Rate Limiting Middleware**: Prevents API abuse.
-- **CORS Middleware**: Handles cross-origin requests.
-- **CSRF Protection Middleware**: Prevents cross-site request forgery.
-- **Error Handling Middleware**: Uniformly handles and logs errors.
+The middleware system is located between the interface layer and the business layer in the layered architecture, supporting both global middleware and plugin-level middleware. It can be used for scenarios like logging, request validation, and performance monitoring. The middleware system uses a chain-of-responsibility pattern, flexibly combining various functionalities, reflecting the request processing optimization of the layered architecture.
+- Authentication Middleware: Validates user identity.
+- Rate Limiting Middleware: Prevents API abuse.
+- CORS Middleware: Handles cross-origin requests.
+- CSRF Protection Middleware: Prevents cross-site request forgery.
+- Error Handling Middleware: Unifies error processing and logging.
 
 ### 📈 Monitoring System
 Weave integrates a complete Prometheus + Grafana monitoring system:
-
 - Automatically collects application runtime metrics.
-- Pre-configured with various visualization dashboards.
+- Pre-configured with various visual dashboards.
 - Supports custom alert rules.
 - Real-time monitoring of system health status and performance metrics.
 
-### 🩺 Health Check
-The health check function covers all layers of the layered architecture, periodically checking the operational status of various system components to ensure stable system operation. Supports custom health check items to meet the needs of different scenarios. Through the microkernel + layered architecture design, health checks can precisely target the operational status of each plugin and each layer.
-
-- Database connection health check.
-- Plugin system status check.
-- Overall system health assessment.
-- Returns appropriate HTTP status codes based on health status.
+---
 
 ## Quick Start
 
 ### Environment Preparation
-- **Go 1.21+** (for local development)
-- **Git** (for cloning the repository)
-- **Docker** and **Docker Compose** (for containerized deployment)
+- **Go 1.24+**
+- **Docker** and **Docker Compose**
 - **MySQL 8.0+**
-- **PostgreSQL、Redis、Prometheus、Grafana** (Optional, for extension)
+- **PostgreSQL, Redis 7.0+, Prometheus, Grafana** (optional, for extension)
 
 ### Deployment Methods
 
@@ -295,7 +278,7 @@ git clone https://github.com/liaotxcn/weave.git
 cd weave
 ```
 
-2. Create an environment variable file (Optional but recommended)
+2. Create an environment variable file (optional but recommended)
 Create a .env file to set environment variables for enhanced security.
 
 3. Start the services
@@ -303,26 +286,25 @@ Use Docker Compose to start the entire service stack with one command:
 ```bash
 docker-compose up -d
 ```
+    On the first run, Docker Compose will automatically:
+    - Build the Docker image for the Weave application.
+    - Create the MySQL database container.
+    - Create the RedisSearch vector database container.
+    - Configure the Prometheus and Grafana monitoring system.
+    - Configure networks and volumes.
+    - Start all services.
 
-   On the first startup, Docker Compose will automatically:
-   - Build the Docker image for the Weave application.
-   - Create the MySQL database container.
-   - Create the RedisSearch vector database container.
-   - Configure the Prometheus and Grafana monitoring system.
-   - Configure networks and volumes.
-   - Start all services.
-   
-   After the services start, you can access the following addresses:
-   - Application Backend: http://localhost:8081
-   - Prometheus Monitoring: http://localhost:9090
-   - Grafana Dashboard: http://localhost:3000 (Default credentials: admin/admin)
+    After services start, you can access:
+    - Application Backend: http://localhost:8081
+    - Prometheus Monitoring: http://localhost:9090    
+    - Grafana Dashboard: http://localhost:3000 (default credentials: admin/admin)
 
-4. Verify Service Status
+4. Verify service status
 Check if all services are running normally:
 ```bash
 docker-compose ps
 ```
-Under normal circumstances,`weave-app`、`weave-mysql`and`weave-redis` should all show Up status.
+Normally, weave-app, weave-mysql, and weave-redis should all show as Up.
 
 ### Docker Compose Commands
 
@@ -330,46 +312,46 @@ Under normal circumstances,`weave-app`、`weave-mysql`and`weave-redis` should al
 docker-compose down    // Stop services
 docker-compose logs -f weave-app   // View application logs
 docker-compose logs -f weave-mysql // View database logs
-docker-compose logs -f weave-redis    // View Redis logs
+docker-compose logs -f weave-redis // View Redis logs
 docker-compose exec weave-app /bin/sh             // Enter the application container
 docker-compose exec weave-mysql mysql -u root -p  // Enter the database container
-docker-compose exec weave-redis redis-cli    // Enter the Redis container
+docker-compose exec weave-redis redis-cli         // Enter the Redis container
 docker-compose up --build -d        // Rebuild and start services
 
 // Clean up old containers and volume data
-docker-compose down -v 
+docker-compose down -v
 docker system prune -f
 docker-compose build --no-cache     // Rebuild images
-docker-compose up --force-recreate -d   // Start with --force-recreate option
+docker-compose up --force-recreate -d   // Start with the --force-recreate option
 ```
 
 #### 2. Local Development Environment Setup
 
-1. Clone the repository and enter the project directory
+1. **Clone the repository and enter the project directory**
 ```bash
 git clone https://github.com/liaotxcn/weave.git
 cd weave
 ```
 
-2. Install dependencies
+2. **Install dependencies**
 ```bash
 go mod download
 ```
 
-3. Configure the database
+3. **Configure the database**
 Ensure the local MySQL service is started and create the database:
 ```sql
 CREATE DATABASE weave;
 ```
 
-4. Set environment variables or modify the default configuration in `config/config.go`
+4. **Set environment variables or modify the default configuration in `config/config.go`**
 
-5. Run the application
+5. **Run the application**
 ```bash
 go run main.go
 ```
 
-6. Build the application
+6. **Build the application**
 ```bash
 go build
 ```
@@ -381,171 +363,37 @@ npm install
 npm run dev
 ```
 
-### Notes
+### Important Notes
 
 1. **Data Persistence**:
-   - MySQL data is stored in the `mysql-data` volume, ensuring data is not lost
-   - RedisSearch data is stored in the `redis-data` volume, ensuring vector index data is not lost
-2. **Health Check**: The system provides a `/health` interface to monitor service health status
-3. **Resource Limits**: CPU and memory limits are configured by default and can be adjusted in `docker-compose.yaml` according to actual needs
-4. **First Startup**: The first startup requires some time to build images and initialize services
+   - MySQL data is stored in the `mysql-data` volume to ensure data is not lost
+   - RedisSearch data is stored in the `redis-data` volume to ensure vector index data is not lost
+
+2. **Health Checks**: The system provides a `/health` endpoint to monitor service health status
+
+3. **Resource Limits**: Default CPU and memory limits are configured, which can be adjusted in `docker-compose.yaml` based on actual requirements
+
+4. **First Startup**: The first startup may take some time to build images and initialize services
+
 5. **Port Mapping**:
    - By default, the container's port 8081 is mapped to the host's port 8081
    - By default, the container's port 6379 is mapped to the host's port 6379 (RedisSearch)
 
----
-
-## Project Documentation
-
-### Please read in detail
-[API Documentation](./docs/API.md)
-[Plugin Development Guide](./docs/PLUGIN_DEVELOPMENT_GUIDE.md)
-[Plugin Scaffold Tool Usage](./docs/PLUGIN_SCAFFOLD_USAGE.md)
-[Database Migration Guide](./docs/DATABASE_MIGRATION.md)
-[Monitoring System Guide](./docs/GRAFANA_MONITORING_GUIDE.md)
-
-### 🔧 Creating a New Plugin
-
-In Weave's microkernel + layered architecture, creating a new plugin is one way to extend system functionality. A plugin is a Go struct that implements the `Plugin` interface. Through this interface, the plugin can interact with the core system. The microkernel architecture provides plugin flexibility, while the layered architecture provides good guidance for the internal code organization of the plugin.
-
-Creating a new plugin is very efficient, just follow these steps:
-1. Implement the `plugins.Plugin` interface, defining the plugin's basic information, lifecycle, and functionality
-2. Register the plugin in the `registerPlugins` function in `main.go`
-
-Advantages of plugin development in the microkernel + layered architecture:
-- **Low Intrusiveness**: Extend system functionality without modifying core code
-- **Independent Evolution**: Plugins can be developed, tested, and deployed independently
-- **Standardized Interface**: Unified plugin interface simplifies the development process
-- **Flexible Combination**: Users can combine different plugins according to their needs
-- **Clear Structure**: The layered architecture philosophy guides the internal code organization of plugins, improving maintainability
-
-### Plugin Example (Using the recommended GetRoutes method)
-```go
-// Example plugin structure
-type MyPlugin struct{}
-
-// Methods implementing the Plugin interface
-func (p *MyPlugin) Name() string { return "myplugin" }
-func (p *MyPlugin) Description() string { return "My custom plugin" }
-func (p *MyPlugin) Version() string { return "1.0.0" }
-func (p *MyPlugin) Init() error { /* Initialization logic */ return nil }
-func (p *MyPlugin) Shutdown() error { /* Shutdown logic */ return nil }
-
-// Register routes using the recommended GetRoutes method
-func (p *MyPlugin) GetRoutes() []Route {
-    return []Route{
-        {
-            Path:        "/",
-            Method:      "GET",
-            Handler:     p.handleIndex,
-            Description: "Plugin homepage",
-            AuthRequired: false,
-            Tags:        []string{"home"},
-        },
-        {
-            Path:        "/api/data",
-            Method:      "GET",
-            Handler:     p.handleGetData,
-            Description: "Get data API",
-            AuthRequired: true,
-            Tags:        []string{"data", "api"},
-            Params: map[string]string{
-                "id": "Data ID",
-            },
-        },
-    }
-}
-
-// Define the plugin's default middlewares
-func (p *MyPlugin) GetDefaultMiddlewares() []gin.HandlerFunc {
-    return []gin.HandlerFunc{
-        p.logMiddleware,
-    }
-}
-
-// Route handler functions
-func (p *MyPlugin) handleIndex(c *gin.Context) {
-    c.JSON(200, gin.H{
-        "plugin": p.Name(),
-        "version": p.Version(),
-    })
-}
-
-func (p *MyPlugin) handleGetData(c *gin.Context) {
-    id := c.Query("id")
-    c.JSON(200, gin.H{
-        "id": id,
-        "data": "Example data",
-    })
-}
-
-// Middleware example
-func (p *MyPlugin) logMiddleware(c *gin.Context) {
-    // Log request
-    c.Next()
-}
-
-// RegisterRoutes method retained for compatibility
-func (p *MyPlugin) RegisterRoutes(router *gin.Engine) {
-    // Note: Using GetRoutes method is recommended, this method is only retained for compatibility
-    // Can keep empty implementation or add log hint here
-}
-
-// Plugin execution logic
-func (p *MyPlugin) Execute(params map[string]interface{}) (interface{}, error) {
-    // Implement plugin functionality
-    return map[string]interface{}{"result": "success"}, nil
-}
-```
-
-### Plugin Example (RegisterRoutes method - Retained only for compatibility)
-
-```go
-// Register plugin routes
-func (p *MyPlugin) RegisterRoutes(router *gin.Engine) {
-    group := router.Group(fmt.Sprintf("/plugins/%s", p.Name()))
-    {
-        group.GET("/", func(c *gin.Context) {
-            c.JSON(200, gin.H{"plugin": p.Name()})
-        })
-        // Add more routes...
-    }
-}
-```
-
-### Comparison of Two Route Registration Methods
-
-| Feature | GetRoutes Method (Recommended) | RegisterRoutes Method (Compatibility) |
-|---------|-------------------------------|--------------------------------------|
-| Route Definition | Uses Route struct array | Directly operates gin.Engine object |
-| Metadata Support | ✅ Full support | ❌ Not supported |
-| Automatic Route Group | ✅ Automatically created | ❌ Requires manual creation |
-| Middleware Management | ✅ Supports global and route level | ❌ Requires manual addition |
-| Documentation Generation | ✅ Supports automatic API doc generation | ❌ Not supported |
-
-### 📊 Database Migration Tool
-
-Weave provides an efficient and powerful database migration tool located in the `pkg/migrate` directory, supporting version management of the database structure:
-
-- Implemented based on the `golang-migrate` library
-- Supports migration application, rollback, status query, etc.
-- Automatically generates version numbers to avoid conflicts
-- Supports migration status check and dirty state handling
+### Extension Functionality/Toolkit [Weave-Toolkit](https://github.com/liaotxcn/weave-toolkit)
 
 ---
 
-## 🤝 Contribution Guide
+## 🤝 Contribution Guidelines
 
-Welcome contributions to the project! Thank you!
+Contributions to the project are welcome! Thank you!
 
 1. **Fork the repository** and clone it locally
 2. **Create a branch** for development (`git checkout -b feature/your-feature`)
-3. **Commit your code** and ensure tests pass
+3. **Commit your code** and ensure it passes tests
 4. **Create a Pull Request** describing your changes
 5. Wait for **code review** and make modifications based on feedback
 
 ---
 
 ### <div align="center"> <strong>✨ Continuously updating and improving... ✨</strong> </div>
-
 

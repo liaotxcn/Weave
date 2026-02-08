@@ -4,14 +4,19 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"html/template"
+	"io/ioutil"
 	"math/big"
 	"net/smtp"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"weave/models"
 	"weave/pkg"
+	"weave/utils"
 
 	"gorm.io/gorm"
 )
@@ -35,6 +40,12 @@ func NewEmailService(config EmailConfig) *EmailService {
 	return &EmailService{config: config}
 }
 
+// isValidEmail 验证邮箱地址格式是否正确
+func isValidEmail(email string) bool {
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return re.MatchString(email)
+}
+
 // GenerateVerificationCode 生成6位数字验证码
 func (s *EmailService) GenerateVerificationCode() (string, error) {
 	result := make([]string, 6)
@@ -51,21 +62,38 @@ func (s *EmailService) GenerateVerificationCode() (string, error) {
 
 // SendVerificationCode 发送验证码到指定邮箱
 func (s *EmailService) SendVerificationCode(email, code string) error {
-	subject := "Weave 登录验证码"
-	body := fmt.Sprintf(`<html>
-<body style="font-family: Arial, sans-serif;">
-<h2>您的验证码</h2>
-<p>尊敬的用户：</p>
-<p>您正在登录系统，验证码为：</p>
-<div style="font-size: 24px; font-weight: bold; color: #007bff; padding: 10px 0;">%s</div>
-<p>该验证码有效期为5分钟，请尽快使用。</p>
-<p>请勿将验证码泄露给他人。</p>
-<p>如果您没有尝试登录，请忽略此邮件。</p>
-<p>此致<br>Weave</p>
-</body>
-</html>`, code)
+	// 验证邮箱地址格式
+	if !isValidEmail(email) {
+		return fmt.Errorf("invalid email address format")
+	}
+
+	subject := "Weave 验证码"
+
+	// 对验证码进行HTML转义，防止XSS风险
+	escapedCode := template.HTMLEscapeString(code)
+
+	// 读取邮件模板
+	body, _ := s.loadEmailTemplate(escapedCode)
 
 	return s.SendEmail(email, subject, body)
+}
+
+// loadEmailTemplate 加载邮件模板
+func (s *EmailService) loadEmailTemplate(code string) (string, error) {
+	// 模板文件路径
+	templatePath := filepath.Join("services", "email", "email.html")
+
+	// 读取模板文件
+	content, err := ioutil.ReadFile(templatePath)
+	if err != nil {
+		return "", err
+	}
+
+	// 替换模板中的验证码占位符
+	templateContent := string(content)
+	templateContent = strings.Replace(templateContent, "{{.Code}}", code, -1)
+
+	return templateContent, nil
 }
 
 // SendEmail 发送邮件
@@ -93,35 +121,46 @@ func (s *EmailService) SendEmail(to, subject, body string) error {
 }
 
 // CreateVerificationCode 创建并保存验证码记录
-func (s *EmailService) CreateVerificationCode(email string, tenantID uint) (*models.EmailVerificationCode, error) {
+func (s *EmailService) CreateVerificationCode(email string, tenantID uint) (string, *models.EmailVerificationCode, error) {
 	// 生成验证码
 	code, err := s.GenerateVerificationCode()
 	if err != nil {
-		return nil, err
+		return "", nil, err
+	}
+
+	// 对验证码进行哈希处理
+	hashedCode, err := utils.HashPassword(code)
+	if err != nil {
+		return "", nil, err
 	}
 
 	// 创建验证码记录
 	verificationCode := &models.EmailVerificationCode{
 		Email:     email,
-		Code:      code,
+		Code:      hashedCode,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(5 * time.Minute), // 5分钟有效期
 		Used:      false,
 		TenantID:  tenantID,
 	}
 
-	return verificationCode, nil
+	return code, verificationCode, nil
 }
 
 // VerifyCode 验证邮箱验证码
 func (s *EmailService) VerifyCode(email, code string, tenantID uint) (bool, error) {
-	// 查找最新的未使用且未过期的验证码
+	// 查找最新的未使用且未过期的验证码记录
 	var verificationCode models.EmailVerificationCode
-	result := pkg.DB.Where("email = ? AND code = ? AND used = false AND expires_at > ? AND tenant_id = ?",
-		email, code, time.Now(), tenantID).Order("created_at DESC").First(&verificationCode)
+	result := pkg.DB.Where("email = ? AND used = false AND expires_at > ? AND tenant_id = ?",
+		email, time.Now(), tenantID).Order("created_at DESC").First(&verificationCode)
 
 	if result.Error != nil {
 		return false, result.Error
+	}
+
+	// 验证验证码是否匹配
+	if !utils.CheckPasswordHash(code, verificationCode.Code) {
+		return false, fmt.Errorf("invalid verification code")
 	}
 
 	// 标记验证码为已使用
@@ -149,15 +188,26 @@ func (s *EmailService) GetLastVerificationTime(email string, tenantID uint) (tim
 	return verificationCode.CreatedAt, nil
 }
 
-// CheckRateLimit 检查获取验证码的频率限制（防止滥用）
+// CheckRateLimit 检查获取验证码的频率限制
 func (s *EmailService) CheckRateLimit(email string, tenantID uint) (bool, error) {
 	lastTime, err := s.GetLastVerificationTime(email, tenantID)
 	if err != nil {
 		return false, err
 	}
 
-	// 如果距离上次发送验证码不足60秒，则限制再次发送
+	// 若距离上次发送验证码不足60秒，则限制再次发送
 	if !lastTime.IsZero() && time.Since(lastTime) < 60*time.Second {
+		return false, nil
+	}
+
+	// 检查24小时内的总发送次数
+	var count int64
+	pkg.DB.Model(&models.EmailVerificationCode{}).
+		Where("email = ? AND tenant_id = ? AND created_at > ?",
+			email, tenantID, time.Now().Add(-24*time.Hour)).
+		Count(&count)
+
+	if count >= 15 {
 		return false, nil
 	}
 

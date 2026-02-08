@@ -5,25 +5,20 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
+
+	"weave/services/aichat/pkg"
 
 	"github.com/cloudwego/eino/components/embedding"
 	"github.com/cloudwego/eino/schema"
+	"github.com/go-ego/gse"
 )
 
-// 中英文停用词表
-var stopwords = map[string]bool{
-	// 中文常用停用词
-	"的": true, "了": true, "是": true, "在": true, "我": true, "有": true, "和": true,
-	"就": true, "不": true, "人": true, "都": true, "一": true, "一个": true, "上": true,
-	"也": true, "很": true, "到": true, "说": true, "要": true, "去": true, "你": true,
-	"会": true, "着": true, "没有": true, "看": true, "好": true, "自己": true, "这": true,
-	"那": true, "他": true, "她": true, "它": true, "们": true, "来": true, "做": true,
-	// 英文常用停用词
-	"the": true, "a": true, "an": true, "and": true, "or": true, "but": true, "is": true,
-	"are": true, "was": true, "were": true, "in": true, "on": true, "at": true, "to": true,
-	"for": true, "of": true, "with": true, "by": true, "this": true, "that": true, "i": true,
-	"you": true, "he": true, "she": true, "it": true, "we": true, "they": true,
-}
+// 全局分词器，sync.Once线程安全初始化
+var (
+	gseSegmenter  gse.Segmenter
+	segmenterOnce sync.Once
+)
 
 // scoredMessage 带分数的消息结构体
 type scoredMessage struct {
@@ -32,49 +27,41 @@ type scoredMessage struct {
 	index   int // 原始索引用于保持时间顺序
 }
 
-// addWord 处理并添加单词到结果列表
-func addWord(wordBuilder *strings.Builder, words *[]string) {
-	if wordBuilder.Len() > 0 {
-		word := wordBuilder.String()
-		wordBuilder.Reset()
-		if word != "" && !stopwords[word] {
-			*words = append(*words, word)
+// initGse 初始化分词器
+func initGse() {
+	segmenterOnce.Do(func() {
+		var err error
+		gseSegmenter, err = gse.New("zh", "alpha")
+		if err != nil {
+			// 兜底回退
+			gseSegmenter = gse.Segmenter{}
 		}
-	}
+	})
 }
 
 // segmentText 对文本进行分词处理，支持中英文混合
-func segmentText(text string) []string {
+func SegmentText(text string) []string {
 	if text == "" {
 		return []string{}
 	}
 
+	// 初始化分词器
+	initGse()
+
 	// 转换为小写
 	lowerText := strings.ToLower(text)
 
-	// 按字符拆分中文，按空格拆分英文
-	var words []string
-	var currentWord strings.Builder
+	// gse智能分词
+	segments := gseSegmenter.Cut(lowerText)
 
-	for _, r := range lowerText {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			// 英文字母或数字，继续构建当前单词
-			currentWord.WriteRune(r)
-		} else if r >= 0x4e00 && r <= 0x9fff {
-			// 中文字符，先处理当前单词，然后添加中文字符
-			addWord(&currentWord, &words)
-			char := string(r)
-			if char != "" && !stopwords[char] {
-				words = append(words, char)
-			}
-		} else {
-			// 其他字符（如标点符号）作为分隔符
-			addWord(&currentWord, &words)
+	// 过滤空字符串
+	var words []string
+	for _, word := range segments {
+		word = strings.TrimSpace(word)
+		if word != "" {
+			words = append(words, word)
 		}
 	}
-
-	// 处理最后一个单词
-	addWord(&currentWord, &words)
 
 	return words
 }
@@ -118,6 +105,50 @@ func selectAndOrderMessages(scoredMessages []scoredMessage, maxHistory int, chat
 	}
 
 	return relevant
+}
+
+// FilterRelevantHistoryWithBM25 使用BM25关键词匹配的对话历史过滤
+func FilterRelevantHistoryWithBM25(chatHistory []*schema.Message, currentQuestion string, maxHistory int, bm25Calculator *pkg.BleveBM25Calculator) []*schema.Message {
+	// 基本参数检查
+	if len(chatHistory) == 0 || maxHistory <= 0 || bm25Calculator == nil {
+		return []*schema.Message{}
+	}
+
+	if maxHistory > len(chatHistory) {
+		maxHistory = len(chatHistory)
+	}
+
+	// 使用BM25提取当前问题的关键词
+	keywords := bm25Calculator.ExtractKeywords(currentQuestion, 3)
+	if len(keywords) == 0 {
+		return []*schema.Message{}
+	}
+
+	var scoredMessages []scoredMessage
+
+	// 为每条历史消息计算BM25关键词匹配分数
+	for i, msg := range chatHistory {
+		if msg.Content == "" {
+			continue
+		}
+
+		// BM25关键词匹配分数
+		keywordScore := calculateBM25MatchScore(msg.Content, keywords, bm25Calculator)
+
+		// 时间权重
+		recencyWeight := calculateRecencyWeight(chatHistory, i)
+
+		// 综合分数 = BM25关键词分数 + 时间权重
+		finalScore := keywordScore + recencyWeight
+
+		scoredMessages = append(scoredMessages, scoredMessage{
+			message: msg,
+			score:   finalScore,
+			index:   i,
+		})
+	}
+
+	return selectAndOrderMessages(scoredMessages, maxHistory, chatHistory, 0)
 }
 
 // FilterRelevantHistory 过滤与当前问题相关的对话历史，支持中英文混合
@@ -212,7 +243,46 @@ func FilterRelevantHistory(ctx context.Context, embedder embedding.Embedder, cha
 	return selectAndOrderMessages(scoredMessages, maxHistory, chatHistory, startIndex)
 }
 
-// filterRelevantHistoryByKeywords 使用关键词匹配过滤相关历史消息
+// calculateBM25MatchScore 计算BM25关键词匹配分数
+func calculateBM25MatchScore(content string, keywords []string, calculator *pkg.BleveBM25Calculator) float64 {
+	if len(keywords) == 0 {
+		return 0.0
+	}
+
+	// 使用BM25计算内容与关键词的相似度
+	matchScore := 0.0
+	for _, keyword := range keywords {
+		// 计算单个关键词与内容的BM25相似度
+		score := calculator.CalculateQuerySimilarity(keyword, content)
+		matchScore += score
+	}
+
+	// 归一化处理
+	return matchScore / float64(len(keywords))
+}
+
+// EnhanceHistorySelection 基于BM25关键词重新排序历史
+func EnhanceHistorySelection(chatHistory []*schema.Message, currentQuestion string, calculator *pkg.BleveBM25Calculator) []*schema.Message {
+	if calculator == nil || len(chatHistory) <= 5 {
+		return chatHistory
+	}
+
+	keywords := calculator.ExtractKeywords(currentQuestion, 3)
+	if len(keywords) == 0 {
+		return chatHistory
+	}
+
+	// 基于BM25关键词重新排序历史
+	sort.Slice(chatHistory, func(i, j int) bool {
+		scoreI := calculateBM25MatchScore(chatHistory[i].Content, keywords, calculator)
+		scoreJ := calculateBM25MatchScore(chatHistory[j].Content, keywords, calculator)
+		return scoreI > scoreJ
+	})
+
+	return chatHistory
+}
+
+// filterRelevantHistoryByKeywords 基于关键词匹配过滤相关历史
 func filterRelevantHistoryByKeywords(chatHistory []*schema.Message, currentQuestion string, maxHistory int) []*schema.Message {
 	// 确保maxHistory不超过历史记录总数
 	if maxHistory > len(chatHistory) {
@@ -228,7 +298,7 @@ func filterRelevantHistoryByKeywords(chatHistory []*schema.Message, currentQuest
 	var scoredMessages []scoredMessage
 
 	// 分词当前问题
-	questionWords := segmentText(currentQuestion)
+	questionWords := SegmentText(currentQuestion)
 	if len(questionWords) == 0 {
 		// 如果问题分词后为空，返回最近的消息
 		return chatHistory[startIndex:]
@@ -247,7 +317,7 @@ func filterRelevantHistoryByKeywords(chatHistory []*schema.Message, currentQuest
 		}
 
 		// 分词历史消息
-		msgWords := segmentText(msg.Content)
+		msgWords := SegmentText(msg.Content)
 		if len(msgWords) == 0 {
 			continue
 		}

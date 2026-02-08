@@ -162,7 +162,7 @@ func (uc *UserController) SendVerificationCode(c *gin.Context) {
 	}
 
 	// 创建验证码记录
-	verificationCode, err := uc.emailService.CreateVerificationCode(userEmail, tenantID)
+	originalCode, verificationCode, err := uc.emailService.CreateVerificationCode(userEmail, tenantID)
 	if err != nil {
 		err := pkg.NewInternalError("Failed to create verification code", err)
 		c.JSON(pkg.GetHTTPStatus(err), gin.H{"code": string(err.Code), "message": err.Message})
@@ -178,8 +178,8 @@ func (uc *UserController) SendVerificationCode(c *gin.Context) {
 
 	// 异步发送邮件
 	go func() {
-		// 发送验证码邮件
-		err := uc.emailService.SendVerificationCode(userEmail, verificationCode.Code)
+		// 发送验证码邮件，使用原始验证码
+		err := uc.emailService.SendVerificationCode(userEmail, originalCode)
 		if err != nil {
 			// 记录发送失败日志，但不影响用户体验
 			fmt.Printf("Failed to send verification email to %s: %v\n", userEmail, err)

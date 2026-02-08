@@ -21,13 +21,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/cloudwego/eino/schema"
+	"weave/middleware"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -35,22 +36,29 @@ import (
 type RedisClient struct {
 	client        *redis.Client
 	maxMessages   int
-	maxMemoryMB   int           // 最大内存使用限制（MB）
-	cleanupFreq   time.Duration // 定期清理频率
-	cleanupTicker *time.Ticker  // 定期清理定时器
-	stopChan      chan struct{} // 停止定期清理的通道
+	maxMemoryMB   int                 // 最大内存使用限制（MB）
+	cleanupFreq   time.Duration       // 定期清理频率
+	cleanupTicker *time.Ticker        // 定期清理定时器
+	stopChan      chan struct{}       // 停止定期清理的通道
+	retryer       *middleware.Retryer // 重试器
 }
 
 // NewRedisClient 创建Redis客户端实例
 func NewRedisClient(ctx context.Context) (*RedisClient, error) {
-	// 从环境变量获取Redis配置
-	redisAddr := os.Getenv("REDIS_ADDR")
+	config := GetDefaultCacheConfig()
+	return NewRedisClientWithConfig(ctx, &config)
+}
+
+// NewRedisClientWithConfig 基于配置创建Redis客户端实例
+func NewRedisClientWithConfig(ctx context.Context, config *CacheConfig) (*RedisClient, error) {
+	// 使用配置值或默认值
+	redisAddr := config.RedisAddr
 	if redisAddr == "" {
 		redisAddr = "localhost:6379" // 默认地址
 	}
 
-	redisPassword := os.Getenv("REDIS_PASSWORD")
-	redisDB := 0
+	redisPassword := config.RedisPassword
+	redisDB := config.RedisDB
 
 	// 创建Redis客户端
 	client := redis.NewClient(&redis.Options{
@@ -70,6 +78,12 @@ func NewRedisClient(ctx context.Context) (*RedisClient, error) {
 	maxMemoryMB := 100             // 默认最大内存使用限制为100MB
 	cleanupFreq := 5 * time.Minute // 每5分钟检查一次内存使用
 
+	// 重试器配置
+	retryConfig := middleware.DefaultRetryConfig()
+	retryConfig.MaxRetries = 3
+	retryConfig.InitialDelay = 50 * time.Millisecond
+	retryConfig.MaxDelay = 2 * time.Second
+
 	log.Printf("redis connection established at %s", redisAddr)
 	cache := &RedisClient{
 		client:      client,
@@ -77,6 +91,7 @@ func NewRedisClient(ctx context.Context) (*RedisClient, error) {
 		maxMemoryMB: maxMemoryMB,
 		cleanupFreq: cleanupFreq,
 		stopChan:    make(chan struct{}),
+		retryer:     middleware.NewRetryer(retryConfig),
 	}
 
 	// 启动定期内存检查
@@ -84,75 +99,124 @@ func NewRedisClient(ctx context.Context) (*RedisClient, error) {
 	return cache, nil
 }
 
-// GetChatHistoryKey 生成对话历史的Redis键名
-func GetChatHistoryKey(userID string) string {
-	return fmt.Sprintf("chat:history:%s", userID)
+// GetConversationKey 生成结构化对话的Redis键名
+func GetConversationKey(conversationID string) string {
+	return fmt.Sprintf("chat:conversation:%s", conversationID)
 }
 
-// limitHistoryLength 限制对话历史长度
-func (rc *RedisClient) limitHistoryLength(history []*schema.Message) []*schema.Message {
-	if len(history) > rc.maxMessages {
-		// 只保留最近的消息
-		return history[len(history)-rc.maxMessages:]
-	}
-	return history
+// GetUserConversationsKey 生成用户对话关联的Redis键名
+func GetUserConversationsKey(userID string) string {
+	return fmt.Sprintf("chat:user_conversations:%s", userID)
 }
 
-// SaveChatHistory 保存对话历史到Redis
-func (rc *RedisClient) SaveChatHistory(ctx context.Context, userID string, history []*schema.Message) error {
-	// 限制对话历史长度
-	history = rc.limitHistoryLength(history)
-
-	// 将对话历史序列化为JSON
-	data, err := json.Marshal(history)
+// SaveConversation 保存结构化对话到Redis
+func (rc *RedisClient) SaveConversation(ctx context.Context, conversation interface{}) error {
+	// 将对话序列化为JSON
+	data, err := json.Marshal(conversation)
 	if err != nil {
-		return fmt.Errorf("failed to marshal chat history: %w", err)
+		return fmt.Errorf("failed to marshal conversation: %w", err)
 	}
 
-	// 保存到Redis，设置过期时间（例如7天）
-	err = rc.client.Set(ctx, GetChatHistoryKey(userID), data, 7*24*time.Hour).Err()
+	// 使用反射获取对话ID和用户ID
+	convValue := reflect.ValueOf(conversation)
+	if convValue.Kind() == reflect.Ptr {
+		convValue = convValue.Elem()
+	}
+
+	idField := convValue.FieldByName("ID")
+	userIDField := convValue.FieldByName("UserID")
+
+	if !idField.IsValid() || !userIDField.IsValid() {
+		return fmt.Errorf("conversation must have ID and UserID fields")
+	}
+
+	convID := idField.String()
+	userID := userIDField.String()
+
+	// 保存对话
+	err = rc.retryer.Do(ctx, func() error {
+		return rc.client.Set(ctx, GetConversationKey(convID), data, 7*24*time.Hour).Err()
+	})
 	if err != nil {
-		return fmt.Errorf("failed to save chat history to redis: %w", err)
+		return fmt.Errorf("failed to save conversation to redis: %w", err)
+	}
+
+	// 关联用户和对话
+	err = rc.retryer.Do(ctx, func() error {
+		// 检查对话是否已存在
+		exists, retryErr := rc.client.SIsMember(ctx, GetUserConversationsKey(userID), convID).Result()
+		if retryErr != nil {
+			return retryErr
+		}
+		// 如果不存在，添加到集合
+		if !exists {
+			return rc.client.SAdd(ctx, GetUserConversationsKey(userID), convID).Err()
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to associate conversation with user: %w", err)
+	}
+
+	// 设置用户对话关联的过期时间
+	err = rc.retryer.Do(ctx, func() error {
+		return rc.client.Expire(ctx, GetUserConversationsKey(userID), 7*24*time.Hour).Err()
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set expiry for user conversations: %w", err)
 	}
 
 	return nil
 }
 
-// LoadChatHistory 从Redis加载对话历史
-func (rc *RedisClient) LoadChatHistory(ctx context.Context, userID string) ([]*schema.Message, error) {
-	// 从Redis获取对话历史
-	data, err := rc.client.Get(ctx, GetChatHistoryKey(userID)).Bytes()
+// LoadConversation 从Redis加载结构化对话
+func (rc *RedisClient) LoadConversation(ctx context.Context, conversationID string) (interface{}, error) {
+	var data []byte
+	err := rc.retryer.Do(ctx, func() error {
+		var err error
+		data, err = rc.client.Get(ctx, GetConversationKey(conversationID)).Bytes()
+		return err
+	})
 	if err != nil {
 		if err == redis.Nil {
-			// 键不存在，返回空切片
-			return []*schema.Message{}, nil
+			return nil, fmt.Errorf("conversation not found")
 		}
-		return nil, fmt.Errorf("failed to load chat history from redis: %w", err)
+		return nil, fmt.Errorf("failed to load conversation from redis: %w", err)
 	}
 
-	// 反序列化为对话历史
-	var history []*schema.Message
-	err = json.Unmarshal(data, &history)
+	// 反序列化对话
+	var conversation map[string]interface{}
+	err = json.Unmarshal(data, &conversation)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal chat history: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal conversation: %w", err)
 	}
 
-	return history, nil
+	return conversation, nil
 }
 
-// AddMessageToHistory 添加消息到对话历史并保存到Redis
-func (rc *RedisClient) AddMessageToHistory(ctx context.Context, userID string, messages ...*schema.Message) error {
-	// 先加载现有历史
-	history, err := rc.LoadChatHistory(ctx, userID)
-	if err != nil {
+// LoadUserConversations 从Redis加载用户的所有结构化对话
+func (rc *RedisClient) LoadUserConversations(ctx context.Context, userID string) ([]interface{}, error) {
+	// 获取用户的所有对话ID
+	var convIDs []string
+	err := rc.retryer.Do(ctx, func() error {
+		var err error
+		convIDs, err = rc.client.SMembers(ctx, GetUserConversationsKey(userID)).Result()
 		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user conversations: %w", err)
 	}
 
-	// 添加新消息
-	history = append(history, messages...)
+	// 加载每个对话
+	conversations := make([]interface{}, 0, len(convIDs))
+	for _, convID := range convIDs {
+		conversation, err := rc.LoadConversation(ctx, convID)
+		if err == nil {
+			conversations = append(conversations, conversation)
+		}
+	}
 
-	// 保存更新后的历史
-	return rc.SaveChatHistory(ctx, userID, history)
+	return conversations, nil
 }
 
 // startMemoryMonitor 启动Redis内存使用监控
@@ -175,7 +239,12 @@ func (rc *RedisClient) checkMemoryUsage() {
 	ctx := context.Background()
 
 	// 获取Redis内存使用情况
-	info, err := rc.client.Info(ctx, "memory").Result()
+	var info string
+	err := rc.retryer.Do(ctx, func() error {
+		var err error
+		info, err = rc.client.Info(ctx, "memory").Result()
+		return err
+	})
 	if err != nil {
 		log.Printf("failed to get redis memory info: %v", err)
 		return
@@ -209,10 +278,15 @@ func (rc *RedisClient) checkMemoryUsage() {
 
 // cleanupOldConversations 清理最旧对话
 func (rc *RedisClient) cleanupOldConversations(ctx context.Context) {
-	// 获取所有对话键
-	keys, err := rc.client.Keys(ctx, "chat:history:*").Result()
+	// 获取所有结构化对话键
+	var keys []string
+	err := rc.retryer.Do(ctx, func() error {
+		var err error
+		keys, err = rc.client.Keys(ctx, "chat:conversation:*").Result()
+		return err
+	})
 	if err != nil {
-		log.Printf("failed to get chat history keys: %v", err)
+		log.Printf("failed to get conversation keys: %v", err)
 		return
 	}
 
@@ -230,8 +304,12 @@ func (rc *RedisClient) cleanupOldConversations(ctx context.Context) {
 	keyTimes := make([]keyWithTime, 0, len(keys))
 
 	for _, key := range keys {
-		ttl, err := rc.client.TTL(ctx, key).Result()
-		if err == nil {
+		var ttl time.Duration
+		if err := rc.retryer.Do(ctx, func() error {
+			var err error
+			ttl, err = rc.client.TTL(ctx, key).Result()
+			return err
+		}); err == nil {
 			// 计算过期时间
 			expiry := time.Now().Add(ttl)
 			keyTimes = append(keyTimes, keyWithTime{key: key, time: expiry})
@@ -250,12 +328,19 @@ func (rc *RedisClient) cleanupOldConversations(ctx context.Context) {
 	}
 
 	for i := 0; i < cleanupCount && i < len(keyTimes); i++ {
-		if err := rc.client.Del(ctx, keyTimes[i].key).Err(); err != nil {
+		if err := rc.retryer.Do(ctx, func() error {
+			return rc.client.Del(ctx, keyTimes[i].key).Err()
+		}); err != nil {
 			log.Printf("failed to delete old conversation %s: %v", keyTimes[i].key, err)
 		} else {
 			log.Printf("deleted old conversation %s to free up memory", keyTimes[i].key)
 		}
 	}
+}
+
+// GetRedisClient 获取底层的 Redis 客户端实例
+func (rc *RedisClient) GetRedisClient() *redis.Client {
+	return rc.client
 }
 
 // Close 关闭Redis连接
