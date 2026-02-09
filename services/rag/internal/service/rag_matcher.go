@@ -83,31 +83,40 @@ func (rm *RAGMatcher) fuseResults(vectorResults, llmResults, keywordResults []*M
 
 	// 添加向量匹配结果（权重最高）
 	for _, result := range vectorResults {
-		result.Score *= 0.6 // 向量匹配权重
-		resultMap[result.Document.ID] = result
-	}
-
-	// 添加LLM语义匹配结果
-	for _, result := range llmResults {
-		if existing, ok := resultMap[result.Document.ID]; ok {
-			// 如果文档已存在，融合分数
-			existing.Score += result.Score * 0.3 // LLM匹配权重
-			existing.Reason += " | " + result.Reason
-		} else {
-			result.Score *= 0.3
+		// 严格过滤：只有相似度高于阈值的结果才考虑
+		if result.Score >= rm.config.VectorSimilarityThreshold {
+			result.Score *= 0.6 // 向量匹配权重
 			resultMap[result.Document.ID] = result
 		}
 	}
 
-	// 添加关键词匹配结果（权重最低，作为后备）
-	for _, result := range keywordResults {
-		if existing, ok := resultMap[result.Document.ID]; ok {
-			// 如果文档已存在，融合分数
-			existing.Score += result.Score * 0.1 // 关键词匹配权重
-			existing.Reason += " | " + result.Reason
-		} else {
-			result.Score *= 0.1
-			resultMap[result.Document.ID] = result
+	// 添加LLM语义匹配结果
+	for _, result := range llmResults {
+		// 严格过滤：只有相似度高于阈值的结果才考虑
+		if result.Score >= rm.config.LLMMatchingThreshold {
+			if existing, ok := resultMap[result.Document.ID]; ok {
+				// 如果文档已存在，融合分数
+				existing.Score += result.Score * 0.3 // LLM匹配权重
+				existing.Reason += " | " + result.Reason
+			} else {
+				result.Score *= 0.3
+				resultMap[result.Document.ID] = result
+			}
+		}
+	}
+
+	// 添加关键词匹配结果（权重最低）
+	// 只有当没有其他匹配结果时才使用关键词匹配
+	if len(resultMap) == 0 {
+		for _, result := range keywordResults {
+			if existing, ok := resultMap[result.Document.ID]; ok {
+				// 如果文档已存在，融合分数
+				existing.Score += result.Score * 0.1 // 关键词匹配权重
+				existing.Reason += " | " + result.Reason
+			} else {
+				result.Score *= 0.1
+				resultMap[result.Document.ID] = result
+			}
 		}
 	}
 
@@ -117,7 +126,20 @@ func (rm *RAGMatcher) fuseResults(vectorResults, llmResults, keywordResults []*M
 		fusedResults = append(fusedResults, result)
 	}
 
-	return fusedResults
+	// 最终过滤：移除分数过低的结果
+	var filteredResults []*MatchResult
+	minScore := 0.1 // 最低分数阈值
+	for _, result := range fusedResults {
+		if result.Score >= minScore {
+			filteredResults = append(filteredResults, result)
+		}
+	}
+
+	rm.logger.Debug("融合结果统计",
+		slog.Int("融合前", len(fusedResults)),
+		slog.Int("过滤后", len(filteredResults)))
+
+	return filteredResults
 }
 
 // GetTopKResults 获取Top K结果
