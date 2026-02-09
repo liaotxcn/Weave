@@ -13,6 +13,7 @@ import (
 	"github.com/cloudwego/eino/components/embedding"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 
 	"weave/services/rag/internal/service"
 )
@@ -25,12 +26,15 @@ func main() {
 	// 加载 .env 文件
 	if err := godotenv.Load("../.env"); err != nil {
 		logger.Warn("未找到 .env 文件")
-	} else {
-		logger.Info(".env 文件加载成功")
+	}
+
+	viper.SetConfigFile("../.env")
+	viper.AutomaticEnv()
+	if err := viper.ReadInConfig(); err != nil {
+		logger.Warn("viper配置读取失败", slog.Any("error", err))
 	}
 
 	// 初始化配置
-	logger.Info("初始化配置")
 	config := service.NewRAGServiceConfig()
 	config.DocumentDir = getEnv("RAG_DOCUMENT_DIR", "")
 	config.MaxChunkSize = 8000
