@@ -15,6 +15,7 @@ import (
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 
+	"weave/services/aichat/pkg"
 	"weave/services/rag/internal/cache"
 )
 
@@ -25,6 +26,7 @@ type RAGService struct {
 	config          *RAGServiceConfig
 	logger          *slog.Logger
 	redisClient     *cache.RedisCache
+	sensitiveFilter *pkg.SensitiveFilter
 }
 
 // RAGServiceConfig RAG服务配置
@@ -75,12 +77,16 @@ func NewRAGService(
 		logger.Warn("Redis缓存初始化失败，将使用无缓存模式", slog.Any("error", err))
 	}
 
+	// 复用 AIChat 安全过滤器
+	sensitiveFilter := pkg.NewSensitiveFilter()
+
 	return &RAGService{
 		documentService: documentService,
 		rragMatcher:     ragMatcher,
 		config:          config,
 		logger:          logger.With("component", "rag_service"),
 		redisClient:     redisClient,
+		sensitiveFilter: sensitiveFilter,
 	}
 }
 
@@ -105,7 +111,20 @@ func (rs *RAGService) Query(ctx context.Context, query string) (string, error) {
 		return "", fmt.Errorf("查询内容为空")
 	}
 
-	// 从缓存获取查询结果
+	if rs.sensitiveFilter != nil {
+		rs.logger.Debug("执行安全检查", slog.String("query", query))
+
+		if rs.sensitiveFilter.ContainsSensitiveContent(query) ||
+			rs.sensitiveFilter.ContainsMaliciousInput(query) ||
+			rs.sensitiveFilter.ContainsInjectionPattern(query) {
+			rs.logger.Warn("查询包含敏感内容", slog.String("query", query))
+			return "", fmt.Errorf("查询包含敏感内容")
+		}
+
+		rs.logger.Debug("安全检查通过", slog.String("query", query))
+	}
+
+	// 从缓存获取查询结果（安全检查通过后）
 	if rs.redisClient != nil {
 		if cachedResult, err := rs.redisClient.GetQueryResult(ctx, query); err == nil {
 			rs.logger.Debug("从缓存获取查询结果")
@@ -152,6 +171,13 @@ func (rs *RAGService) Query(ctx context.Context, query string) (string, error) {
 
 	// 生成最终结果
 	result := rs.generateResult(query, relevantChunks)
+
+	// 过滤生成结果中的敏感内容
+	if rs.sensitiveFilter != nil {
+		if rs.sensitiveFilter.ContainsSensitiveContent(result) {
+			return "", fmt.Errorf("生成结果包含敏感内容")
+		}
+	}
 
 	// 将查询结果存入缓存
 	if rs.redisClient != nil {

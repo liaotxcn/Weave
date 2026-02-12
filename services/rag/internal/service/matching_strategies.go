@@ -32,10 +32,10 @@ type RAGMatcherConfig struct {
 // NewRAGMatcherConfig 创建默认配置
 func NewRAGMatcherConfig() *RAGMatcherConfig {
 	return &RAGMatcherConfig{
-		VectorSimilarityThreshold: 0.2,
+		VectorSimilarityThreshold: 0.7,
 		VectorSearchTopK:          3,
 		LLMMatchingEnabled:        true,
-		LLMMatchingThreshold:      0.5,
+		LLMMatchingThreshold:      0.7,
 		KeywordMatchingEnabled:    true,
 	}
 }
@@ -123,9 +123,13 @@ func (v *VectorSimilarityStrategy) Match(ctx context.Context, query string, docu
 
 		// 计算余弦相似度
 		similarity := v.cosineSimilarity(queryVector, docVector)
-		v.logger.Debug("计算相似度完成",
+
+		// 详细记录每个文档的相似度
+		v.logger.Info("文档相似度计算",
 			slog.String("documentID", doc.ID),
+			slog.String("query", query),
 			slog.Float64("similarity", similarity),
+			slog.Bool("aboveThreshold", similarity >= v.config.VectorSimilarityThreshold),
 		)
 
 		if similarity >= v.config.VectorSimilarityThreshold {
@@ -135,6 +139,16 @@ func (v *VectorSimilarityStrategy) Match(ctx context.Context, query string, docu
 				Reason:   fmt.Sprintf("向量相似度: %.3f", similarity),
 				Strategy: v.Name(),
 			})
+			v.logger.Debug("文档匹配成功",
+				slog.String("documentID", doc.ID),
+				slog.Float64("similarity", similarity),
+			)
+		} else {
+			v.logger.Debug("文档未达到阈值",
+				slog.String("documentID", doc.ID),
+				slog.Float64("similarity", similarity),
+				slog.Float64("threshold", v.config.VectorSimilarityThreshold),
+			)
 		}
 	}
 
