@@ -120,7 +120,7 @@ require (
 require (
 	github.com/blevesearch/bleve/v2 v2.5.7
 	github.com/bytedance/sonic v1.14.2 // indirect
-	github.com/cloudwego/eino v0.7.27
+	github.com/cloudwego/eino v0.7.36
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.6
 	github.com/cloudwego/eino-ext/components/tool/mcp v0.0.8
 	github.com/fsnotify/fsnotify v1.9.0
