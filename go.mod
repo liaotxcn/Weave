@@ -3,7 +3,7 @@ module weave
 go 1.24.9
 
 require (
-	github.com/cloudwego/eino-ext/components/model/ollama v0.1.7
+	github.com/cloudwego/eino-ext/components/model/ollama v0.1.8
 	github.com/gin-gonic/gin v1.11.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -47,7 +47,7 @@ require (
 	github.com/bytedance/sonic/loader v0.4.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
-	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.10 // indirect
+	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.13 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -120,8 +120,8 @@ require (
 require (
 	github.com/blevesearch/bleve/v2 v2.5.7
 	github.com/bytedance/sonic v1.14.2 // indirect
-	github.com/cloudwego/eino v0.7.27
-	github.com/cloudwego/eino-ext/components/model/openai v0.1.6
+	github.com/cloudwego/eino v0.7.36
+	github.com/cloudwego/eino-ext/components/model/openai v0.1.8
 	github.com/cloudwego/eino-ext/components/tool/mcp v0.0.8
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
