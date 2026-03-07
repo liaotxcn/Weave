@@ -125,8 +125,8 @@ func (hc *HealthChecker) evaluateHealthStatus(status *AgentHealthStatus) string 
 		return "UNHEALTHY"
 	}
 
-	// 响应时间超过5秒视为不健康
-	if status.ResponseTime > 5000 && status.ResponseTime != -1 {
+	// 响应时间超过10秒视为不健康
+	if status.ResponseTime > 10000 && status.ResponseTime != -1 {
 		status.Message = "响应时间过长"
 		return "UNHEALTHY"
 	}
@@ -137,8 +137,8 @@ func (hc *HealthChecker) evaluateHealthStatus(status *AgentHealthStatus) string 
 		return "UNHEALTHY"
 	}
 
-	// 内存使用超过500MB或响应时间超过1秒视为降级
-	if status.MemoryUsageMB > 500 || (status.ResponseTime > 1000 && status.ResponseTime != -1) {
+	// 内存使用超过500MB或响应时间超过3秒视为降级
+	if status.MemoryUsageMB > 500 || (status.ResponseTime > 3000 && status.ResponseTime != -1) {
 		status.Message = "性能降级"
 		return "DEGRADED"
 	}
