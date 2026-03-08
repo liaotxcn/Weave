@@ -229,6 +229,9 @@ func (s *APIServer) registerRoutes() {
 
 	// 健康检查
 	s.router.GET("/health", s.handleHealthCheck)
+
+	// Agent
+	s.router.GET("/agent/health", s.handleAgentHealthCheck)
 }
 
 // handleChatControl 处理聊天控制请求
@@ -468,6 +471,20 @@ func (s *APIServer) handleHealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "ok",
 		"service": "aichat",
+	})
+}
+
+// handleAgentHealthCheck 处理Agent健康检查请求
+func (s *APIServer) handleAgentHealthCheck(c *gin.Context) {
+	logger := pkg.GetLogger()
+	agentService := service.NewAgentService(logger.Logger)
+
+	// 获取健康状态
+	status := agentService.GetHealthStatus()
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ok",
+		"agent":  status,
 	})
 }
 
