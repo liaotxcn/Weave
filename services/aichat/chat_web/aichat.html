@@ -47,24 +47,22 @@
                 rows="1"
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
             ></textarea>
-            <div class="image-upload-section">
-                <input type="file" id="imageInput" accept="image/*" multiple onchange="handleImageSelection(event)">
-                <button id="imageUploadButton" onclick="document.getElementById('imageInput').click()"><svg t="1768990542596" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="50606" width="16" height="16"><path d="M924.604 652.741c-8.657 14.045-19.995 28.969-34.799 42.708C907.114 680.514 915 668.283 915 668.283V814H100V584.302s1.919-3.974 5.316-10.56c-2.923 4.009-5.316 7.276-6.316 9.566V818h826V652.121c0 0.207-0.268 0.413-0.396 0.62z" fill="#6366f1" p-id="50607"></path><path d="M775.368 745.783c-8.774 0.937-17.964 1.441-27.604 1.441-39.155 0-75.216-7.109-107.343-21.134 24.504 13.482 54.804 22.814 91.806 22.814 15.477 0 29.833-1.136 43.141-3.121zM131.466 495.698c24.359-21.467 50.47-38.599 77.807-50.922 34.444-15.525 70.653-23.397 107.72-23.397 66.907 0 127.417 26.807 175.037 77.523 35.605 37.919 51.425 75.721 52.082 77.312l0.312 0.772 0.237 0.8c0.093 0.301 10.913 34.815 41.447 68.596 40.337 44.625 94.725 67.252 161.656 67.252 66.244 0 116.132-26.417 148.243-78.517C918.485 598.647 924 562.194 925 556.373V190H99v338.411c9-10.208 19.688-21.452 32.466-32.713z m584.837-209.863c58.124 0 105.243 47.119 105.243 105.243 0 58.124-47.119 105.243-105.243 105.243-58.124 0-105.243-47.119-105.243-105.243-0.001-58.124 47.118-105.243 105.243-105.243z" fill="#6366f1" p-id="50608"></path><path d="M959 187.913C959 170.288 944.712 156 927.087 156H96.913C79.288 156 65 170.288 65 187.913v631.175C65 836.712 79.288 851 96.913 851h830.175C944.712 851 959 836.712 959 819.087V187.913zM99 818V583.308c1-2.29 3.529-5.557 6.452-9.566 9.37-12.852 25.809-33.312 48.918-53.541 49.445-43.283 104.126-65.23 162.623-65.23 57.831 0 108.201 22.236 149.761 66.091 29.534 31.165 44.095 62.936 46.073 67.43 2.167 6.668 14.95 42.956 47.286 79.213 20.612 23.111 44.966 41.534 72.393 54.758 2.61 1.259 5.25 2.464 7.915 3.627 32.127 14.025 68.187 21.134 107.342 21.134 9.64 0 18.83-0.504 27.604-1.441 51.363-5.487 88.21-26.058 114.37-50.335 14.805-13.739 26.209-28.662 34.866-42.708 0.128-0.207 0.396-0.413 0.396-0.62V818H99z m826-628v366.373c-1 5.821-6.516 42.275-28.993 78.743" fill="#6366f1" p-id="50609"></path></svg> 添加图片</button>
+            <div class="input-actions">
+                <div class="input-buttons">
+                    <button class="function-button" id="deepThinkingButton">深度思考</button>
+                    <button class="function-button primary" id="smartSearchButton">智能搜索</button>
+                </div>
+                <div class="upload-send">
+                    <input type="file" id="imageInput" accept="image/*" multiple onchange="handleImageSelection(event)">
+                    <button id="imageUploadButton" onclick="document.getElementById('imageInput').click()" title="添加图片">📷</button>
+                    <button id="sendButton" onclick="sendMessage()" title="发送">➤</button>
+                </div>
             </div>
             <div class="selected-images" id="selectedImages"></div>
-            <div class="all-buttons-container">
-                <div class="button-item">
-                    <button id="sendButton" onclick="sendMessage()"><svg t="1768989938251" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="42140" width="16" height="16"><path d="M870.599222 165.813828H634.598025v61.299012h193.091888l100.223885 275.845556H665.247531v30.649506a153.247531 153.247531 0 0 1-306.495062 0v-30.649506H96.086202l100.223885-275.845556H389.401975v-61.299012H153.400778L21.607902 528.397486v495.602514h980.784196V528.397486z m70.493864 796.88716H82.906914v-398.44358h216.692008a214.546543 214.546543 0 0 0 424.802156 0H941.093086z" fill="#FFFFFF" p-id="42141"></path><path d="M481.350494 117.387609v416.220293h61.299012V117.387609l39.537863 39.537862 43.522299-43.215803L512 0l-113.709668 113.709668 43.522299 43.215803L481.350494 117.387609z" fill="#FFFFFF" p-id="42142"></path></svg></button>
-                </div>
-                <div class="button-item">
-                    <button id="pauseButton" class="control-button" onclick="controlChat('pause')" disabled><svg t="1768990382030" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="48121" width="16" height="16"><path d="M128 106.858667C128 94.976 137.621333 85.333333 149.12 85.333333h85.76c11.648 0 21.12 9.6 21.12 21.525334V917.12c0 11.882667-9.621333 21.525333-21.12 21.525333H149.12A21.290667 21.290667 0 0 1 128 917.141333V106.88z m640 0c0-11.882667 9.621333-21.525333 21.12-21.525334h85.76c11.648 0 21.12 9.6 21.12 21.525334V917.12c0 11.882667-9.621333 21.525333-21.12 21.525333h-85.76a21.290667 21.290667 0 0 1-21.12-21.525333V106.88z" fill="#6366f1" p-id="48122"></path></svg></button>
-                </div>
-                <div class="button-item">
-                    <button id="continueButton" class="control-button" onclick="controlChat('continue')" disabled><svg t="1768990197687" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="46149" width="16" height="16"><path d="M757.333333 447.125333L363.093333 167.872a83.413333 83.413333 0 0 0-131.626666 68.096v558.464a83.413333 83.413333 0 0 0 131.626666 68.074667L757.333333 583.274667a83.413333 83.413333 0 0 0 0-136.149334z m-38.506666 74.965334a11.925333 11.925333 0 0 1-2.837334 2.837333l-394.218666 279.253333a11.925333 11.925333 0 0 1-18.794667-9.749333V235.968a11.925333 11.925333 0 0 1 18.794667-9.728l394.24 279.253333a11.925333 11.925333 0 0 1 3.904 14.72l-1.066667 1.877334z" fill="#6366f1" p-id="46150"></path></svg></button>
-                </div>
-                <div class="button-item">
-                    <button id="stopButton" class="control-button" onclick="controlChat('stop')" disabled><svg t="1768990234485" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="47127" width="16" height="16"><path d="M128 128m53.333333 0l661.333334 0q53.333333 0 53.333333 53.333333l0 661.333334q0 53.333333-53.333333 53.333333l-661.333334 0q-53.333333 0-53.333333-53.333333l0-661.333334q0-53.333333 53.333333-53.333333Z" fill="#6366f1" p-id="47128"></path></svg></button>
-                </div>
+            <div class="control-buttons">
+                <button id="pauseButton" class="control-button" onclick="controlChat('pause')" disabled title="暂停">⏸</button>
+                <button id="continueButton" class="control-button" onclick="controlChat('continue')" disabled title="继续">▶</button>
+                <button id="stopButton" class="control-button" onclick="controlChat('stop')" disabled title="停止">⏹</button>
             </div>
         </div>
     </div>

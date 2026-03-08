@@ -483,11 +483,82 @@
             margin-top: var(--spacing-lg);
         }
 
-        .image-upload-section {
+        .input-placeholder {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            margin-bottom: -8px;
+        }
+
+        .input-content-wrapper {
+            position: relative;
+        }
+
+        #messageInput {
+            width: 100%;
+            padding: 16px 20px 16px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 28px;
+            resize: none;
+            min-height: 60px;
+            max-height: 180px;
+            font-family: inherit;
+            font-size: var(--font-size-base);
+            transition: all 0.3s ease;
+            background-color: #f8fafc;
+        }
+
+        #messageInput:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .input-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .input-buttons {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .function-button {
+            padding: 8px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            background-color: #f8fafc;
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: var(--spacing-md);
-            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .function-button:hover {
+            background-color: #f1f5f9;
+            border-color: var(--primary-color);
+        }
+
+        .function-button.primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .function-button.primary:hover {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+        }
+
+        .upload-send {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         #imageInput {
@@ -495,32 +566,53 @@
         }
 
         #imageUploadButton {
-            background: linear-gradient(135deg, var(--secondary-color), var(--secondary-dark));
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            padding: 6px 12px;
+            width: 36px;
+            height: 36px;
+            border: 1px solid #e2e8f0;
+            border-radius: 50%;
+            background-color: #f8fafc;
             cursor: pointer;
-            font-weight: 500;
-            font-size: var(--font-size-sm);
-            transition: all 0.3s ease;
-            width: fit-content;
             display: flex;
             align-items: center;
-            gap: 4px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-            min-height: 32px;
-            min-width: 80px;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 18px;
+            padding: 0;
         }
 
         #imageUploadButton:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            background-color: #f1f5f9;
+            border-color: var(--primary-color);
         }
 
-        #imageUploadButton:active {
+        #sendButton {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            padding: 0;
+        }
+
+        #sendButton:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        #sendButton:active {
             transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        #sendButton:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
         }
 
         .selected-images {
@@ -570,62 +662,38 @@
             min-height: 26px;
         }
 
-
-
-        #messageInput {
-            flex: 1;
-            padding: 16px 20px;
-            border: 2px solid #e2e8f0;
-            border-radius: 28px;
-            resize: none;
-            min-height: 100px;
-            max-height: 180px;
-            font-family: inherit;
-            font-size: var(--font-size-base);
-            transition: all 0.3s ease;
-            background-color: #f8fafc;
-        }
-
-
-
-        .all-buttons-container {
+        .control-buttons {
             display: flex;
             gap: var(--spacing-sm);
             justify-content: center;
             align-items: center;
-            flex-wrap: wrap;
+            margin-top: 8px;
         }
 
-
-
         .control-button {
-            padding: 6px 12px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 50%;
             cursor: pointer;
-            font-weight: 500;
-            font-size: var(--font-size-sm);
+            font-size: 16px;
             transition: all 0.3s ease;
-            min-width: 60px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             display: flex;
             align-items: center;
-            gap: 4px;
-            min-height: 32px;
             justify-content: center;
+            padding: 0;
         }
 
-        .control-button:hover {
+        .control-button:hover:not(:disabled) {
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
 
-        .control-button:active {
+        .control-button:active:not(:disabled) {
             transform: translateY(0);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
-
 
         #pauseButton {
             background: linear-gradient(135deg, var(--warning-color), var(--warning-dark));
@@ -647,52 +715,7 @@
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
-        }
-
-        #sendButton {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: var(--font-size-sm);
-            font-weight: 500;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            min-height: 32px;
-            min-width: 60px;
-            justify-content: center;
-        }
-
-        #sendButton:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        #sendButton:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-        }
-
-        #sendButton:disabled {
-            background-color: #94a3b8;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-
-
-        #sendButton:disabled {
-            background-color: #94a3b8;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+            opacity: 0.5;
         }
 
         #clearButton {
