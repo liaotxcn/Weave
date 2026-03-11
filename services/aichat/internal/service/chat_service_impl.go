@@ -9,6 +9,7 @@ import (
 	"weave/services/aichat/internal/cache"
 	"weave/services/aichat/internal/chat"
 	"weave/services/aichat/internal/model"
+	"weave/services/aichat/internal/model/embedder"
 	"weave/services/aichat/internal/security"
 	"weave/services/aichat/internal/summary"
 	"weave/services/aichat/internal/template"
@@ -91,10 +92,20 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	}
 
 	// 初始化嵌入器
-	s.embedder, err = model.NewOllamaEmbedder(ctx)
+	s.embedder, err = embedder.NewEmbedder(ctx)
 	if err != nil {
-
+		s.logger.Warn("初始化嵌入器失败，将使用回退机制", zap.Error(err))
 		s.embedder = nil // 触发 FilterRelevantHistory 回退机制
+	} else {
+		// 获取 Redis 客户端实例，为嵌入器添加缓存
+		if redisCache, ok := s.chatCache.(*cache.RedisClient); ok {
+			redisClient := redisCache.GetRedisClient()
+			if redisClient != nil {
+				s.embedder = embedder.NewCachedEmbedder(ctx, s.embedder, redisClient)
+				s.logger.Info("为嵌入器添加 Redis 缓存成功")
+			}
+		}
+		s.logger.Info("嵌入器初始化成功")
 	}
 
 	// 创建模板（单例模式）
