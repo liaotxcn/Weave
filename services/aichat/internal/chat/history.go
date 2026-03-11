@@ -381,50 +381,52 @@ func cosineSimilarity(a, b []float64) float64 {
 	return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
 }
 
-// rffFusion RFF (Reciprocal Rank Fusion) 多路召回结果融合
+// RFF权重配置
+const (
+	RFFWeightBM25      = 0.5  // BM25 权重
+	RFFWeightEmbedding = 0.5  // Embedding 权重
+	RFFK               = 60.0 // RFF参数k
+)
+
+// weightedRFFFusion 加权RFF多路召回融合
+// rankings: 各路召回的文档ID排序列表
+// weights: 各路权重（需与rankings长度一致）
 // k: RFF参数，控制排名衰减速度
-func rffFusion(rankings [][]int, k float64, maxHistory int) []int {
-	if len(rankings) == 0 {
+func weightedRFFFusion(rankings [][]int, weights []float64, k float64, maxHistory int) []int {
+	if len(rankings) == 0 || len(weights) == 0 {
 		return nil
 	}
 
-	// 统计每个文档的RFF得分
 	scores := make(map[int]float64)
-
-	for _, ranking := range rankings {
+	for i, ranking := range rankings {
+		w := weights[i]
 		for rank, docID := range ranking {
-			// RFF: score = Σ(1.0 / (k + rank))
-			scores[docID] += 1.0 / (k + float64(rank+1))
+			// 加权RFF: score = Σ w × 1/(k + rank)
+			scores[docID] += w / (k + float64(rank+1))
 		}
 	}
 
-	// 转换为切片排序
 	type docScore struct {
 		id    int
 		score float64
 	}
-
 	results := make([]docScore, 0, len(scores))
 	for id, score := range scores {
 		results = append(results, docScore{id: id, score: score})
 	}
 
-	// 按RFF得分降序排序
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].score > results[j].score
 	})
 
-	// 截取前maxHistory个
 	if len(results) > maxHistory {
 		results = results[:maxHistory]
 	}
 
-	// 提取ID
 	finalRanking := make([]int, len(results))
 	for i, r := range results {
 		finalRanking[i] = r.id
 	}
-
 	return finalRanking
 }
 
@@ -579,13 +581,16 @@ func FilterRelevantHistoryHybrid(ctx context.Context, embedder embedding.Embedde
 
 	wg.Wait()
 
-	// 收集有效召回结果
+	// 收集有效召回结果和对应权重
 	var rankings [][]int
+	var weights []float64
 	if len(rankingA) > 0 {
 		rankings = append(rankings, rankingA)
+		weights = append(weights, RFFWeightBM25)
 	}
 	if len(rankingB) > 0 {
 		rankings = append(rankings, rankingB)
+		weights = append(weights, RFFWeightEmbedding)
 	}
 
 	// 如果没有召回结果，返回最近消息
@@ -597,8 +602,8 @@ func FilterRelevantHistoryHybrid(ctx context.Context, embedder embedding.Embedde
 		return chatHistory[start:]
 	}
 
-	// RFF融合排序
-	finalRanking := rffFusion(rankings, 60.0, maxHistory)
+	// 加权RFF融合排序
+	finalRanking := weightedRFFFusion(rankings, weights, RFFK, maxHistory)
 
 	// 按最终排序提取消息
 	result := make([]*schema.Message, len(finalRanking))

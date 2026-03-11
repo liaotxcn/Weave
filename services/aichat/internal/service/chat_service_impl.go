@@ -102,7 +102,6 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 			redisClient := redisCache.GetRedisClient()
 			if redisClient != nil {
 				s.embedder = embedder.NewCachedEmbedder(ctx, s.embedder, redisClient)
-				s.logger.Info("为嵌入器添加 Redis 缓存成功")
 			}
 		}
 		s.logger.Info("嵌入器初始化成功")
