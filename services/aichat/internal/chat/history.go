@@ -380,3 +380,233 @@ func cosineSimilarity(a, b []float64) float64 {
 
 	return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
 }
+
+// rffFusion RFF (Reciprocal Rank Fusion) 多路召回结果融合
+// k: RFF参数，控制排名衰减速度
+func rffFusion(rankings [][]int, k float64, maxHistory int) []int {
+	if len(rankings) == 0 {
+		return nil
+	}
+
+	// 统计每个文档的RFF得分
+	scores := make(map[int]float64)
+
+	for _, ranking := range rankings {
+		for rank, docID := range ranking {
+			// RFF: score = Σ(1.0 / (k + rank))
+			scores[docID] += 1.0 / (k + float64(rank+1))
+		}
+	}
+
+	// 转换为切片排序
+	type docScore struct {
+		id    int
+		score float64
+	}
+
+	results := make([]docScore, 0, len(scores))
+	for id, score := range scores {
+		results = append(results, docScore{id: id, score: score})
+	}
+
+	// 按RFF得分降序排序
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].score > results[j].score
+	})
+
+	// 截取前maxHistory个
+	if len(results) > maxHistory {
+		results = results[:maxHistory]
+	}
+
+	// 提取ID
+	finalRanking := make([]int, len(results))
+	for i, r := range results {
+		finalRanking[i] = r.id
+	}
+
+	return finalRanking
+}
+
+// recallWithBM25 A路召回：BM25关键词召回，返回文档ID排序列表
+func recallWithBM25(chatHistory []*schema.Message, currentQuestion string, calculator *pkg.BleveBM25Calculator, maxHistory int) []int {
+	if calculator == nil || len(chatHistory) == 0 {
+		return nil
+	}
+
+	keywords := calculator.ExtractKeywords(currentQuestion, 5)
+	if len(keywords) == 0 {
+		return nil
+	}
+
+	type docScore struct {
+		id    int
+		score float64
+	}
+	scores := make([]docScore, 0, len(chatHistory))
+
+	for i, msg := range chatHistory {
+		if msg.Content == "" {
+			continue
+		}
+		score := calculateBM25MatchScore(msg.Content, keywords, calculator)
+		if score > 0 {
+			scores = append(scores, docScore{id: i, score: score})
+		}
+	}
+
+	// 按BM25得分降序排序
+	sort.Slice(scores, func(i, j int) bool {
+		return scores[i].score > scores[j].score
+	})
+
+	// 截取前maxHistory*2个（给RFF留空间）
+	limit := maxHistory * 2
+	if limit > len(scores) {
+		limit = len(scores)
+	}
+
+	ranking := make([]int, limit)
+	for i := 0; i < limit; i++ {
+		ranking[i] = scores[i].id
+	}
+
+	return ranking
+}
+
+// recallWithEmbedding B路召回：Embedding向量语义召回，返回文档ID排序列表
+func recallWithEmbedding(ctx context.Context, embedder embedding.Embedder, chatHistory []*schema.Message, currentQuestion string, maxHistory int) []int {
+	if embedder == nil || len(chatHistory) == 0 {
+		return nil
+	}
+
+	// 获取问题向量
+	questionEmbeddings, err := embedder.EmbedStrings(ctx, []string{currentQuestion})
+	if err != nil || len(questionEmbeddings) == 0 {
+		return nil
+	}
+	questionVector := questionEmbeddings[0]
+
+	// 准备历史消息
+	var contents []string
+	var indices []int
+	for i, msg := range chatHistory {
+		if msg.Content != "" {
+			contents = append(contents, msg.Content)
+			indices = append(indices, i)
+		}
+	}
+
+	if len(contents) == 0 {
+		return nil
+	}
+
+	// 批量获取向量
+	historyEmbeddings, err := embedder.EmbedStrings(ctx, contents)
+	if err != nil || len(historyEmbeddings) != len(contents) {
+		return nil
+	}
+
+	type docScore struct {
+		id    int
+		score float64
+	}
+	scores := make([]docScore, 0, len(historyEmbeddings))
+
+	for i, emb := range historyEmbeddings {
+		similarity := cosineSimilarity(questionVector, emb)
+		if similarity > 0 {
+			scores = append(scores, docScore{id: indices[i], score: similarity})
+		}
+	}
+
+	// 按相似度降序排序
+	sort.Slice(scores, func(i, j int) bool {
+		return scores[i].score > scores[j].score
+	})
+
+	// 截取前maxHistory*2个
+	limit := maxHistory * 2
+	if limit > len(scores) {
+		limit = len(scores)
+	}
+
+	ranking := make([]int, limit)
+	for i := 0; i < limit; i++ {
+		ranking[i] = scores[i].id
+	}
+
+	return ranking
+}
+
+// FilterRelevantHistoryHybrid 多路召回+RFF排序融合
+// A路：BM25关键词召回  B路：Embedding语义召回
+func FilterRelevantHistoryHybrid(ctx context.Context, embedder embedding.Embedder, calculator *pkg.BleveBM25Calculator, chatHistory []*schema.Message, currentQuestion string, maxHistory int) []*schema.Message {
+	if len(chatHistory) == 0 || maxHistory <= 0 {
+		return []*schema.Message{}
+	}
+
+	if maxHistory > len(chatHistory) {
+		maxHistory = len(chatHistory)
+	}
+
+	// 空问题直接返回最近消息
+	if currentQuestion == "" {
+		start := len(chatHistory) - maxHistory
+		if start < 0 {
+			start = 0
+		}
+		return chatHistory[start:]
+	}
+
+	// 两路并行召回
+	var rankingA, rankingB []int
+	var wg sync.WaitGroup
+
+	// A路：BM25召回
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rankingA = recallWithBM25(chatHistory, currentQuestion, calculator, maxHistory)
+	}()
+
+	// B路：Embedding召回
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		rankingB = recallWithEmbedding(ctx, embedder, chatHistory, currentQuestion, maxHistory)
+	}()
+
+	wg.Wait()
+
+	// 收集有效召回结果
+	var rankings [][]int
+	if len(rankingA) > 0 {
+		rankings = append(rankings, rankingA)
+	}
+	if len(rankingB) > 0 {
+		rankings = append(rankings, rankingB)
+	}
+
+	// 如果没有召回结果，返回最近消息
+	if len(rankings) == 0 {
+		start := len(chatHistory) - maxHistory
+		if start < 0 {
+			start = 0
+		}
+		return chatHistory[start:]
+	}
+
+	// RFF融合排序
+	finalRanking := rffFusion(rankings, 60.0, maxHistory)
+
+	// 按最终排序提取消息
+	result := make([]*schema.Message, len(finalRanking))
+	for i, idx := range finalRanking {
+		if idx >= 0 && idx < len(chatHistory) {
+			result[i] = chatHistory[idx]
+		}
+	}
+
+	return result
+}
