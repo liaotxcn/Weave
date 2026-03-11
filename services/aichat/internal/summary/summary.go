@@ -148,6 +148,11 @@ func (sg *SimpleSummaryGenerator) ExtractKeywords(text string, topN int) []strin
 	return filterKeywords(keywords)
 }
 
+// GetBM25Calculator 获取BM25计算器（用于多路召回）
+func (sg *SimpleSummaryGenerator) GetBM25Calculator() *pkg.BleveBM25Calculator {
+	return sg.bm25Calculator
+}
+
 // selectConversationRounds 智能选择对话轮次
 func (sg *SimpleSummaryGenerator) selectConversationRounds(messages []*schema.Message, maxRounds int) []ConversationRound {
 	var rounds []ConversationRound

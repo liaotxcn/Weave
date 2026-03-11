@@ -9,6 +9,7 @@ import (
 	"weave/services/aichat/internal/cache"
 	"weave/services/aichat/internal/chat"
 	"weave/services/aichat/internal/model"
+	"weave/services/aichat/internal/model/embedder"
 	"weave/services/aichat/internal/security"
 	"weave/services/aichat/internal/summary"
 	"weave/services/aichat/internal/template"
@@ -91,10 +92,19 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	}
 
 	// 初始化嵌入器
-	s.embedder, err = model.NewOllamaEmbedder(ctx)
+	s.embedder, err = embedder.NewEmbedder(ctx)
 	if err != nil {
-
+		s.logger.Warn("初始化嵌入器失败，将使用回退机制", zap.Error(err))
 		s.embedder = nil // 触发 FilterRelevantHistory 回退机制
+	} else {
+		// 获取 Redis 客户端实例，为嵌入器添加缓存
+		if redisCache, ok := s.chatCache.(*cache.RedisClient); ok {
+			redisClient := redisCache.GetRedisClient()
+			if redisClient != nil {
+				s.embedder = embedder.NewCachedEmbedder(ctx, s.embedder, redisClient)
+			}
+		}
+		s.logger.Info("嵌入器初始化成功")
 	}
 
 	// 创建模板（单例模式）
@@ -192,8 +202,9 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 		filteredHistory = append(filteredHistory, recentMessages...)
 		s.logger.Info("使用摘要作为上下文", zap.String("user_id", userID), zap.Int("message_count", len(chatHistory)))
 	} else {
-		// 过滤相关历史消息
-		filteredHistory = chat.FilterRelevantHistory(ctx, s.embedder, chatHistory, filteredInput, 50)
+		// 多路召回+RFF排序融合 (A路: BM25关键词召回, B路: Embedding语义召回)
+		bm25Calc := s.summaryGenerator.GetBM25Calculator()
+		filteredHistory = chat.FilterRelevantHistoryHybrid(ctx, s.embedder, bm25Calc, chatHistory, filteredInput, 50)
 	}
 
 	// 添加关键词上下文
@@ -410,8 +421,9 @@ func (s *chatServiceImpl) processUserInputStreamWithImages(ctx context.Context, 
 	// 从结构化对话中获取消息历史
 	chatHistory := conversation.Messages
 
-	// 过滤与当前问题相关的对话历史
-	filteredHistory := chat.FilterRelevantHistory(ctx, s.embedder, chatHistory, filteredInput, 50)
+	// 多路召回+RFF排序融合 (A路: BM25关键词召回, B路: Embedding语义召回)
+	bm25Calc := s.summaryGenerator.GetBM25Calculator()
+	filteredHistory := chat.FilterRelevantHistoryHybrid(ctx, s.embedder, bm25Calc, chatHistory, filteredInput, 50)
 
 	// 添加关键词上下文
 	if len(keywords) > 0 {
