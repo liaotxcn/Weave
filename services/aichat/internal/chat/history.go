@@ -635,15 +635,17 @@ type LLMRerankerConfig struct {
 	TopK      int     // 最终返回数
 	Threshold float64 // 分数阈值
 	MaxTokens int     // 单条消息最大长度
+	MinScore  float64 // 最低分数（低于此值直接过滤）
 }
 
 // DefaultLLMRerankerConfig 默认配置
 func DefaultLLMRerankerConfig() *LLMRerankerConfig {
 	return &LLMRerankerConfig{
-		TopN:      10,
-		TopK:      5,
-		Threshold: 5.0,
-		MaxTokens: 200,
+		TopN:      5,   // 候选数
+		TopK:      3,   // 最终返回数
+		Threshold: 6.0, // 阈值，筛选相关消息
+		MaxTokens: 150, // 每条消息最大长度
+		MinScore:  3.0, // 最低分数，快速过滤
 	}
 }
 
@@ -707,7 +709,7 @@ func (r *LLMReranker) Rerank(ctx context.Context, question string, candidates []
 
 	var scored []scoredMsg
 	for i, msg := range candidates {
-		if scores[i] >= r.config.Threshold {
+		if scores[i] >= r.config.Threshold && scores[i] >= r.config.MinScore {
 			scored = append(scored, scoredMsg{msg: msg, score: scores[i]})
 		}
 	}
