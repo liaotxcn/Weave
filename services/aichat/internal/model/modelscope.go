@@ -15,15 +15,20 @@ func createModelScopeChatModel(ctx context.Context, useVisionModel bool) (einomo
 	apiKey := viper.GetString("AICHAT_MODELSCOPE_API_KEY")
 	var modelName string
 
-	// 根据是否需要视觉模型选择配置
-	if useVisionModel {
-		modelName = viper.GetString("AICHAT_MODELSCOPE_VISUAL_MODEL_NAME")
-		// 如果视觉模型未配置，回退到默认模型
-		if modelName == "" {
+	rerankModelName := viper.GetString("AICHAT_RERANK_MODELSCOPE_MODEL_NAME")
+	if rerankModelName != "" {
+		modelName = rerankModelName
+	} else {
+		// 根据是否需要视觉模型选择配置
+		if useVisionModel {
+			modelName = viper.GetString("AICHAT_MODELSCOPE_VISUAL_MODEL_NAME")
+			// 如果视觉模型未配置，回退到默认模型
+			if modelName == "" {
+				modelName = viper.GetString("AICHAT_MODELSCOPE_MODEL_NAME")
+			}
+		} else {
 			modelName = viper.GetString("AICHAT_MODELSCOPE_MODEL_NAME")
 		}
-	} else {
-		modelName = viper.GetString("AICHAT_MODELSCOPE_MODEL_NAME")
 	}
 
 	baseURL := viper.GetString("AICHAT_MODELSCOPE_BASE_URL")

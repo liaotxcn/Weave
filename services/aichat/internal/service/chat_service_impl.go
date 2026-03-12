@@ -35,6 +35,7 @@ type chatServiceImpl struct {
 	rateLimiter         *security.ImageRateLimiter
 	activeConversations map[string]*model.Conversation  // 当前活跃对话
 	summaryGenerator    *summary.SimpleSummaryGenerator // 摘要生成器
+	reranker            *chat.LLMReranker               // LLM重排器
 }
 
 // NewChatService 创建聊天服务实例
@@ -126,6 +127,18 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	s.summaryGenerator = summary.NewBM25SummaryGenerator([]string{})
 	s.logger.Info("摘要生成器初始化完成")
 
+	// 初始化LLM重排器
+	if viper.GetBool("AICHAT_ENABLE_RERANK") {
+		rerankModelType := viper.GetString("AICHAT_RERANK_MODEL_TYPE")
+		llmModel, err := model.CreateChatModel(ctx, rerankModelType)
+		if err != nil {
+			s.logger.Warn("创建LLM重排模型失败，重排功能禁用", zap.Error(err))
+		} else {
+			s.reranker = chat.NewLLMReranker(llmModel, nil)
+			s.logger.Info("LLM重排器初始化成功", zap.String("model_type", rerankModelType))
+		}
+	}
+
 	return nil
 }
 
@@ -202,9 +215,9 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 		filteredHistory = append(filteredHistory, recentMessages...)
 		s.logger.Info("使用摘要作为上下文", zap.String("user_id", userID), zap.Int("message_count", len(chatHistory)))
 	} else {
-		// 多路召回+RFF排序融合 (A路: BM25关键词召回, B路: Embedding语义召回)
+		// 多路召回+加权RFF排序+LLM重排 (A路: BM25关键词召回, B路: Embedding语义召回)
 		bm25Calc := s.summaryGenerator.GetBM25Calculator()
-		filteredHistory = chat.FilterRelevantHistoryHybrid(ctx, s.embedder, bm25Calc, chatHistory, filteredInput, 50)
+		filteredHistory = chat.FilterRelevantHistoryHybrid(ctx, s.embedder, bm25Calc, s.reranker, chatHistory, filteredInput, 50)
 	}
 
 	// 添加关键词上下文
@@ -421,9 +434,9 @@ func (s *chatServiceImpl) processUserInputStreamWithImages(ctx context.Context, 
 	// 从结构化对话中获取消息历史
 	chatHistory := conversation.Messages
 
-	// 多路召回+RFF排序融合 (A路: BM25关键词召回, B路: Embedding语义召回)
+	// 多路召回+加权RFF排序+LLM重排 (A路: BM25关键词召回, B路: Embedding语义召回)
 	bm25Calc := s.summaryGenerator.GetBM25Calculator()
-	filteredHistory := chat.FilterRelevantHistoryHybrid(ctx, s.embedder, bm25Calc, chatHistory, filteredInput, 50)
+	filteredHistory := chat.FilterRelevantHistoryHybrid(ctx, s.embedder, bm25Calc, s.reranker, chatHistory, filteredInput, 50)
 
 	// 添加关键词上下文
 	if len(keywords) > 0 {

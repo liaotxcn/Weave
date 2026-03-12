@@ -2,16 +2,21 @@ package chat
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
-	"weave/services/aichat/pkg"
+	"weave/pkg"
+	aichatpkg "weave/services/aichat/pkg"
 
 	"github.com/cloudwego/eino/components/embedding"
+	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"github.com/go-ego/gse"
+	"go.uber.org/zap"
 )
 
 // 全局分词器，sync.Once线程安全初始化
@@ -108,7 +113,7 @@ func selectAndOrderMessages(scoredMessages []scoredMessage, maxHistory int, chat
 }
 
 // FilterRelevantHistoryWithBM25 使用BM25关键词匹配的对话历史过滤
-func FilterRelevantHistoryWithBM25(chatHistory []*schema.Message, currentQuestion string, maxHistory int, bm25Calculator *pkg.BleveBM25Calculator) []*schema.Message {
+func FilterRelevantHistoryWithBM25(chatHistory []*schema.Message, currentQuestion string, maxHistory int, bm25Calculator *aichatpkg.BleveBM25Calculator) []*schema.Message {
 	// 基本参数检查
 	if len(chatHistory) == 0 || maxHistory <= 0 || bm25Calculator == nil {
 		return []*schema.Message{}
@@ -244,7 +249,7 @@ func FilterRelevantHistory(ctx context.Context, embedder embedding.Embedder, cha
 }
 
 // calculateBM25MatchScore 计算BM25关键词匹配分数
-func calculateBM25MatchScore(content string, keywords []string, calculator *pkg.BleveBM25Calculator) float64 {
+func calculateBM25MatchScore(content string, keywords []string, calculator *aichatpkg.BleveBM25Calculator) float64 {
 	if len(keywords) == 0 {
 		return 0.0
 	}
@@ -262,7 +267,7 @@ func calculateBM25MatchScore(content string, keywords []string, calculator *pkg.
 }
 
 // EnhanceHistorySelection 基于BM25关键词重新排序历史
-func EnhanceHistorySelection(chatHistory []*schema.Message, currentQuestion string, calculator *pkg.BleveBM25Calculator) []*schema.Message {
+func EnhanceHistorySelection(chatHistory []*schema.Message, currentQuestion string, calculator *aichatpkg.BleveBM25Calculator) []*schema.Message {
 	if calculator == nil || len(chatHistory) <= 5 {
 		return chatHistory
 	}
@@ -431,7 +436,7 @@ func weightedRFFFusion(rankings [][]int, weights []float64, k float64, maxHistor
 }
 
 // recallWithBM25 A路召回：BM25关键词召回，返回文档ID排序列表
-func recallWithBM25(chatHistory []*schema.Message, currentQuestion string, calculator *pkg.BleveBM25Calculator, maxHistory int) []int {
+func recallWithBM25(chatHistory []*schema.Message, currentQuestion string, calculator *aichatpkg.BleveBM25Calculator, maxHistory int) []int {
 	if calculator == nil || len(chatHistory) == 0 {
 		return nil
 	}
@@ -541,9 +546,9 @@ func recallWithEmbedding(ctx context.Context, embedder embedding.Embedder, chatH
 	return ranking
 }
 
-// FilterRelevantHistoryHybrid 多路召回+RFF排序融合
+// FilterRelevantHistoryHybrid 多路召回+加权RFF排序+LLM重排
 // A路：BM25关键词召回  B路：Embedding语义召回
-func FilterRelevantHistoryHybrid(ctx context.Context, embedder embedding.Embedder, calculator *pkg.BleveBM25Calculator, chatHistory []*schema.Message, currentQuestion string, maxHistory int) []*schema.Message {
+func FilterRelevantHistoryHybrid(ctx context.Context, embedder embedding.Embedder, calculator *aichatpkg.BleveBM25Calculator, reranker *LLMReranker, chatHistory []*schema.Message, currentQuestion string, maxHistory int) []*schema.Message {
 	if len(chatHistory) == 0 || maxHistory <= 0 {
 		return []*schema.Message{}
 	}
@@ -606,12 +611,180 @@ func FilterRelevantHistoryHybrid(ctx context.Context, embedder embedding.Embedde
 	finalRanking := weightedRFFFusion(rankings, weights, RFFK, maxHistory)
 
 	// 按最终排序提取消息
-	result := make([]*schema.Message, len(finalRanking))
-	for i, idx := range finalRanking {
+	candidates := make([]*schema.Message, 0, len(finalRanking))
+	for _, idx := range finalRanking {
 		if idx >= 0 && idx < len(chatHistory) {
-			result[i] = chatHistory[idx]
+			candidates = append(candidates, chatHistory[idx])
 		}
 	}
 
-	return result
+	// LLM重排
+	if reranker != nil && len(candidates) > 0 {
+		reranked, err := reranker.Rerank(ctx, currentQuestion, candidates)
+		if err == nil && len(reranked) > 0 {
+			return reranked
+		}
+	}
+
+	return candidates
+}
+
+// LLMRerankerConfig LLM重排配置
+type LLMRerankerConfig struct {
+	TopN      int     // 重排候选数
+	TopK      int     // 最终返回数
+	Threshold float64 // 分数阈值
+	MaxTokens int     // 单条消息最大长度
+	MinScore  float64 // 最低分数（低于此值直接过滤）
+}
+
+// DefaultLLMRerankerConfig 默认配置
+func DefaultLLMRerankerConfig() *LLMRerankerConfig {
+	return &LLMRerankerConfig{
+		TopN:      5,   // 候选数
+		TopK:      3,   // 最终返回数
+		Threshold: 6.0, // 阈值，筛选相关消息
+		MaxTokens: 150, // 每条消息最大长度
+		MinScore:  3.0, // 最低分数，快速过滤
+	}
+}
+
+// LLMReranker LLM重排器
+type LLMReranker struct {
+	llm    model.ToolCallingChatModel
+	config *LLMRerankerConfig
+}
+
+// NewLLMReranker 创建LLM重排器
+func NewLLMReranker(llm model.ToolCallingChatModel, config *LLMRerankerConfig) *LLMReranker {
+	if config == nil {
+		config = DefaultLLMRerankerConfig()
+	}
+	return &LLMReranker{llm: llm, config: config}
+}
+
+// Rerank 使用LLM对候选消息进行相关性重排
+func (r *LLMReranker) Rerank(ctx context.Context, question string, candidates []*schema.Message) ([]*schema.Message, error) {
+	if r.llm == nil || len(candidates) == 0 {
+		return candidates, nil
+	}
+
+	logger := pkg.GetLogger()
+
+	// 限制候选数量
+	topN := r.config.TopN
+	if len(candidates) < topN {
+		topN = len(candidates)
+	}
+	candidates = candidates[:topN]
+
+	// 并行打分
+	scores := make([]float64, len(candidates))
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for i, msg := range candidates {
+		wg.Add(1)
+		go func(idx int, message *schema.Message) {
+			defer wg.Done()
+
+			score, err := r.scoreMessage(ctx, question, message)
+			if err != nil {
+				logger.Warn("LLM打分失败", zap.Error(err))
+				return
+			}
+
+			mu.Lock()
+			scores[idx] = score
+			mu.Unlock()
+		}(i, msg)
+	}
+	wg.Wait()
+
+	// 过滤并排序
+	type scoredMsg struct {
+		msg   *schema.Message
+		score float64
+	}
+
+	var scored []scoredMsg
+	for i, msg := range candidates {
+		if scores[i] >= r.config.Threshold && scores[i] >= r.config.MinScore {
+			scored = append(scored, scoredMsg{msg: msg, score: scores[i]})
+		}
+	}
+
+	// 按分数降序排序
+	sort.Slice(scored, func(i, j int) bool {
+		return scored[i].score > scored[j].score
+	})
+
+	// 截取TopK
+	topK := r.config.TopK
+	if len(scored) < topK {
+		topK = len(scored)
+	}
+
+	result := make([]*schema.Message, topK)
+	for i := 0; i < topK; i++ {
+		result[i] = scored[i].msg
+	}
+
+	logger.Info("LLM重排完成",
+		zap.Int("candidates", len(candidates)),
+		zap.Int("filtered", len(scored)),
+		zap.Int("final", len(result)))
+
+	return result, nil
+}
+
+// scoreMessage 对单条消息打分
+func (r *LLMReranker) scoreMessage(ctx context.Context, question string, msg *schema.Message) (float64, error) {
+	content := msg.Content
+	if len(content) > r.config.MaxTokens {
+		content = content[:r.config.MaxTokens] + "..."
+	}
+
+	prompt := fmt.Sprintf(`你是一个对话相关性评估专家。请评估以下历史消息与用户当前问题的相关性。
+
+用户当前问题：%s
+
+历史消息：%s: %s
+
+请给出相关性评分（0-10分）：
+- 0-3分：完全不相关
+- 4-6分：部分相关
+- 7-10分：高度相关
+
+仅返回数字分数，无需解释。`, question, msg.Role, content)
+
+	resp, err := r.llm.Generate(ctx, []*schema.Message{
+		schema.SystemMessage("你是一个专业的对话相关性评估专家。"),
+		schema.UserMessage(prompt),
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	// 解析分数
+	scoreStr := strings.TrimSpace(resp.Content)
+	score, err := strconv.ParseFloat(scoreStr, 64)
+	if err != nil {
+		// 尝试从文本中提取数字
+		for _, c := range scoreStr {
+			if c >= '0' && c <= '9' {
+				score = float64(c - '0')
+				break
+			}
+		}
+	}
+
+	if score < 0 {
+		score = 0
+	}
+	if score > 10 {
+		score = 10
+	}
+
+	return score, nil
 }
