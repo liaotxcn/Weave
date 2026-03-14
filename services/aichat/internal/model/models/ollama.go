@@ -14,34 +14,31 @@
  * limitations under the License.
  */
 
-package model
+package models
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino-ext/components/model/ollama"
 	einomodel "github.com/cloudwego/eino/components/model"
 	"github.com/spf13/viper"
 )
 
-// CreateOpenAIChatModel 创建并返回一个OpenAI聊天模型实例
-func CreateOpenAIChatModel(ctx context.Context) (einomodel.ToolCallingChatModel, error) {
-	key := viper.GetString("AICHAT_OPENAI_API_KEY")
-	modelName := viper.GetString("AICHAT_OPENAI_MODEL_NAME")
-	baseURL := viper.GetString("AICHAT_OPENAI_BASE_URL")
+func CreateOllamaChatModel(ctx context.Context) (einomodel.ToolCallingChatModel, error) {
+	baseURL := viper.GetString("AICHAT_OLLAMA_BASE_URL")
+	modelName := viper.GetString("AICHAT_OLLAMA_MODEL_NAME")
 
-	if key == "" || modelName == "" || baseURL == "" {
-		return nil, fmt.Errorf("AICHAT_OPENAI_API_KEY、AICHAT_OPENAI_MODEL_NAME 或 AICHAT_OPENAI_BASE_URL 未在 .env 文件中配置")
+	if baseURL == "" || modelName == "" {
+		return nil, fmt.Errorf("AICHAT_OLLAMA_BASE_URL 或 AICHAT_OLLAMA_MODEL_NAME 未在 .env 文件中配置")
 	}
 
-	chatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
+	chatModel, err := ollama.NewChatModel(ctx, &ollama.ChatModelConfig{
 		BaseURL: baseURL,
 		Model:   modelName,
-		APIKey:  key,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create ollama chat model failed: %w", err)
 	}
 	return chatModel, nil
 }

@@ -20,39 +20,37 @@ import (
 	"context"
 	"fmt"
 
+	"weave/services/aichat/internal/model/models"
 	einomodel "github.com/cloudwego/eino/components/model"
 	"github.com/spf13/viper"
 )
 
-// CreateChatModel 根据模型类型创建聊天模型实例
 func CreateChatModel(ctx context.Context, modelType string) (einomodel.ToolCallingChatModel, error) {
 	switch modelType {
 	case "openai":
-		return CreateOpenAIChatModel(ctx)
+		return models.CreateOpenAIChatModel(ctx)
 	case "modelscope":
-		return CreateModelScopeChatModel(ctx)
+		return models.CreateModelScopeChatModel(ctx)
 	case "ollama":
-		return CreateOllamaChatModel(ctx)
+		return models.CreateOllamaChatModel(ctx)
 	default:
 		return nil, fmt.Errorf("不支持的模型类型: %s", modelType)
 	}
 }
 
-// CreateVisionChatModel 根据模型类型创建支持视觉的聊天模型实例
 func CreateVisionChatModel(ctx context.Context, modelType string) (einomodel.ToolCallingChatModel, error) {
 	switch modelType {
 	case "modelscope":
-		return CreateModelScopeVisionChatModel(ctx)
+		return models.CreateModelScopeVisionChatModel(ctx)
 	case "openai":
-		return CreateOpenAIChatModel(ctx) 
+		return models.CreateOpenAIChatModel(ctx)
 	case "ollama":
-		return CreateOllamaChatModel(ctx) 
+		return models.CreateOllamaChatModel(ctx)
 	default:
 		return nil, fmt.Errorf("不支持的模型类型: %s", modelType)
 	}
 }
 
-// GetModelNameByType 根据模型类型获取模型名称
 func GetModelNameByType(modelType string) string {
 	switch modelType {
 	case "openai":

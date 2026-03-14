@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package summary
+package chat
 
 import (
 	"context"
@@ -31,6 +31,10 @@ type SummaryGenerator interface {
 	GenerateSummary(ctx context.Context, messages []*schema.Message) (string, error)
 	// UpdateSummary 更新对话摘要
 	UpdateSummary(ctx context.Context, existingSummary string, newMessages []*schema.Message) (string, error)
+	// ExtractKeywords 提取关键词
+	ExtractKeywords(text string, topN int) []string
+	// GetBM25Calculator 获取BM25计算器（用于多路召回）
+	GetBM25Calculator() *pkg.BleveBM25Calculator
 }
 
 // SimpleSummaryGenerator 摘要生成器实现

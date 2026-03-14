@@ -1,4 +1,4 @@
-package service
+package chat
 
 import (
 	"context"
@@ -11,8 +11,7 @@ import (
 	"weave/services/aichat/internal/model"
 	"weave/services/aichat/internal/model/embedder"
 	"weave/services/aichat/internal/security"
-	"weave/services/aichat/internal/summary"
-	"weave/services/aichat/internal/template"
+	aichatpkg "weave/services/aichat/pkg"
 
 	"github.com/cloudwego/eino/components/embedding"
 	"github.com/cloudwego/eino/components/prompt"
@@ -33,9 +32,9 @@ type chatServiceImpl struct {
 	filter              *chat.SensitiveFilter
 	modelType           string
 	rateLimiter         *security.ImageRateLimiter
-	activeConversations map[string]*model.Conversation  // 当前活跃对话
-	summaryGenerator    *summary.SimpleSummaryGenerator // 摘要生成器
-	reranker            *chat.LLMReranker               // LLM重排器
+	activeConversations map[string]*model.Conversation // 当前活跃对话
+	summaryGenerator    *chat.SimpleSummaryGenerator   // 摘要生成器
+	reranker            *chat.LLMReranker              // LLM重排器
 }
 
 // NewChatService 创建聊天服务实例
@@ -109,7 +108,7 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	}
 
 	// 创建模板（单例模式）
-	s.chatTemplate = template.GetTemplate()
+	s.chatTemplate = aichatpkg.GetTemplate()
 
 	// 初始化敏感内容过滤器
 	s.filter = chat.NewSensitiveFilter()
@@ -124,7 +123,7 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	s.logger.Info("活跃对话管理器初始化完成")
 
 	// 初始化摘要生成器
-	s.summaryGenerator = summary.NewBM25SummaryGenerator([]string{})
+	s.summaryGenerator = chat.NewBM25SummaryGenerator([]string{})
 	s.logger.Info("摘要生成器初始化完成")
 
 	// 初始化LLM重排器
@@ -317,7 +316,7 @@ func (s *chatServiceImpl) processUserInputWithImages(ctx context.Context, userIn
 	} else {
 		// 纯文本消息，使用模板格式化
 		var err error
-		messages, err = template.FormatMessage(ctx, "PaiChat", "积极、温暖且专业", chatHistoryStr.String(), filteredInput)
+		messages, err = aichatpkg.FormatMessage(ctx, "PaiChat", "积极、温暖且专业", chatHistoryStr.String(), filteredInput)
 		if err != nil {
 			s.logger.Error("模板格式化失败", zap.Error(err), zap.String("user_id", userID))
 			// 如果模板格式化失败，回退到直接使用消息
@@ -535,7 +534,7 @@ func (s *chatServiceImpl) processUserInputStreamWithImages(ctx context.Context, 
 	} else {
 		// 纯文本消息，使用模板格式化
 		var err error
-		messages, err = template.FormatMessage(ctx, "PaiChat", "积极、温暖且专业", chatHistoryStr.String(), filteredInput)
+		messages, err = aichatpkg.FormatMessage(ctx, "PaiChat", "积极、温暖且专业", chatHistoryStr.String(), filteredInput)
 		if err != nil {
 			s.logger.Error("模板格式化失败", zap.Error(err), zap.String("user_id", userID))
 			// 如果模板格式化失败，回退到直接使用消息
