@@ -28,7 +28,8 @@ import (
 	"weave/middleware"
 	"weave/pkg"
 	"weave/services/aichat/internal/model"
-	"weave/services/aichat/internal/service"
+	"weave/services/aichat/internal/service/agent"
+	"weave/services/aichat/internal/service/chat"
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/gin-gonic/gin"
@@ -37,7 +38,7 @@ import (
 
 // API Server 结构体
 type APIServer struct {
-	chatService         service.ChatService
+	chatService         chat.ChatService
 	router              *gin.Engine
 	addr                string
 	logger              *pkg.Logger
@@ -177,7 +178,7 @@ func (c *SessionControlCache) Close() {
 }
 
 // NewAPIServer 创建API服务器
-func NewAPIServer(chatService service.ChatService, addr string) *APIServer {
+func NewAPIServer(chatService chat.ChatService, addr string) *APIServer {
 	// Gin 发布模式
 	gin.SetMode(gin.ReleaseMode)
 
@@ -477,7 +478,7 @@ func (s *APIServer) handleHealthCheck(c *gin.Context) {
 // handleAgentHealthCheck 处理Agent健康检查请求
 func (s *APIServer) handleAgentHealthCheck(c *gin.Context) {
 	logger := pkg.GetLogger()
-	agentService := service.NewAgentService(logger.Logger)
+	agentService := agent.NewAgentService(logger.Logger)
 
 	// 获取健康状态
 	status := agentService.GetHealthStatus()

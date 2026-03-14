@@ -27,7 +27,7 @@ import (
 	"time"
 	"weave/pkg"
 	"weave/services/aichat/internal/api"
-	"weave/services/aichat/internal/service"
+	"weave/services/aichat/internal/service/chat"
 
 	"go.uber.org/zap"
 )
@@ -44,7 +44,7 @@ func main() {
 	logger := pkg.GetLogger()
 
 	// 创建服务
-	chatService := service.NewChatService()
+	chatService := chat.NewChatService()
 
 	// 初始化服务
 	if err := chatService.Initialize(ctx); err != nil {
