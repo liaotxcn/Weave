@@ -11,7 +11,6 @@ import (
 	"weave/services/aichat/internal/model"
 	"weave/services/aichat/internal/model/embedder"
 	"weave/services/aichat/internal/security"
-	"weave/services/aichat/internal/summary"
 	aichatpkg "weave/services/aichat/pkg"
 
 	"github.com/cloudwego/eino/components/embedding"
@@ -33,9 +32,9 @@ type chatServiceImpl struct {
 	filter              *chat.SensitiveFilter
 	modelType           string
 	rateLimiter         *security.ImageRateLimiter
-	activeConversations map[string]*model.Conversation  // 当前活跃对话
-	summaryGenerator    *summary.SimpleSummaryGenerator // 摘要生成器
-	reranker            *chat.LLMReranker               // LLM重排器
+	activeConversations map[string]*model.Conversation // 当前活跃对话
+	summaryGenerator    *chat.SimpleSummaryGenerator   // 摘要生成器
+	reranker            *chat.LLMReranker              // LLM重排器
 }
 
 // NewChatService 创建聊天服务实例
@@ -124,7 +123,7 @@ func (s *chatServiceImpl) Initialize(ctx context.Context) error {
 	s.logger.Info("活跃对话管理器初始化完成")
 
 	// 初始化摘要生成器
-	s.summaryGenerator = summary.NewBM25SummaryGenerator([]string{})
+	s.summaryGenerator = chat.NewBM25SummaryGenerator([]string{})
 	s.logger.Info("摘要生成器初始化完成")
 
 	// 初始化LLM重排器
