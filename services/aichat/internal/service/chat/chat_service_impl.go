@@ -190,11 +190,12 @@ func (s *chatServiceImpl) buildImageMessage(ctx context.Context, userID, text st
 	}
 
 	for _, imgBase64 := range base64Images {
-		if err := security.IsValidBase64Image(imgBase64); err != nil {
+		format, err := security.CheckBase64Image(imgBase64)
+		if err != nil {
 			s.logger.Warn("无效的 Base64 图片", zap.Error(err), zap.String("user_id", userID))
 			return nil, err
 		}
-		dataURL := "data:image/jpeg;base64," + imgBase64
+		dataURL := "data:image/" + format.Extension + ";base64," + imgBase64
 		parts = append(parts, schema.MessageInputPart{
 			Type:  schema.ChatMessagePartTypeImageURL,
 			Image: &schema.MessageInputImage{MessagePartCommon: schema.MessagePartCommon{URL: &dataURL}},
