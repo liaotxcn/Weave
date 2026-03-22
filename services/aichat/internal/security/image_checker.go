@@ -18,9 +18,12 @@ var supportedImageFormats = []ImageFormat{
 	{"JPEG", "jpg", []byte{0xFF, 0xD8, 0xFF}},
 	{"PNG", "png", []byte{0x89, 0x50, 0x4E, 0x47}},
 	{"GIF", "gif", []byte{0x47, 0x49, 0x46, 0x38}},
-	{"WebP", "webp", []byte{0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50}},
+	{"WebP", "webp", []byte{0x52, 0x49, 0x46, 0x46}},
 	{"BMP", "bmp", []byte{0x42, 0x4D}},
 }
+
+// webpSignature WebP 格式签名
+var webpSignature = []byte{0x57, 0x45, 0x42, 0x50}
 
 // CheckBase64Image 检查 Base64 编码的图片是否合法
 func CheckBase64Image(base64Str string) (ImageFormat, error) {
@@ -39,9 +42,16 @@ func CheckBase64Image(base64Str string) (ImageFormat, error) {
 		return ImageFormat{}, errors.New("image too large")
 	}
 
-	// 检查文件头，判断是否为支持的图片格式
 	for _, format := range supportedImageFormats {
-		if len(decoded) >= len(format.MagicBytes) && bytes.HasPrefix(decoded, format.MagicBytes) {
+		if len(decoded) < len(format.MagicBytes) {
+			continue
+		}
+
+		if format.Name == "WebP" {
+			if bytes.HasPrefix(decoded, format.MagicBytes) && len(decoded) >= 12 && bytes.Equal(decoded[8:12], webpSignature) {
+				return format, nil
+			}
+		} else if bytes.HasPrefix(decoded, format.MagicBytes) {
 			return format, nil
 		}
 	}
@@ -62,7 +72,15 @@ func GetImageFormatFromData(data []byte) (ImageFormat, error) {
 	}
 
 	for _, format := range supportedImageFormats {
-		if len(data) >= len(format.MagicBytes) && bytes.HasPrefix(data, format.MagicBytes) {
+		if len(data) < len(format.MagicBytes) {
+			continue
+		}
+
+		if format.Name == "WebP" {
+			if bytes.HasPrefix(data, format.MagicBytes) && len(data) >= 12 && bytes.Equal(data[8:12], webpSignature) {
+				return format, nil
+			}
+		} else if bytes.HasPrefix(data, format.MagicBytes) {
 			return format, nil
 		}
 	}
