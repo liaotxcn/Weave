@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"net/http"
 	"time"
 	"weave/controllers"
 	"weave/middleware"
@@ -14,8 +15,13 @@ import (
 
 // SetupRouter 配置路由
 func SetupRouter() *gin.Engine {
-	// 创建路由引擎，但不使用默认中间件，而是手动添加需要的中间件
 	router := gin.New()
+
+	// 请求体大小限制
+	router.Use(func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 10<<20)
+		c.Next()
+	})
 
 	// 初始化指标管理器
 	mm := metrics.NewMetricsManager()
@@ -69,22 +75,22 @@ func SetupRouter() *gin.Engine {
 		appGroup.Use(pkg.AuditLogMiddleware())      // 添加安全审计日志中间件
 
 		// 认证相关路由
-			auth := appGroup.Group("/auth")
-			{
-				// 为认证服务添加重试和超时保护
-				auth.Use(middleware.RetryMiddleware(middleware.DefaultRetryConfig()))
-				auth.Use(middleware.TimeoutMiddleware(middleware.DefaultTimeoutConfig()))
+		auth := appGroup.Group("/auth")
+		{
+			// 为认证服务添加重试和超时保护
+			auth.Use(middleware.RetryMiddleware(middleware.DefaultRetryConfig()))
+			auth.Use(middleware.TimeoutMiddleware(middleware.DefaultTimeoutConfig()))
 
-				// 限流保护，为认证接口添加限流：每秒允许10个请求，突发容量20
-				auth.Use(middleware.RateLimiter(10, 20))
-				userCtrl := controllers.NewUserController()
-				auth.POST("/register", userCtrl.Register)
-				auth.POST("/login", userCtrl.Login)
-				auth.POST("/refresh-token", userCtrl.RefreshToken)
-				// 添加验证码相关接口
-				auth.POST("/send-verification-code", userCtrl.SendVerificationCode)
-				auth.POST("/login-with-code", userCtrl.LoginWithVerificationCode)
-			}
+			// 限流保护，为认证接口添加限流：每秒允许10个请求，突发容量20
+			auth.Use(middleware.RateLimiter(10, 20))
+			userCtrl := controllers.NewUserController()
+			auth.POST("/register", userCtrl.Register)
+			auth.POST("/login", userCtrl.Login)
+			auth.POST("/refresh-token", userCtrl.RefreshToken)
+			// 添加验证码相关接口
+			auth.POST("/send-verification-code", userCtrl.SendVerificationCode)
+			auth.POST("/login-with-code", userCtrl.LoginWithVerificationCode)
+		}
 
 		// API分组
 		api := appGroup.Group("/api/v1")
