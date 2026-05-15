@@ -1,22 +1,41 @@
 <template>
   <div class="teams-center">
-    <el-card class="content-card" shadow="hover">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-bg-decoration"></div>
+      <div class="header-content">
+        <div class="header-icon-wrapper">
+          <div class="header-icon">
+            <el-icon :size="28"><UserFilled /></el-icon>
+          </div>
+        </div>
+        <div class="header-text">
+          <h1>团队中心</h1>
+          <p>管理您的团队、成员和协作项目</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
       <!-- 搜索与统计工具栏 -->
       <div class="toolbar">
         <div class="toolbar-left">
-          <el-input
-            v-model="keyword"
-            placeholder="搜索团队名称..."
-            style="width: 300px;"
-            clearable
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-          <el-statistic title="共" :value="filteredTeams.length" suffix="个团队" />
+          <div class="search-box el-input-reset">
+            <el-input
+              v-model="keyword"
+              placeholder="搜索团队名称..."
+              clearable
+              :prefix-icon="Search"
+            />
+          </div>
+          <div class="team-stats">
+            <span class="stats-label">共</span>
+            <span class="stats-value">{{ filteredTeams.length }}</span>
+            <span class="stats-label">个团队</span>
+          </div>
         </div>
-        <el-button type="primary" @click="showCreateModal = true" :icon="Plus">
+        <el-button type="primary" @click="showCreateModal = true" :icon="Plus" class="create-btn">
           创建团队
         </el-button>
       </div>
@@ -51,12 +70,11 @@
         
         <!-- 团队列表 -->
         <div v-else class="team-grid">
-          <el-card
+          <div
             v-for="team in filteredTeams"
             :key="team.id"
-            class="team-card"
+            class="team-card card-base"
             @click="viewTeam(team)"
-            shadow="hover"
           >
             <div class="team-header">
               <div class="team-avatar" :style="{'--avatar-bg': getAvatarColor(team.name)}">
@@ -81,73 +99,69 @@
                 </el-button>
               </div>
             </div>
-            
+
             <div class="team-content">
               <h3 class="team-name">{{ team.name }}</h3>
               <p class="team-description" v-if="team.description">{{ team.description }}</p>
               <p class="team-description placeholder" v-else>暂无团队描述</p>
             </div>
-            
+
             <div class="team-meta">
-              <el-tag size="small" type="info" effect="plain">
+              <span class="meta-tag">
                 <el-icon><UserFilled /></el-icon>
                 {{ team.members ? parseMembers(team.members).length : 0 }} 成员
-              </el-tag>
-              <el-tag size="small" :type="team.owner_id === this.$root.currentUser?.id ? 'success' : 'warning'" effect="plain">
+              </span>
+              <span class="meta-tag" :class="team.owner_id === this.$root.currentUser?.id ? 'tag-owner' : 'tag-member'">
                 {{ team.owner_id === this.$root.currentUser?.id ? '管理员' : '成员' }}
-              </el-tag>
+              </span>
             </div>
-            
+
             <div class="team-footer">
               <span class="create-time">创建于 {{ formatDate(team.created_at) }}</span>
             </div>
-          </el-card>
+          </div>
         </div>
       </div>
-    </el-card>
+    </div>
     
     <!-- 创建团队模态框 -->
     <el-dialog
       v-model="showCreateModal"
       title="创建新团队"
-      width="500px"
+      width="520px"
       destroy-on-close
+      class="team-dialog"
     >
-      <el-form :model="createForm" ref="createFormRef" @submit.prevent="submitCreateTeam" label-position="top">
-        <el-form-item 
-          label="团队名称" 
-          prop="name"
-          :rules="[{ required: true, message: '请输入团队名称', trigger: 'blur' },
-                   { min: 2, max: 50, message: '团队名称长度在 2 到 50 个字符', trigger: 'blur' }]"
-        >
+      <div class="dialog-body el-input-reset">
+        <div class="form-group">
+          <label class="form-label">团队名称 <span class="required">*</span></label>
           <el-input
             v-model="createForm.name"
             placeholder="请输入团队名称，如：产品开发团队"
             maxlength="50"
             show-word-limit
           />
-        </el-form-item>
-        
-        <el-form-item 
-          label="团队描述"
-          prop="description"
-          :rules="[{ max: 200, message: '团队描述不能超过 200 个字符', trigger: 'blur' }]"
-        >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">团队描述</label>
           <el-input
             v-model="createForm.description"
             type="textarea"
             placeholder="请输入团队描述，帮助团队成员了解团队的目标和职责"
-            rows="4"
+            :rows="4"
             maxlength="200"
             show-word-limit
           />
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
       <template #footer>
-        <el-button @click="closeCreateModal">取消</el-button>
-        <el-button type="primary" @click="submitCreateTeam" :loading="creatingTeam" :icon="Plus">
-          {{ creatingTeam ? '创建中...' : '创建团队' }}
-        </el-button>
+        <div class="dialog-footer">
+          <el-button @click="closeCreateModal" class="cancel-btn">取消</el-button>
+          <el-button type="primary" @click="submitCreateTeam" :loading="creatingTeam" :icon="Plus" class="submit-btn">
+            {{ creatingTeam ? '创建中...' : '创建团队' }}
+          </el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -155,44 +169,40 @@
     <el-dialog
       v-model="showEditModal"
       title="编辑团队信息"
-      width="500px"
+      width="520px"
       destroy-on-close
+      class="team-dialog"
     >
-      <el-form :model="editForm" ref="editFormRef" @submit.prevent="submitUpdateTeam" label-position="top">
-        <el-form-item 
-          label="团队名称" 
-          prop="name"
-          :rules="[{ required: true, message: '请输入团队名称', trigger: 'blur' },
-                   { min: 2, max: 50, message: '团队名称长度在 2 到 50 个字符', trigger: 'blur' }]"
-        >
+      <div class="dialog-body el-input-reset">
+        <div class="form-group">
+          <label class="form-label">团队名称 <span class="required">*</span></label>
           <el-input
             v-model="editForm.name"
             placeholder="请输入团队名称"
             maxlength="50"
             show-word-limit
           />
-        </el-form-item>
-        
-        <el-form-item 
-          label="团队描述"
-          prop="description"
-          :rules="[{ max: 200, message: '团队描述不能超过 200 个字符', trigger: 'blur' }]"
-        >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">团队描述</label>
           <el-input
             v-model="editForm.description"
             type="textarea"
             placeholder="请输入团队描述"
-            rows="4"
+            :rows="4"
             maxlength="200"
             show-word-limit
           />
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
       <template #footer>
-        <el-button @click="closeEditModal">取消</el-button>
-        <el-button type="primary" @click="submitUpdateTeam" :loading="updatingTeam" :icon="EditPen">
-          {{ updatingTeam ? '更新中...' : '更新团队' }}
-        </el-button>
+        <div class="dialog-footer">
+          <el-button @click="closeEditModal" class="cancel-btn">取消</el-button>
+          <el-button type="primary" @click="submitUpdateTeam" :loading="updatingTeam" :icon="EditPen" class="submit-btn">
+            {{ updatingTeam ? '更新中...' : '更新团队' }}
+          </el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -206,16 +216,17 @@
       <div class="modal-body">
         <!-- 搜索与添加成员 -->
         <div class="members-toolbar">
+          <div class="el-input-reset" style="width: 300px;">
           <el-input
             v-model="memberSearchKeyword"
             placeholder="搜索团队成员..."
-            style="width: 300px;"
             clearable
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
+          </div>
           <el-button type="primary" @click="showAddMemberForm = true" :icon="Plus">
             添加成员
           </el-button>
@@ -274,40 +285,34 @@
         <el-divider v-if="showAddMemberForm" />
         <div v-if="showAddMemberForm" class="add-member-form-container">
           <h3>添加新成员</h3>
-          <el-form :model="addMemberForm" ref="addMemberFormRef" @submit.prevent="submitAddMember" label-position="top">
-            <el-form-item 
-              label="用户ID" 
-              prop="user_id"
-              :rules="[{ required: true, message: '请输入用户ID', trigger: 'blur' }]"
-            >
+          <div class="dialog-body el-input-reset">
+            <div class="form-group">
+              <label class="form-label">用户ID <span class="required">*</span></label>
               <el-input
                 type="number"
                 v-model="addMemberForm.user_id"
                 placeholder="请输入用户ID"
               />
-            </el-form-item>
-            
-            <el-form-item 
-              label="角色" 
-              prop="role"
-              :rules="[{ required: true, message: '请选择角色', trigger: 'change' }]"
-            >
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">角色 <span class="required">*</span></label>
               <el-select
                 v-model="addMemberForm.role"
                 style="width: 100%;"
+                placeholder="请选择角色"
               >
                 <el-option value="member">成员</el-option>
                 <el-option value="admin">管理员</el-option>
               </el-select>
-            </el-form-item>
-            
-            <div class="form-actions">
-              <el-button @click="showAddMemberForm = false">取消</el-button>
-              <el-button type="primary" @click="submitAddMember" :loading="addingMember" :icon="Plus">
-                {{ addingMember ? '添加中...' : '添加成员' }}
-              </el-button>
             </div>
-          </el-form>
+          </div>
+          <div class="form-actions">
+            <el-button @click="showAddMemberForm = false" class="cancel-btn">取消</el-button>
+            <el-button type="primary" @click="submitAddMember" :loading="addingMember" :icon="Plus" class="submit-btn">
+              {{ addingMember ? '添加中...' : '添加成员' }}
+            </el-button>
+          </div>
         </div>
       </div>
     </el-dialog>
@@ -357,10 +362,7 @@ export default {
         user_id: '',
         role: 'member'
       },
-      errors: {},
-      createFormRef: null,
-      editFormRef: null,
-      addMemberFormRef: null
+      errors: {}
     }
   },
   mounted() {
@@ -489,57 +491,77 @@ export default {
     
     // 提交创建团队
     async submitCreateTeam() {
-      if (!this.$refs.createFormRef) return;
-      
-      await this.$refs.createFormRef.validate(async (valid) => {
-        if (!valid) return;
-        
-        this.creatingTeam = true
-        try {
-          const teamData = {
-            name: this.createForm.name.trim(),
-            description: this.createForm.description.trim()
-          }
-          
-          // 调用后端API创建团队
-          await api.post('/api/v1/teams/', teamData)
-          
-          // 创建成功后刷新团队列表
-          await this.loadTeams()
-          
-          // 显示成功提示
-          this.$message.success('团队创建成功')
-          
-          // 关闭模态框
-          this.closeCreateModal()
-        } catch (e) {
-          const errorMsg = e?.response?.data?.message || '创建团队失败，请稍后重试'
-          this.$message.error(errorMsg)
-        } finally {
-          this.creatingTeam = false
+      // 手动验证表单
+      if (!this.createForm.name || !this.createForm.name.trim()) {
+        this.$message.warning('请输入团队名称')
+        return
+      }
+
+      if (this.createForm.name.trim().length < 2 || this.createForm.name.trim().length > 50) {
+        this.$message.warning('团队名称长度在 2 到 50 个字符')
+        return
+      }
+
+      if (this.createForm.description && this.createForm.description.length > 200) {
+        this.$message.warning('团队描述不能超过 200 个字符')
+        return
+      }
+
+      this.creatingTeam = true
+      try {
+        const teamData = {
+          name: this.createForm.name.trim(),
+          description: this.createForm.description.trim()
         }
-      });
+
+        // 调用后端API创建团队
+        await api.post('/api/v1/teams/', teamData)
+
+        // 创建成功后刷新团队列表
+        await this.loadTeams()
+
+        // 显示成功提示
+        this.$message.success('团队创建成功')
+
+        // 关闭模态框
+        this.closeCreateModal()
+      } catch (e) {
+        const errorMsg = e?.response?.data?.message || '创建团队失败，请稍后重试'
+        this.$message.error(errorMsg)
+      } finally {
+        this.creatingTeam = false
+      }
     },
       
     // 更新团队信息
     async submitUpdateTeam() {
-      if (!this.$refs.editFormRef) return;
-      
-      await this.$refs.editFormRef.validate(async (valid) => {
-        if (!valid) return;
-        
-        this.updatingTeam = true
-        try {
-          await teamService.updateTeam(this.currentTeam.id, this.editForm)
-          this.closeEditModal()
-          this.loadTeams() // 更新团队列表
-          this.$message.success('团队信息更新成功')
-        } catch (error) {
-          this.$message.error('更新团队信息失败')
-        } finally {
-          this.updatingTeam = false
-        }
-      });
+      // 手动验证表单
+      if (!this.editForm.name || !this.editForm.name.trim()) {
+        this.$message.warning('请输入团队名称')
+        return
+      }
+
+      if (this.editForm.name.trim().length < 2 || this.editForm.name.trim().length > 50) {
+        this.$message.warning('团队名称长度在 2 到 50 个字符')
+        return
+      }
+
+      if (this.editForm.description && this.editForm.description.length > 200) {
+        this.$message.warning('团队描述不能超过 200 个字符')
+        return
+      }
+
+      this.updatingTeam = true
+      try {
+        await teamService.updateTeam(this.currentTeam.id, this.editForm)
+        this.closeEditModal()
+        this.loadTeams() // 更新团队列表
+        this.$message.success('团队信息更新成功')
+      } catch (error) {
+        this.$message.error('更新团队信息失败')
+      } finally {
+        this.updatingTeam = false
+      }
     },
     // 查看团队成员列表
     async viewTeamMembers(team) {
@@ -613,122 +635,441 @@ export default {
 </script>
 
 <style scoped>
-/* 基本容器样式 */
 .teams-center {
-  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0;
   max-width: 1200px;
   margin: 0 auto;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  min-height: 100%;
+  font-family: var(--font-sans);
 }
 
-/* 头部区域 */
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 800;
+/* ===== 页面头部 ===== */
+.page-header {
+  position: relative;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+  border-radius: var(--radius-xl);
+  padding: 32px 36px;
   color: white;
-  margin: 0;
-  letter-spacing: -0.025em;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25), 0 0 40px rgba(139, 92, 246, 0.1);
 }
 
-/* 内容卡片 */
-.content-card {
-  border-radius: 24px;
-  padding: 28px;
+.header-bg-decoration {
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 8s ease-in-out infinite;
+}
+
+.header-bg-decoration::before {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -5%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 6s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
+}
+
+.header-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-icon-wrapper {
+  flex-shrink: 0;
+}
+
+.header-icon {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
-}
-
-/* 团队卡片 */
-.team-card {
-  border-radius: 20px;
-  margin-bottom: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.team-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+.page-header:hover .header-icon {
+  transform: rotate(-5deg) scale(1.05);
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-/* 团队卡片内部样式 */
+.header-text h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-text p {
+  margin: 0;
+  opacity: 0.95;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* ===== 主内容区 ===== */
+.main-content {
+  background: var(--color-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 28px 32px;
+}
+
+/* ===== 工具栏 ===== */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  width: 320px;
+}
+
+.team-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+}
+
+.stats-label {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.stats-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary-600);
+}
+
+.create-btn {
+  height: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0 24px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.create-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+}
+
+/* ===== 状态区域 ===== */
+.status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.loading-state {
+  color: var(--color-text-secondary);
+}
+
+.error-state {
+  color: var(--error);
+}
+
+/* ===== 团队网格 ===== */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+}
+
+/* ===== 团队卡片基础样式 ===== */
+.card-base {
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-base::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-400));
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.card-base:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  border-color: var(--border-medium);
+}
+
+.card-base:hover::before {
+  transform: scaleX(1);
+}
+
+/* ===== 团队头部 ===== */
 .team-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .team-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
 }
 
+.card-base:hover .team-actions {
+  opacity: 1;
+}
+
+/* ===== 团队头像 ===== */
+.team-avatar {
+  width: 64px;
+  height: 64px;
+  background-color: var(--avatar-bg, var(--color-primary));
+  color: white;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.team-avatar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent);
+  z-index: 1;
+}
+
+.card-base:hover .team-avatar {
+  transform: scale(1.08) rotate(3deg);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+}
+
+/* ===== 团队内容 ===== */
 .team-content {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .team-name {
   font-size: 20px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--color-text-primary);
   margin: 0 0 10px 0;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
+  transition: color 0.3s ease;
+  line-height: 1.3;
 }
 
-.team-card:hover .team-name {
-  color: #667eea;
+.card-base:hover .team-name {
+  color: var(--primary-600);
 }
 
+.team-description {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.team-description.placeholder {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+/* ===== 团队元信息 ===== */
 .team-meta {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
 }
 
+.meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--border-light);
+  transition: all 0.25s ease;
+}
+
+.meta-tag.tag-owner {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.meta-tag.tag-member {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+/* ===== 团队底部 ===== */
 .team-footer {
   text-align: right;
+  padding-top: 16px;
+  border-top: 1px solid var(--bg-tertiary);
 }
 
-/* 工具栏样式 */
-.toolbar {
+.create-time {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+/* ===== 对话框统一样式 ===== */
+.team-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.team-dialog :deep(.el-dialog__header) {
+  padding: 24px 28px 0 !important;
+  margin-right: 0 !important;
+}
+
+.team-dialog :deep(.el-dialog__title) {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: var(--color-text-primary) !important;
+}
+
+.team-dialog :deep(.el-dialog__body) {
+  padding: 24px 28px !important;
+}
+
+.team-dialog :deep(.el-dialog__footer) {
+  padding: 0 28px 24px !important;
+}
+
+.dialog-body {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
+  flex-direction: column;
+  gap: 20px;
 }
 
-/* 搜索与统计容器 */
-.toolbar-left {
+.form-group {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* 团队数量统计样式 */
-:deep(.el-statistic) {
-  font-size: 16px;
+.form-label {
+  display: block;
+  font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
-  margin-left: 16px;
-  align-self: center;
+  color: var(--color-text-primary);
 }
 
-/* 成员管理模态框样式 */
+.required {
+  color: var(--error);
+  margin-left: 2px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-btn,
+.submit-btn {
+  height: 38px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 9px;
+  padding: 0 20px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+/* ===== 成员管理对话框 ===== */
 .members-toolbar {
   display: flex;
   justify-content: space-between;
@@ -751,6 +1092,7 @@ export default {
   margin-bottom: 20px;
   font-size: 18px;
   font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .form-actions {
@@ -760,601 +1102,148 @@ export default {
   margin-top: 24px;
 }
 
-/* 状态容器 */
-.status-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  text-align: center;
+/* ===== 响应式设计 ===== */
+@media (max-width: 968px) {
+  .teams-center {
+    gap: 20px;
+  }
+
+  .page-header {
+    padding: 28px 28px;
+  }
+
+  .header-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .header-icon :deep(.el-icon) {
+    font-size: 24px !important;
+  }
+
+  .header-text h1 {
+    font-size: 25px;
+  }
+
+  .main-content {
+    padding: 24px 26px;
+  }
+
+  .team-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
 }
 
-.loading-state {
-  color: #64748b;
-}
-
-.error-state {
-  color: #ef4444;
-}
-
-/* 响应式设计 */
 @media (max-width: 768px) {
   .teams-center {
-    padding: 16px;
-  }
-  
-  .content-card {
-    padding: 20px;
-  }
-  
-  .header-section {
-    flex-direction: column;
-    align-items: flex-start;
+    padding: 0 12px;
     gap: 16px;
   }
-  
+
+  .page-header {
+    padding: 24px 22px;
+  }
+
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .header-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .header-text h1 {
+    font-size: 23px;
+  }
+
+  .header-text p {
+    font-size: 14px;
+  }
+
+  .main-content {
+    padding: 20px;
+  }
+
   .toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 16px;
   }
-  
+
+  .toolbar-left {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .create-btn {
+    width: 100%;
+  }
+
   .members-toolbar {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .team-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-}
 
-/* 其他保持不变的样式 */
-.primary-btn {
-  padding: 12px 24px;
-  background: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.35s ease;
-}
-
-.primary-btn:hover {
-  background: #4338ca;
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.35);
-}
-
-.team-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
-  animation: fadeInUp 0.6s ease-out;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .card-base {
+    padding: 20px;
   }
 }
 
-.team-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 24px;
-  cursor: pointer;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  animation: fadeIn 0.5s ease-out;
-  opacity: 0;
-  animation-fill-mode: forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+@media (max-width: 480px) {
+  .page-header {
+    padding: 20px 18px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .header-icon {
+    width: 52px;
+    height: 52px;
   }
-}
 
-.team-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  border-color: #cbd5e1;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-}
-
-.team-card:active {
-  transform: translateY(-2px) scale(0.98);
-  transition: transform 0.15s ease;
-}
-
-.team-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
-}
-
-.team-avatar {
-  width: 64px;
-  height: 64px;
-  background-color: var(--avatar-bg, #4f46e5);
-  color: white;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  font-weight: 700;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.team-avatar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%);
-  z-index: 1;
-}
-
-.team-avatar span {
-  position: relative;
-  z-index: 2;
-}
-
-.team-card:hover .team-avatar {
-  transform: scale(1.05) translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-
-.team-card:hover .team-avatar {
-  transform: scale(1.05) rotate(2deg);
-}
-
-.team-actions {
-  display: flex;
-  gap: 12px;
-  opacity: 0;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  transform: translateY(-4px);
-  margin-top: 8px;
-}
-
-.team-card:hover .team-actions {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.action-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: #f1f5f9;
-  border-radius: 10px;
-  color: #64748b;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: scale(0.95);
-}
-
-.action-btn:hover {
-  background: #4f46e5;
-  color: white;
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
-}
-
-.action-btn:active {
-  transform: translateY(-1px) scale(0.98);
-  transition: transform 0.15s ease;
-}
-
-.team-content {
-  margin-bottom: 20px;
-}
-
-.team-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 10px 0;
-  transition: color 0.3s ease;
-  letter-spacing: -0.025em;
-}
-
-.team-card:hover .team-name {
-  color: #667eea;
-}
-
-.team-description {
-  font-size: 14px;
-  color: #64748b;
-  line-height: 1.6;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.team-description.placeholder {
-  color: #94a3b8;
-  font-style: italic;
-}
-
-.team-meta {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.meta-icon {
-  stroke: currentColor;
-  width: 16px;
-  height: 16px;
-}
-
-.team-footer {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.create-time {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* 创建团队模态框 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+  .header-icon :deep(.el-icon) {
+    font-size: 22px !important;
   }
-  to {
-    opacity: 1;
+
+  .header-text h1 {
+    font-size: 21px;
   }
-}
 
-.modal-content {
-  background: white;
-  border-radius: 18px;
-  width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  transform: scale(0.95) translateY(20px);
-  opacity: 0;
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
-  animation: modalSlideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  padding: 32px;
-}
-
-@keyframes modalSlideIn {
-  to {
-    transform: scale(1) translateY(0);
-    opacity: 1;
+  .header-text p {
+    font-size: 13px;
   }
-}
 
-.modal-content:hover {
-  transform: scale(1);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-  padding: 0 8px;
-  border-bottom: none;
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 700;
-  color: #1e293b;
-  letter-spacing: -0.02em;
-}
-
-.modal-close {
-  background: #f1f5f9;
-  border: none;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #64748b;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.modal-close:hover {
-  background: #e2e8f0;
-  color: #334155;
-  transform: rotate(90deg);
-}
-
-.modal-body {
-  padding: 0 8px;
-}
-
-.create-team-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.form-group {
-  margin-bottom: 28px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.form-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0;
-  font-weight: 600;
-  color: #334155;
-  font-size: 15px;
-}
-
-.char-count {
-  font-size: 12px;
-  font-weight: 400;
-  color: #94a3b8;
-}
-
-.form-input,
-.form-textarea {
-  width: 100%;
-  padding: 14px 18px;
-  border: 2px solid #e2e8f0;
-  border-radius: 14px;
-  font-size: 15px;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  background: #f8fafc;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.form-input:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15), inset 0 1px 3px rgba(0, 0, 0, 0.05);
-  background: white;
-  transform: translateY(-2px);
-}
-
-.form-textarea {
-  resize: vertical;
-  min-height: 120px;
-  line-height: 1.6;
-}
-
-.success-indicator {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  .main-content {
+    padding: 18px;
   }
-  70% {
-    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+
+  .card-base {
+    padding: 18px;
   }
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+
+  .team-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
   }
-}
 
-.error-message {
-  color: #ef4444;
-  font-size: 13px;
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  animation: shake 0.5s ease-in-out;
-}
-
-.error-message::before {
-  content: '⚠';
-  font-size: 14px;
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-  20%, 40%, 60%, 80% { transform: translateX(2px); }
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 16px;
-  padding-top: 28px;
-  padding-bottom: 8px;
-  border-top: 1px solid #f1f5f9;
-  flex-wrap: wrap;
-}
-
-.cancel-btn {
-  padding: 12px 24px;
-  background: white;
-  color: #64748b;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.35s ease;
-}
-
-.cancel-btn:hover {
-  border-color: #cbd5e1;
-  color: #334155;
-  transform: translateY(-2px);
-  background: #f8fafc;
-}
-
-.submit-btn {
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.submit-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-.submit-btn:hover:not(:disabled) {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);
-}
-
-.submit-btn:hover:not(:disabled)::before {
-  left: 100%;
-}
-
-.submit-btn:active:not(:disabled) {
-  transform: translateY(-1px) scale(0.98);
-  transition: transform 0.15s ease;
-}
-
-.submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.loading-spinner-small {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .teams-center {
-    padding: 16px;
+  .team-name {
+    font-size: 18px;
   }
-  
-  .header-section {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  
-  .content-card {
-    padding: 16px;
-  }
-  
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  
-  .search-container {
-    max-width: 100%;
-  }
-  
-  .team-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .team-card {
-    padding: 16px;
+
+  .status-container {
+    padding: 60px 16px;
   }
 }
 </style>

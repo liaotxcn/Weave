@@ -4,42 +4,28 @@
     <div class="auth-bg-pattern"></div>
     
     <div class="auth-card">
-      <!-- 品牌展示区域 - 使用Element Plus卡片 -->
-      <el-card class="brand-card" shadow="never" :body-style="{ padding: 0 }">
+      <!-- 统一头部：品牌 + 标签切换 -->
+      <div class="header">
         <div class="brand">
-          <div class="logo-container">
-            <el-avatar shape="circle" size="large" class="brand-logo">
-              <img src="/logo.png" alt="Weave Logo" />
-            </el-avatar>
-            <h1 class="brand-title">Weave</h1>
-          </div>
+          <el-avatar shape="circle" :size="36" class="brand-logo">
+            <img src="/logo.png" alt="Weave Logo" />
+          </el-avatar>
+          <h1 class="brand-title">Weave</h1>
         </div>
-      </el-card>
-      
-      <!-- 标签切换区域 - 使用Element Plus按钮和Tabs组件思路 -->
-      <div class="tabs">
-        <el-button 
-          type="primary" 
-          :plain="!showLogin" 
-          :icon="UserFilled" 
-          @click="switchToLogin"
-          class="tab-btn"
-        >
-          登录
-        </el-button>
-        <el-button 
-          type="primary" 
-          :plain="showLogin" 
-          :icon="Plus" 
-          @click="switchToRegister"
-          class="tab-btn"
-        >
-          注册
-        </el-button>
-        <el-tabs v-model="activeTab" class="tab-indicator-container" :show-tabbar="false">
-          <el-tab-pane label="登录" name="login"></el-tab-pane>
-          <el-tab-pane label="注册" name="register"></el-tab-pane>
-        </el-tabs>
+        <div class="tabs">
+          <button
+            :class="['tab-btn', { active: showLogin }]"
+            @click="switchToLogin"
+          >
+            登录
+          </button>
+          <button
+            :class="['tab-btn', { active: !showLogin }]"
+            @click="switchToRegister"
+          >
+            注册
+          </button>
+        </div>
       </div>
       
       <!-- 表单区域 -->
@@ -60,35 +46,24 @@
       
       <!-- 页脚信息 -->
       <div class="auth-footer">
-        <p>© {{ new Date().getFullYear() }} Weave - 插件开发/服务聚合平台</p>
+        <p>© {{ new Date().getFullYear() }} Weave</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import Login from './Login.vue'
 import Register from './Register.vue'
 import { authService } from '../services/auth.js'
 import api from '../services/auth.js'
-// 导入Element Plus图标
-import { UserFilled, Plus } from '@element-plus/icons-vue'
 
 // 定义props和emits
 const emit = defineEmits(['auth-success'])
 
 // 状态管理
 const showLogin = ref(true) // 默认显示登录表单
-// 计算属性用于标签切换
-const activeTab = computed({
-  get() {
-    return showLogin.value ? 'login' : 'register'
-  },
-  set(val) {
-    showLogin.value = val === 'login'
-  }
-})
 
 // 初始化时检查用户是否已登录，并预热CSRF Cookie
 onMounted(() => {
@@ -133,19 +108,18 @@ const handleRegisterSuccess = () => {
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
-  padding: 24px;
+  padding: 12px;
   position: relative;
-  overflow: hidden;
 }
 
 /* 背景装饰图案 */
 .auth-bg-pattern {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
+  background-image:
     radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 25%),
     radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 30%);
   z-index: 1;
@@ -154,111 +128,78 @@ const handleRegisterSuccess = () => {
 /* 主卡片 */
 .auth-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 440px;
   background: var(--bg-primary);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   position: relative;
   z-index: 2;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.auth-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+/* ===== 统一头部：品牌 + 标签切换 ===== */
+.header {
+  background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
+  padding: 16px 20px 0;
 }
 
-/* 品牌卡片 */
-.brand-card {
-  border: none;
-  margin-bottom: 16px;
-}
-
-/* 品牌区域 */
 .brand {
-  background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
-  color: var(--bg-primary);
-  padding: 32px 32px 24px;
-  text-align: center;
-  border-radius: var(--radius-xl);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
-}
-
-.logo-container {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 10px;
+  padding-bottom: 12px;
 }
 
 .brand-logo {
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
 }
 
 .brand-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
+  font-size: 20px;
+  font-weight: 700;
   margin: 0;
-  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-100) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: white;
   letter-spacing: -0.02em;
 }
 
-.brand-subtitle {
-  font-size: var(--font-size-sm);
-  margin: 0;
-  font-weight: var(--font-weight-medium);
-  border-radius: var(--radius-full);
-  padding: 6px 20px;
-  font-size: 14px;
-}
-
-/* 标签切换区域 */
 .tabs {
-  position: relative;
   display: flex;
-  gap: 12px;
-  padding: 20px 24px 16px;
-  background: var(--bg-primary);
-  justify-content: center;
+  gap: 0;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
 }
 
 .tab-btn {
   flex: 1;
-  max-width: 180px;
-  border-radius: var(--radius-lg);
-  font-weight: var(--font-weight-semibold);
-  padding: 12px 20px;
-  transition: all 0.3s ease;
+  padding: 9px 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
 }
 
 .tab-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
 }
 
-/* 标签指示器 */
-.tab-indicator-container {
-  position: absolute;
-  bottom: 0;
-  left: 24px;
-  right: 24px;
-  width: calc(100% - 48px);
-}
-
-:deep(.el-tabs__nav-wrap) {
-  display: none;
+.tab-btn.active {
+  color: var(--primary-600);
+  background: var(--bg-primary);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  font-weight: 700;
 }
 
 /* 表单区域 */
 .form-area {
-  padding: 24px 24px;
-  min-height: 360px;
+  padding: 12px 16px;
 }
 
 /* 表单切换过渡动画 */
@@ -291,13 +232,13 @@ const handleRegisterSuccess = () => {
 :deep(form) {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 :deep(.form-group) {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   position: relative;
 }
 
@@ -415,7 +356,7 @@ const handleRegisterSuccess = () => {
   text-align: center;
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 :deep(.link-btn) {
@@ -438,60 +379,44 @@ const handleRegisterSuccess = () => {
 
 /* 页脚 */
 .auth-footer {
-  padding: 20px 24px;
-  background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
-  border-top: 3px solid var(--primary-400);
+  padding: 8px 16px;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-light);
   text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-/* 页脚装饰元素 */
-.auth-footer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 20%),
-              radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 15%);
-  z-index: 1;
 }
 
 .auth-footer p {
   margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--bg-primary);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: 0.02em;
-  position: relative;
-  z-index: 2;
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(4px);
-  transition: all var(--transition-normal);
-}
-
-.auth-footer p:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
 }
 
 /* 响应式设计 */
 @media (max-width: 480px) {
   .auth-container {
-    padding: 16px;
+    padding: 8px;
   }
   
+  .header {
+    padding: 12px 14px 0;
+  }
+
   .brand {
-    padding: 24px 20px 20px;
+    gap: 8px;
+    padding-bottom: 10px;
+  }
+
+  .brand-title {
+    font-size: 18px;
   }
   
+  .tab-btn {
+    font-size: 13px;
+    padding: 8px 0;
+  }
+
   .form-area {
-    padding: 20px 20px;
+    padding: 10px 12px;
   }
   
   .auth-card {

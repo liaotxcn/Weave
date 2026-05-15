@@ -2,7 +2,7 @@
   <div class="login-container">
     <h2 class="form-title">登录</h2>
     
-    <el-form class="auth-form" @submit.prevent="handleLogin" label-position="top" size="large">
+    <el-form class="auth-form el-input-reset" @submit.prevent="handleLogin" label-position="top" size="large">
       <!-- 用户名输入 -->
       <el-form-item label="用户名" required>
         <el-input 
@@ -45,9 +45,8 @@
             :disabled="loading || !canSendCode || countdown > 0"
             @click="sendVerificationCode"
             title="验证码将发送至您注册时使用的邮箱"
-            :plain="true"
-            size="large"
-            style="min-width: 120px;"
+            size="default"
+            class="verify-btn"
           >
             {{ countdown > 0 ? `${countdown}秒后重新获取` : '获取验证码' }}
           </el-button>
@@ -57,13 +56,13 @@
         </div>
       </el-form-item>
       
-      <div class="assist">
+      <div class="assist-row">
         <el-checkbox v-model="rememberMe">记住我</el-checkbox>
       </div>
       
       <!-- 验证码发送成功提示将使用ElMessage组件显示 -->
       
-      <el-button type="primary" native-type="submit" :disabled="loading || !canLogin" :loading="loading" style="width: 100%;" size="large">
+      <el-button type="primary" native-type="submit" :disabled="loading || !canLogin" :loading="loading" size="default" class="submit-btn">
         登录
       </el-button>
     </el-form>
@@ -238,133 +237,55 @@ export default {
 .login-container {
   display: flex;
   flex-direction: column;
-  gap: 0;
   position: relative;
-  max-width: 400px;
+  max-width: 420px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px;
-  background: white;
+  padding: 12px 16px;
+  background: var(--color-surface);
   border-radius: var(--radius-xl);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-card);
 }
 
-/* 验证码输入框 */
-.verification-code-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.submit-btn {
   width: 100%;
-}
-
-.form-title {
-  font-size: 24px;
+  height: 38px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 28px 0;
-  text-align: center;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
+  border-radius: 10px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+.submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
 }
 
-/* 验证码输入框 */
-.verification-code-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
+.verify-btn {
+  min-width: 100px;
+  height: 34px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1.5px solid var(--primary-300);
+  color: var(--primary-600) !important;
+  background: var(--primary-50) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.input-hint {
-  font-size: var(--font-size-xs);
-  color: var(--text-tertiary);
-  margin-top: 6px;
-  padding-left: 2px;
+.verify-btn:hover:not(:disabled) {
+  background: var(--primary-100) !important;
+  border-color: var(--primary);
+  color: var(--primary-700) !important;
+  transform: translateY(-1px);
 }
 
-/* 彻底修复Element Plus输入框双重边框问题 */
-:deep(.el-input) {
-  /* 确保输入框容器没有额外边框 */
-  border: none !important;
-  box-shadow: none !important;
-}
-
-:deep(.el-input__wrapper) {
-  /* 重置输入框包装器的所有边框和阴影 */
-  transition: all 0.3s ease;
-  border-radius: var(--radius-md) !important;
-  box-shadow: none !important;
-  border: 1px solid var(--border-color) !important;
-  outline: none !important;
-  background-color: #fff !important;
-}
-
-:deep(.el-input__wrapper:focus-within) {
-  /* 焦点状态只保留一层阴影和边框 */
-  box-shadow: 0 0 0 2px rgba(144, 202, 249, 0.2), 0 2px 8px rgba(144, 202, 249, 0.3) !important;
-  border-color: #69b1ff !important;
-}
-
-:deep(.el-input__inner) {
-  /* 确保内部输入元素没有额外边框 */
-  border: none !important;
-  box-shadow: none !important;
-  background-color: transparent !important;
-}
-
-/* 禁用状态优化 */
-:deep(.el-input.is-disabled .el-input__wrapper) {
-  opacity: 0.7;
-  background-color: var(--bg-secondary) !important;
-}
-
-.input-hint {
-  font-size: var(--font-size-xs);
-  color: var(--text-tertiary);
-  margin-top: 4px;
-  padding-left: 4px;
-}
-
-/* 辅助选项 */
-.assist {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
-}
-
-/* 切换提示 */
-.switch-tip {
-  text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin-top: 24px;
-}
-
-/* 响应式调整 */
-@media (max-width: 480px) {
-  .form-title {
-    font-size: var(--font-size-lg);
-    margin-bottom: 20px;
-  }
-  
-  .auth-form {
-    gap: 14px;
-  }
-  
-  .assist {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  
-  .switch-tip {
-    margin-top: 20px;
-  }
+.verify-btn:disabled {
+  color: var(--color-text-tertiary) !important;
+  background: var(--bg-tertiary) !important;
+  border-color: var(--border-light) !important;
 }
 </style>

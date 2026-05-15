@@ -1,0 +1,286 @@
+/* 共享表单样式 */
+
+.form-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.switch-tip {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.input-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: 6px;
+  padding-left: 2px;
+}
+
+.input-hint-success {
+  color: var(--color-success);
+}
+
+/* Element Plus 输入框统一重置 - 消除双层边框 */
+
+/* 全局强制覆盖（确保 :deep() 不生效时也能清除原生边框） */
+.el-input-reset .el-input {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.el-input-reset .el-input__wrapper {
+  border-radius: 10px !important;
+  border: 1.5px solid var(--border-light) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-color: var(--bg-secondary) !important;
+  padding: 4px 12px !important;
+  transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.25s ease !important;
+}
+
+.el-input-reset .el-input__wrapper:hover {
+  border-color: var(--primary-300) !important;
+  background-color: var(--bg-primary) !important;
+}
+
+.el-input-reset .el-input__wrapper:focus-within,
+.el-input-reset .el-input.is-focus .el-input__wrapper {
+  border-color: var(--primary) !important;
+  background-color: var(--bg-primary) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12),
+             0 4px 14px rgba(99, 102, 241, 0.08) !important;
+}
+
+.el-input-reset .el-input__inner {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-color: transparent !important;
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+  color: var(--color-text-primary) !important;
+  padding: 8px 4px !important;
+  height: auto !important;
+}
+
+.el-input-reset .el-input__inner::placeholder {
+  color: var(--color-text-tertiary) !important;
+  font-size: 14px !important;
+  opacity: 0.7;
+}
+
+.el-input-reset .el-input__prefix {
+  color: var(--color-text-tertiary);
+  transition: color 0.25s ease;
+  margin-right: 4px;
+}
+
+.el-input-reset .el-input__wrapper:focus-within .el-input__prefix,
+.el-input-reset .el-input.is-focus .el-input__wrapper .el-input__prefix {
+  color: var(--primary);
+}
+
+.el-input-reset .el-input__suffix {
+  color: var(--color-text-tertiary);
+}
+
+.el-input-reset .el-input .el-input__clear {
+  color: var(--color-text-tertiary);
+  transition: color 0.2s ease;
+}
+
+.el-input-reset .el-input .el-input__clear:hover {
+  color: var(--color-text-secondary);
+}
+
+.el-input-reset .el-input.is-disabled .el-input__wrapper {
+  opacity: 0.6;
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-light) !important;
+  cursor: default;
+}
+
+.el-input-reset .el-input.is-disabled .el-input__inner {
+  color: var(--color-text-secondary) !important;
+  cursor: default;
+}
+
+/* 验证码输入区域 */
+.verification-code-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 通用卡片样式 */
+.card-base {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-smooth);
+}
+
+.card-base:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+/* 辅助选项行 */
+.assist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+/* 密码强度指示器 */
+.pw-strength {
+  margin-top: 8px;
+}
+
+.strength-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  font-weight: var(--font-weight-medium);
+}
+
+.strength-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.strength-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.strength-progress {
+  height: 100%;
+  transition: all var(--transition-normal);
+  border-radius: var(--radius-full);
+}
+
+.strength-progress.weak {
+  background: var(--error);
+  width: 33%;
+}
+
+.strength-progress.medium {
+  background: var(--warning);
+  width: 66%;
+}
+
+.strength-progress.strong {
+  background: var(--success);
+  width: 100%;
+}
+
+.strength-text {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  min-width: 24px;
+}
+
+.strength-text.weak {
+  color: var(--error);
+}
+
+.strength-text.medium {
+  color: var(--warning);
+}
+
+.strength-text.strong {
+  color: var(--success);
+}
+
+/* 密码强度提示明细 */
+.strength-hints {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  font-size: var(--font-size-xs);
+}
+
+.hint-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+}
+
+.hint-passed {
+  color: var(--success);
+  font-weight: var(--font-weight-medium);
+}
+
+.hint-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  font-size: 10px;
+}
+
+.hint-passed .hint-icon {
+  background: var(--success-100);
+  color: var(--success);
+}
+
+/* 响应式 */
+@media (max-width: 480px) {
+  .form-title {
+    font-size: var(--font-size-lg);
+    margin-bottom: 8px;
+  }
+  
+  .auth-form {
+    gap: 8px;
+  }
+  
+  .switch-tip {
+    margin-top: 6px;
+  }
+
+  .strength-hints {
+    grid-template-columns: 1fr;
+  }
+
+  .assist-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .verification-code-wrap {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

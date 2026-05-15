@@ -2,7 +2,7 @@
   <div class="user-center">
     <div class="welcome-header">
       <div class="welcome-content">
-        <el-avatar :size="80" :icon="UserFilled" class="user-avatar-large"></el-avatar>
+        <el-avatar :size="48" :icon="UserFilled" class="user-avatar-large"></el-avatar>
         <div class="welcome-info">
           <h2>个人中心</h2>
           <p>管理您的账户信息、安全设置和活动记录</p>
@@ -11,27 +11,27 @@
     </div>
 
     <div class="cards">
-      <el-card class="profile-card" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <div class="card-icon">
-              <el-icon><User /></el-icon>
-            </div>
-            <h3>基本资料</h3>
+      <div class="profile-card card-base">
+        <div class="card-header">
+          <div class="card-icon">
+            <el-icon><User /></el-icon>
           </div>
-        </template>
+          <h3>基本资料</h3>
+        </div>
         
-        <div class="form-content">
-          <el-form-item label="用户名" class="form-group">
+        <div class="form-content el-input-reset">
+          <div class="form-group">
+            <label class="form-label">用户名</label>
             <el-input 
               :value="user?.username" 
               readonly 
               placeholder="用户名不可修改"
               :prefix-icon="User"
             />
-          </el-form-item>
+          </div>
 
-          <el-form-item label="邮箱地址" :error="emailInvalid ? '请输入有效的邮箱地址' : ''" class="form-group">
+          <div class="form-group">
+            <label class="form-label">邮箱地址</label>
             <el-input 
               v-model="email" 
               type="email" 
@@ -39,15 +39,17 @@
               :prefix-icon="Message"
               @input="clearStatus" 
             />
-          </el-form-item>
+            <div v-if="emailInvalid" class="field-error">请输入有效的邮箱地址</div>
+          </div>
 
-          <el-form-item label="创建时间" class="form-group">
+          <div class="form-group">
+            <label class="form-label">创建时间</label>
             <el-input 
               :value="formatDate(user?.created_at)" 
               readonly 
               :prefix-icon="Calendar"
             />
-          </el-form-item>
+          </div>
         </div>
 
         <div class="card-actions">
@@ -61,20 +63,19 @@
             保存资料
           </el-button>
         </div>
-      </el-card>
+      </div>
 
-      <el-card class="security-card" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <div class="card-icon">
-              <el-icon><Lock /></el-icon>
-            </div>
-            <h3>安全设置</h3>
+      <div class="security-card card-base">
+        <div class="card-header">
+          <div class="card-icon">
+            <el-icon><Lock /></el-icon>
           </div>
-        </template>
+          <h3>安全设置</h3>
+        </div>
 
-        <div class="form-content">
-          <el-form-item label="当前密码" :error="currentPasswordError" class="form-group">
+        <div class="form-content el-input-reset">
+          <div class="form-group">
+            <label class="form-label">当前密码</label>
             <el-input 
               v-model="currentPassword" 
               type="password" 
@@ -82,9 +83,11 @@
               :prefix-icon="Lock" 
               @input="clearStatus"
             />
-          </el-form-item>
+            <div v-if="currentPasswordError" class="field-error">{{ currentPasswordError }}</div>
+          </div>
           
-          <el-form-item label="新密码" class="form-group">
+          <div class="form-group">
+            <label class="form-label">新密码</label>
             <el-input 
               v-model="newPassword" 
               type="password" 
@@ -108,9 +111,10 @@
                 </span>
               </div>
             </div>
-          </el-form-item>
+          </div>
 
-          <el-form-item label="确认密码" :error="passwordMismatch ? '两次输入的密码不一致' : ''" class="form-group">
+          <div class="form-group">
+            <label class="form-label">确认密码</label>
             <el-input 
               v-model="confirmNewPassword" 
               type="password" 
@@ -118,7 +122,8 @@
               :prefix-icon="Key" 
               @input="clearStatus"
             />
-          </el-form-item>
+            <div v-if="passwordMismatch" class="field-error">两次输入的密码不一致</div>
+          </div>
         </div>
 
         <div class="card-actions">
@@ -132,7 +137,7 @@
             更新密码
           </el-button>
         </div>
-      </el-card>
+      </div>
     </div>
 
     <el-card class="activity-card" shadow="hover">
@@ -443,375 +448,323 @@ export default {
 </script>
 
 <style scoped>
-/* 全局样式 */
 .user-center {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   padding: 0;
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
-/* 欢迎头部 */
+/* ===== 欢迎头部 ===== */
 .welcome-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  padding: 32px;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
+  border-radius: var(--radius-xl);
+  padding: 24px 28px;
   color: white;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-}
-
-.welcome-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-  pointer-events: none;
 }
 
 .welcome-content {
   display: flex;
   align-items: center;
-  gap: 20px;
-  position: relative;
-  z-index: 1;
+  gap: 18px;
 }
 
 .user-avatar-large {
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease;
 }
 
 .user-avatar-large:hover {
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
 .welcome-info h2 {
-  margin: 0 0 8px 0;
-  font-size: 28px;
-  font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .welcome-info p {
   margin: 0;
-  opacity: 0.9;
-  font-size: 16px;
+  opacity: 0.88;
+  font-size: 14px;
 }
 
-/* 卡片布局 */
+/* ===== 卡片网格 ===== */
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-  gap: 24px;
+  gap: 20px;
 }
 
-/* 卡片样式 */
-.profile-card,
-.security-card,
-.activity-card {
-  border-radius: 12px;
-  overflow: hidden;
+/* ===== 卡片基础样式 ===== */
+.card-base {
+  background: var(--color-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  transition: all 0.25s ease;
 }
 
-/* 卡片头部 */
+.card-base:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: var(--border-medium);
+}
+
+/* ===== 卡片头部 ===== */
 .card-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 18px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--bg-tertiary);
 }
 
 .card-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  width: 36px;
+  height: 36px;
+  background: var(--primary-50);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--primary-600);
   flex-shrink: 0;
+  font-size: 17px;
 }
 
 .card-header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text-primary);
 }
 
-.card-subtitle {
-  color: #6b7280;
-  font-size: 14px;
-  margin-left: auto;
-}
-
-/* 表单样式 */
+/* ===== 表单区域 ===== */
 .form-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .form-group {
-  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding-bottom: 2px;
+}
+
+.field-error {
+  font-size: 12px;
+  color: var(--error);
+  margin-top: 4px;
+  line-height: 1.4;
 }
 
 /* 密码强度 */
 .password-strength {
   margin-top: 8px;
-  padding: 12px;
-  background: #f9fafb;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
 }
 
 .strength-bar {
-  height: 6px;
-  background: #e5e7eb;
+  height: 5px;
+  background: var(--bg-tertiary);
   border-radius: 3px;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .strength-fill {
   height: 100%;
   border-radius: 3px;
-  transition: all 0.3s ease;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   width: 0%;
 }
 
-.strength-fill.weak {
-  width: 33%;
-  background: #ef4444;
-}
-
-.strength-fill.medium {
-  width: 66%;
-  background: #f59e0b;
-}
-
-.strength-fill.strong {
-  width: 100%;
-  background: #10b981;
-}
+.strength-fill.weak { width: 33%; background: var(--error); }
+.strength-fill.medium { width: 66%; background: var(--warning); }
+.strength-fill.strong { width: 100%; background: var(--success); }
 
 .strength-info {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .strength-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 700;
 }
-
-.strength-label.weak {
-  color: #ef4444;
-}
-
-.strength-label.medium {
-  color: #f59e0b;
-}
-
-.strength-label.strong {
-  color: #10b981;
-}
+.strength-label.weak { color: var(--error); }
+.strength-label.medium { color: var(--warning); }
+.strength-label.strong { color: var(--success); }
 
 .strength-tips {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-text-tertiary);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
-/* 按钮样式 */
+/* 操作按钮区 */
 .card-actions {
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--bg-tertiary);
+  display: flex;
+  justify-content: flex-start;
 }
 
+.card-actions .el-button {
+  height: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 10px;
+  padding: 0 24px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
+.card-actions .el-button--primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+}
 
 /* 活动卡片 */
 .activity-card {
   grid-column: 1 / -1;
+  background: var(--color-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.activity-card :deep(.el-card__header) {
+  padding: 20px 24px 0 !important;
+  border-bottom: none !important;
+}
+
+.activity-card :deep(.el-card__body) {
+  padding: 20px 24px 24px !important;
 }
 
 .activity-content {
-  min-height: 200px;
+  min-height: 160px;
 }
 
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-  color: #6b7280;
-}
-
-.empty-icon {
-  margin-bottom: 16px;
-  opacity: 0.3;
-}
-
+/* 活动列表 */
 .activity-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .activity-item {
-  padding: 16px;
-  background: #f9fafb;
+  padding: 14px 16px;
+  background: var(--bg-secondary);
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  transition: all 0.3s ease;
+  border: 1px solid var(--border-light);
+  transition: all 0.25s ease;
 }
 
 .activity-item:hover {
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transform: translateY(-1px);
-}
-
-.activity-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+  border-color: var(--border-medium);
 }
 
 .activity-action {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.action-badge {
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.action-badge.UPDATE {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.action-badge.CREATE {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.action-badge.DELETE {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
 .resource-info {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 13px;
-}
-
-.activity-time {
-  color: #9ca3af;
-  font-size: 12px;
-  white-space: nowrap;
 }
 
 .activity-details {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-light);
 }
 
 .change-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 6px;
 }
 
 .change-item.old {
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--error-100);
+  color: var(--error-700);
 }
 
 .change-item.new {
-  background: #f0fdf4;
-  color: #166534;
+  background: var(--success-100);
+  color: var(--success-700);
 }
 
-/* 分页样式 */
+/* 分页 */
 .pagination {
   margin-top: 24px;
   padding-top: 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-light);
 }
 
-/* 全局消息 */
-
-
-/* 响应式设计 */
+/* 响应式 */
 @media (max-width: 768px) {
   .user-center {
-    padding: 0 16px;
-    gap: 20px;
+    padding: 0 12px;
+    gap: 16px;
   }
   
   .welcome-header {
-    padding: 24px;
+    padding: 20px 20px;
   }
   
   .welcome-content {
     flex-direction: column;
     text-align: center;
+    gap: 14px;
   }
   
   .welcome-info h2 {
-    font-size: 24px;
+    font-size: 19px;
   }
   
   .cards {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 16px;
   }
   
-  .card {
+  .card-base {
     padding: 20px;
-  }
-  
-  .global-message {
-    right: 16px;
-    left: 16px;
-    max-width: none;
-  }
-  
-  .activity-header {
-    flex-direction: column;
-    gap: 8px;
   }
   
   .activity-action {
@@ -821,29 +774,29 @@ export default {
 
 @media (max-width: 480px) {
   .welcome-header {
-    padding: 20px;
+    padding: 18px 18px;
   }
   
-  .user-avatar-large {
-    width: 60px;
-    height: 60px;
+  .user-avatar-large :deep(img) {
+    max-width: 48px !important;
+    max-height: 48px !important;
   }
   
   .welcome-info h2 {
-    font-size: 20px;
+    font-size: 18px;
   }
   
   .welcome-info p {
-    font-size: 14px;
+    font-size: 13px;
   }
   
-  .card {
-    padding: 16px;
-  }
-  
-  .btn {
+  .card-actions .el-button {
     width: 100%;
-    justify-content: center;
+  }
+  
+  .card-base {
+    padding: 18px;
   }
 }
 </style>
+
