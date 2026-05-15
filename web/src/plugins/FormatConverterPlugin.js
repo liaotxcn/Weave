@@ -246,20 +246,37 @@ class FormatConverterPlugin {
 
   textarea {
     flex: 1;
-    padding: 12px;
-    border: 1px solid #d9d9d9;
-    border-radius: 4px;
+    padding: 12px 14px;
+    border: 1.5px solid #d9d9d9;
+    border-radius: 10px;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 13px;
     line-height: 1.5;
     resize: vertical;
-    background-color: #ffffff;
+    background-color: #fafafa;
+    color: #111827;
+    outline: none;
+    transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.25s ease;
+  }
+
+  textarea:hover {
+    border-color: #a5b4fc;
+    background-color: #fff;
   }
 
   textarea:focus {
     outline: none;
-    border-color: #1890ff;
-    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12),
+               0 2px 10px rgba(99, 102, 241, 0.06);
+    background-color: #fff;
+  }
+
+  textarea::placeholder {
+    color: #9ca3af;
+    opacity: 0.7;
   }
 
   textarea[readonly] {

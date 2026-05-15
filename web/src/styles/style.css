@@ -1,6 +1,6 @@
 /* CSS变量定义 - 设计系统基础 */
 :root {
-  /* 颜色系统 */
+  /* 颜色系统 - 主色 */
   --primary: #667eea;
   --primary-50: #f5f7ff;
   --primary-100: #eef2ff;
@@ -39,6 +39,18 @@
   --border-light: #e5e7eb;
   --border-medium: #d1d5db;
   --border-dark: #9ca3af;
+
+  /* 语义化颜色别名 (兼容组件中的旧引用) */
+  --color-primary: var(--primary-600);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-background: var(--bg-secondary);
+  --color-surface: var(--bg-primary);
+  --color-border: var(--border-light);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
   
   /* 阴影系统 */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -46,6 +58,8 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 10px 25px rgba(0, 0, 0, 0.1);
   
   /* 圆角系统 */
   --radius-sm: 0.25rem;
@@ -94,6 +108,7 @@
   --transition-opacity: opacity 0.2s ease;
   --transition-colors: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
   --transition-all: all 0.2s ease;
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 基础样式重置 */

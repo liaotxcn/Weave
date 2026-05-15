@@ -4,6 +4,7 @@ import './styles/style.css'
 import './styles/shared.css'
 import './styles/patterns.css'
 import './styles/animations.css'
+import './styles/shared-components.css'
 import axios from 'axios'
 
 // 引入Element Plus

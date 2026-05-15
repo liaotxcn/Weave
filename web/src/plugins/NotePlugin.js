@@ -247,8 +247,14 @@ class NotePlugin {
             .note-meta { color:#6b7280; font-size:12px; }
 
             .note-form { display:flex; flex-direction:column; gap:8px; margin-bottom: 12px; }
-            .input { width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; background:#fff; font-size:14px; }
-            .textarea { width:100%; min-height:96px; padding:10px; border:1px solid #d1d5db; border-radius:8px; background:#fff; font-size:14px; resize:vertical; }
+            .input { width:100%; padding:10px 14px; border:1.5px solid #e5e7eb; border-radius:10px; background:#f9fafb; font-size:14px; color:#111827; outline:none; transition:border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s ease; }
+            .input:hover { border-color:#a5b4fc; background:#fff; }
+            .input:focus { border-color:#667eea; background:#fff; box-shadow:0 0 0 3px rgba(99,102,241,0.12), 0 2px 10px rgba(99,102,241,0.06); }
+            .input::placeholder { color:#9ca3af; opacity:0.7; }
+            .textarea { width:100%; min-height:96px; padding:10px 14px; border:1.5px solid #e5e7eb; border-radius:10px; background:#f9fafb; font-size:14px; color:#111827; resize:vertical; outline:none; transition:border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s ease; }
+            .textarea:hover { border-color:#a5b4fc; background:#fff; }
+            .textarea:focus { border-color:#667eea; background:#fff; box-shadow:0 0 0 3px rgba(99,102,241,0.12), 0 2px 10px rgba(99,102,241,0.06); }
+            .textarea::placeholder { color:#9ca3af; opacity:0.7; }
             .feedback { margin-left:8px; color:#64748b; font-size:12px; }
 
             .notes-list { display:flex; flex-direction:column; gap:10px; }

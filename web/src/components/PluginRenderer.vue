@@ -210,271 +210,359 @@ const refreshPlugin = () => { loadPlugin() }
 </script>
 
 <style scoped>
-.plugin-renderer { 
-  width: 100%; 
-  min-height: 100%; 
-  padding: var(--space-4, 16px); 
+.plugin-renderer {
+  width: 100%;
+  min-height: 100%;
+  padding: 24px;
   box-sizing: border-box;
   position: relative;
 }
 
 /* 加载状态 */
-.plugin-loading { 
-  display: flex; 
+.plugin-loading {
+  display: flex;
   flex-direction: column;
-  align-items: center; 
-  justify-content: center; 
-  min-height: 300px;
-  color: var(--text-tertiary, #666); 
-  gap: var(--space-3, 12px);
-  padding: var(--space-6, 24px);
-  background: var(--bg-secondary, #f8fafc);
-  border-radius: var(--radius-lg, 10px);
-  transition: var(--transition-all, all 0.3s ease);
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: var(--color-text-tertiary, #6b7280);
+  gap: 20px;
+  padding: 40px;
+  background: linear-gradient(135deg, var(--bg-secondary, #f8fafc), rgba(99, 102, 241, 0.03));
+  border-radius: 16px;
+  border: 1px solid var(--border-light, #e5e7eb);
+  animation: fadeInUp 0.4s ease-out;
 }
 
-.spinner { 
-  width: 40px; 
-  height: 40px; 
-  border: 3px solid var(--border-light, rgba(102,126,234,0.25)); 
-  border-top-color: var(--primary-500, #667eea); 
-  border-radius: 50%; 
-  animation: spin 1s linear infinite; 
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3.5px solid rgba(99, 102, 241, 0.15);
+  border-top-color: var(--primary-500, #6366f1);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
-@keyframes spin { 
-  to { transform: rotate(360deg); } 
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* 错误状态 */
-.plugin-error { 
-  display: flex; 
+.plugin-error {
+  display: flex;
   flex-direction: column;
-  align-items: center; 
-  justify-content: center; 
-  min-height: 300px;
-  color: var(--error-700, #f44336); 
-  gap: var(--space-3, 12px);
-  padding: var(--space-6, 24px);
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: var(--error-600, #dc2626);
+  gap: 16px;
+  padding: 40px;
   text-align: center;
-  background: var(--error-100, #fef2f2);
-  border: 1px solid var(--error-200, #fecaca);
-  border-radius: var(--radius-lg, 10px);
-  transition: var(--transition-all, all 0.3s ease);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.04), rgba(252, 165, 165, 0.02));
+  border-radius: 16px;
+  border: 1.5px solid rgba(239, 68, 68, 0.15);
+  animation: fadeInUp 0.4s ease-out;
 }
 
 .error-icon {
-  font-size: 3rem;
-  filter: drop-shadow(0 4px 3px rgba(239, 68, 68, 0.1));
+  font-size: 3.5rem;
+  filter: drop-shadow(0 6px 8px rgba(239, 68, 68, 0.15));
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
 }
 
 .plugin-error h3 {
   margin: 0;
-  font-size: var(--font-size-xl, 1.25rem);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--error-700, #c53030);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--error-700, #b91c1c);
+  letter-spacing: -0.01em;
 }
 
 .plugin-error p {
   margin: 0;
-  max-width: 600px;
-  line-height: 1.6;
+  max-width: 480px;
+  line-height: 1.7;
+  font-size: 14px;
+  color: var(--error-600, #dc2626);
 }
 
 .retry-btn {
-  background: var(--error-700, #c53030);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
   border: none;
-  padding: var(--space-2, 8px) var(--space-4, 16px);
-  border-radius: var(--radius-md, 6px);
+  padding: 10px 24px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: var(--transition-all, all 0.2s ease);
-  margin-top: var(--space-2, 8px);
-  font-weight: var(--font-weight-medium, 500);
-  box-shadow: var(--shadow, 0 2px 4px rgba(0,0,0,0.1));
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+  letter-spacing: 0.01em;
 }
 
 .retry-btn:hover {
-  background: var(--error-800, #991b1b);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md, 0 4px 6px rgba(0,0,0,0.1));
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+}
+
+.retry-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.25);
 }
 
 /* 插件内容区域 */
-.plugin-content { 
-  width: 100%; 
-  min-height: 300px;
-  overflow: auto; 
-  background: var(--bg-primary, #ffffff);
-  border-radius: var(--radius-lg, 10px);
+.plugin-content {
+  width: 100%;
+  min-height: 400px;
+  overflow: auto;
+  background: white;
+  border-radius: 16px;
   border: 1px solid var(--border-light, #e5e7eb);
-  transition: var(--transition-all, all 0.3s ease);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,0.05));
   display: flex;
   flex-direction: column;
+  animation: fadeInUp 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 扁平化样式调整 */
-.plugin-toolbar { 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
-  padding: 12px 16px; 
-  border-bottom: 1px solid var(--border-color, #e5e7eb); 
-  background: var(--toolbar-bg, #f8fafc); 
-  position: sticky; 
-  top: 0; 
-  z-index: 1;
-  transition: var(--transition-all, all 0.3s ease);
+/* 工具栏 */
+.plugin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
 }
 
-.plugin-meta .plugin-name { 
-  color: var(--primary-800, #3949ab); 
-  font-weight: 600; 
+.plugin-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.plugin-meta .plugin-version { 
-  margin-left: 8px; 
-  color: #64748b; 
-  font-size: 12px; 
-  background: var(--badge-bg, #f1f5f9); 
-  border-radius: 6px; 
-  padding: 2px 6px; 
+.plugin-meta .plugin-name {
+  color: var(--primary-700, #4338ca);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
 }
 
-.plugin-meta .plugin-desc { 
-  color: var(--muted, #6b7280); 
-  margin-left: 6px; 
+.plugin-meta .plugin-sep {
+  color: var(--color-text-tertiary, #9ca3af);
+  margin: 0 4px;
+  font-weight: 300;
 }
 
-.plugin-sep { 
-  color: var(--muted, #9ca3af); 
-  margin: 0 6px; 
+.plugin-meta .plugin-desc {
+  color: var(--color-text-secondary, #64748b);
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.plugin-actions .toolbar-btn { 
-  background: var(--primary-600, #667eea); 
-  color: #fff; 
-  border: none; 
-  padding: 6px 10px; 
-  border-radius: 8px; 
-  font-size: 13px; 
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1));
+.plugin-meta .plugin-version {
+  margin-left: 8px;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary-500, #6366f1), var(--primary-600, #4f46e5));
+  border-radius: 8px;
+  padding: 3px 10px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+  letter-spacing: 0.02em;
 }
 
-.toolbar-btn:hover { 
-  background: var(--primary-700, #5a67d8); 
-  transform: translateY(-1px);
-  box-shadow: var(--shadow, 0 2px 4px rgba(0,0,0,0.1));
+.plugin-actions .toolbar-btn {
+  background: linear-gradient(135deg, var(--primary-500, #6366f1), var(--primary-600, #4f46e5));
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.25);
+  letter-spacing: 0.01em;
 }
 
-.toolbar-btn:active { 
+.toolbar-btn:hover {
+  background: linear-gradient(135deg, var(--primary-600, #4f46e5), var(--primary-700, #4338ca));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
+}
+
+.toolbar-btn:active {
   transform: translateY(0);
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1));
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
 }
 
-.plugin-body { 
-  padding: 16px; 
-  overflow: auto; 
-  height: 100%; 
+.plugin-body {
+  padding: 24px;
+  overflow: auto;
+  height: 100%;
+  flex: 1;
 }
 
 /* 空状态 */
-.plugin-empty { 
+.plugin-empty {
   display: flex;
   flex-direction: column;
-  align-items: center; 
-  justify-content: center; 
-  min-height: 300px;
-  color: var(--text-muted, #6b7280); 
-  gap: var(--space-3, 12px);
-  padding: var(--space-6, 24px);
-  background: var(--bg-secondary, #f8fafc);
-  border-radius: var(--radius-lg, 10px);
-  transition: var(--transition-all, all 0.3s ease);
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: var(--text-muted, #6b7280);
+  gap: 18px;
+  padding: 50px;
+  background: linear-gradient(135deg, var(--bg-secondary, #f8fafc), rgba(99, 102, 241, 0.02));
+  border-radius: 16px;
+  border: 1px dashed var(--border-medium, #cbd5e1);
+  animation: fadeInUp 0.4s ease-out;
 }
 
 .empty-icon {
-  font-size: 3.5rem;
-  opacity: 0.6;
+  font-size: 4rem;
+  opacity: 0.55;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(3deg); }
 }
 
 .plugin-empty p {
   margin: 0;
-  font-size: var(--font-size-lg, 1.125rem);
-  font-weight: var(--font-weight-medium, 500);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #64748b);
+  letter-spacing: -0.01em;
 }
 
 /* 滚动条样式 */
-.plugin-content::-webkit-scrollbar, 
-.plugin-body::-webkit-scrollbar { 
-  width: 8px; 
-  height: 8px; 
+.plugin-content::-webkit-scrollbar,
+.plugin-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.plugin-content::-webkit-scrollbar-thumb, 
-.plugin-body::-webkit-scrollbar-thumb { 
-  background: rgba(102,126,234,0.25); 
-  border-radius: 8px; 
+.plugin-content::-webkit-scrollbar-thumb,
+.plugin-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3));
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.plugin-content::-webkit-scrollbar-thumb:hover,
+.plugin-body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.5), rgba(139, 92, 246, 0.5));
+  background-clip: content-box;
 }
 
 /* 淡入动画 */
-.fade-in { 
-  animation: fadeIn 0.25s ease-out both; 
+.fade-in {
+  animation: fadeInUp 0.35s ease-out both;
 }
 
-@keyframes fadeIn { 
-  from { 
-    opacity: 0; 
-    transform: translateY(4px); 
-  } 
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
-  } 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .plugin-loading,
   .plugin-error,
-  .plugin-empty {
-    min-height: 250px;
-    padding: var(--space-4, 16px);
+  .plugin-empty,
+  .plugin-content {
+    min-height: 320px;
+    padding: 20px;
+    border-radius: 12px;
   }
-  
+
   .spinner {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
   }
-  
+
   .error-icon,
   .empty-icon {
-    font-size: 2.5rem;
+    font-size: 3rem;
   }
-  
+
   .plugin-error h3 {
-    font-size: var(--font-size-lg, 1.125rem);
+    font-size: 19px;
+  }
+
+  .plugin-toolbar {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .plugin-body {
+    padding: 18px;
   }
 }
 
 @media (max-width: 480px) {
   .plugin-renderer {
-    padding: var(--space-3, 12px);
+    padding: 16px;
   }
-  
+
+  .plugin-loading,
+  .plugin-error,
+  .plugin-empty,
   .plugin-content {
-    border-radius: var(--radius-md, 8px);
+    min-height: 280px;
+    padding: 16px;
+    border-radius: 10px;
   }
-  
-  .plugin-toolbar {
-    padding: 10px 12px;
-    flex-wrap: wrap;
-    gap: 8px;
+
+  .spinner {
+    width: 32px;
+    height: 32px;
   }
-  
+
+  .error-icon,
+  .empty-icon {
+    font-size: 2.5rem;
+  }
+
+  .plugin-error h3 {
+    font-size: 17px;
+  }
+
+  .plugin-error p {
+    font-size: 13px;
+  }
+
+  .toolbar-btn {
+    padding: 7px 14px;
+    font-size: 12px;
+  }
+
   .plugin-body {
-    padding: 12px;
+    padding: 14px;
   }
 }
 </style>

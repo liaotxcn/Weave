@@ -1,7 +1,7 @@
 <template>
   <div class="register-container">
     <h2 class="form-title">注册</h2>
-    <el-form class="auth-form" @submit.prevent="handleRegister" label-position="top" size="large">
+    <el-form class="auth-form el-input-reset" @submit.prevent="handleRegister" label-position="top" size="large">
       <!-- 用户名输入 -->
       <el-form-item label="用户名" :error="usernameInvalid && username ? '用户名至少需要3个字符' : ''" :validate-status="usernameInvalid && username ? 'error' : (username && !usernameInvalid ? 'success' : '')" required>
         <el-input 
@@ -101,7 +101,7 @@
       
       <!-- 注册按钮 -->
       <el-form-item>
-        <el-button type="primary" native-type="submit" :disabled="loading || !canRegister" :loading="loading" style="width: 100%;" size="large">
+        <el-button type="primary" native-type="submit" :disabled="loading || !canRegister" :loading="loading" size="default" class="submit-btn">
         注册
       </el-button>
       </el-form-item>
@@ -247,250 +247,37 @@ export default {
 .register-container {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  max-width: 400px;
+  max-width: 420px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px;
-  background: white;
+  padding: 12px 16px;
+  background: var(--color-surface);
   border-radius: var(--radius-xl);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-card);
 }
 
-.form-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 28px 0;
-  text-align: center;
-  letter-spacing: -0.02em;
-}
-
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* 验证码输入框 */
-.verification-code-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.submit-btn {
   width: 100%;
+  height: 38px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 10px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.input-hint {
-  font-size: var(--font-size-xs);
-  color: var(--text-tertiary);
-  margin-top: 6px;
-  padding-left: 2px;
+.submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
 }
 
-.input-hint-success {
-  color: var(--color-success);
-  font-size: var(--font-size-xs);
-  margin-top: 6px;
-  padding-left: 2px;
+.switch-btn {
+  font-weight: 500;
+  color: var(--color-primary);
+  padding: 4px 8px;
 }
 
-/* 彻底修复Element Plus输入框双重边框问题 */
-:deep(.el-input) {
-  /* 确保输入框容器没有额外边框 */
-  border: none !important;
-  box-shadow: none !important;
-}
-
-:deep(.el-input__wrapper) {
-  /* 重置输入框包装器的所有边框和阴影 */
-  transition: all 0.3s ease;
-  border-radius: var(--radius-md) !important;
-  box-shadow: none !important;
-  border: 1px solid var(--border-color) !important;
-  outline: none !important;
-  background-color: #fff !important;
-}
-
-:deep(.el-input__wrapper:focus-within) {
-  /* 焦点状态只保留一层阴影和边框 */
-  box-shadow: 0 0 0 2px rgba(144, 202, 249, 0.2), 0 2px 8px rgba(144, 202, 249, 0.3) !important;
-  border-color: #69b1ff !important;
-}
-
-:deep(.el-input__inner) {
-  /* 确保内部输入元素没有额外边框 */
-  border: none !important;
-  box-shadow: none !important;
-  background-color: transparent !important;
-}
-
-/* 禁用状态优化 */
-:deep(.el-input.is-disabled .el-input__wrapper) {
-  opacity: 0.7;
-  background-color: var(--bg-secondary) !important;
-}
-
-/* 输入提示 */
-.input-hint {
-  font-size: var(--font-size-xs);
-  margin-top: 2px;
-  transition: all var(--transition-fast);
-}
-
-.input-hint-error {
-  color: var(--error);
-  font-weight: var(--font-weight-medium);
-}
-
-.input-hint-success {
-  color: var(--success);
-  font-weight: var(--font-weight-medium);
-}
-
-/* 密码强度指示器 */
-.pw-strength {
-  margin-top: 8px;
-}
-
-.strength-label {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-  font-weight: var(--font-weight-medium);
-}
-
-.strength-bar-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.strength-bar {
-  flex: 1;
-  height: 8px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-  position: relative;
-}
-
-.strength-progress {
-  height: 100%;
-  transition: all var(--transition-normal);
-  border-radius: var(--radius-full);
-  position: relative;
-}
-
-.strength-progress::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.strength-progress.weak {
-  background: var(--error);
-}
-
-.strength-progress.medium {
-  background: var(--warning);
-}
-
-.strength-progress.strong {
-  background: var(--success);
-}
-
-.strength-text {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  min-width: 24px;
-}
-
-.strength-text.weak {
-  color: var(--error);
-}
-
-.strength-text.medium {
-  color: var(--warning);
-}
-
-.strength-text.strong {
-  color: var(--success);
-}
-
-/* 密码强度提示 */
-.strength-hints {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  font-size: var(--font-size-xs);
-}
-
-@media (max-width: 480px) {
-  .strength-hints {
-    grid-template-columns: 1fr;
-  }
-}
-
-.hint-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-tertiary);
-}
-
-.hint-passed {
-  color: var(--success);
-  font-weight: var(--font-weight-medium);
-}
-
-.hint-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--bg-tertiary);
-  font-size: 10px;
-}
-
-.hint-passed .hint-icon {
-  background: var(--success-100);
-  color: var(--success);
-}
-
-/* 切换提示 */
-.switch-tip {
-  text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin-top: 24px;
-}
-
-/* 响应式调整 */
-@media (max-width: 480px) {
-  .form-title {
-    font-size: var(--font-size-lg);
-    margin-bottom: 20px;
-  }
-  
-  .auth-form {
-    gap: 14px;
-  }
-  
-  .switch-tip {
-    margin-top: 20px;
-  }
+.switch-btn:hover {
+  color: var(--primary-700);
 }
 </style>
