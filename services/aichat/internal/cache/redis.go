@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"reflect"
 	"sort"
 	"strconv"
@@ -28,8 +27,10 @@ import (
 	"time"
 
 	"weave/middleware"
+	"weave/pkg"
 
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 // RedisClient Redis客户端结构体
@@ -84,7 +85,7 @@ func NewRedisClientWithConfig(ctx context.Context, config *CacheConfig) (*RedisC
 	retryConfig.InitialDelay = 50 * time.Millisecond
 	retryConfig.MaxDelay = 2 * time.Second
 
-	log.Printf("redis connection established at %s", redisAddr)
+	pkg.Info("Redis connection established", zap.String("address", redisAddr))
 	cache := &RedisClient{
 		client:      client,
 		maxMessages: maxMessages,
@@ -246,7 +247,7 @@ func (rc *RedisClient) checkMemoryUsage() {
 		return err
 	})
 	if err != nil {
-		log.Printf("failed to get redis memory info: %v", err)
+		pkg.Warn("Failed to get Redis memory info", zap.Error(err))
 		return
 	}
 
@@ -271,7 +272,9 @@ func (rc *RedisClient) checkMemoryUsage() {
 
 	// 如果内存使用超过限制，清理最旧对话
 	if usedMemoryMB > float64(rc.maxMemoryMB) {
-		log.Printf("redis memory usage %.2fMB exceeds limit %dMB, starting cleanup", usedMemoryMB, rc.maxMemoryMB)
+		pkg.Warn("Redis memory exceeds limit, starting cleanup",
+			zap.Float64("used_mb", usedMemoryMB),
+			zap.Int("limit_mb", rc.maxMemoryMB))
 		rc.cleanupOldConversations(ctx)
 	}
 }
@@ -286,7 +289,7 @@ func (rc *RedisClient) cleanupOldConversations(ctx context.Context) {
 		return err
 	})
 	if err != nil {
-		log.Printf("failed to get conversation keys: %v", err)
+		pkg.Warn("Failed to get conversation keys", zap.Error(err))
 		return
 	}
 
@@ -331,9 +334,9 @@ func (rc *RedisClient) cleanupOldConversations(ctx context.Context) {
 		if err := rc.retryer.Do(ctx, func() error {
 			return rc.client.Del(ctx, keyTimes[i].key).Err()
 		}); err != nil {
-			log.Printf("failed to delete old conversation %s: %v", keyTimes[i].key, err)
+			pkg.Warn("Failed to delete old conversation", zap.String("key", keyTimes[i].key), zap.Error(err))
 		} else {
-			log.Printf("deleted old conversation %s to free up memory", keyTimes[i].key)
+			pkg.Info("Deleted old conversation to free memory", zap.String("key", keyTimes[i].key))
 		}
 	}
 }

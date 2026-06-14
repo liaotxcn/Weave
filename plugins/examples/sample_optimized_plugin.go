@@ -2,11 +2,12 @@ package examples
 
 import (
 	"fmt"
-	"log"
 
+	"weave/pkg"
 	"weave/plugins/core"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // SampleOptimizedPlugin 展示如何使用优化后的插件路由注册机制的示例插件
@@ -58,19 +59,19 @@ func (p *SampleOptimizedPlugin) Init() error {
 
 // Shutdown 关闭插件
 func (p *SampleOptimizedPlugin) Shutdown() error {
-	log.Printf("%s: 插件已关闭", p.Name())
+	pkg.Info("Plugin shutdown", zap.String("plugin", p.Name()))
 	return nil
 }
 
 // OnEnable 插件启用时调用
 func (p *SampleOptimizedPlugin) OnEnable() error {
-	log.Printf("%s: 插件已启用", p.Name())
+	pkg.Info("Plugin enabled", zap.String("plugin", p.Name()))
 	return nil
 }
 
 // OnDisable 插件禁用时调用
 func (p *SampleOptimizedPlugin) OnDisable() error {
-	log.Printf("%s: 插件已禁用", p.Name())
+	pkg.Info("Plugin disabled", zap.String("plugin", p.Name()))
 	return nil
 }
 
@@ -124,7 +125,7 @@ func (p *SampleOptimizedPlugin) GetDefaultMiddlewares() []gin.HandlerFunc {
 func (p *SampleOptimizedPlugin) RegisterRoutes(router *gin.Engine) {
 	// 这个方法在使用新的GetRoutes时不会被调用
 	// 保留只是为了兼容性
-	log.Printf("%s: 注意：使用了旧的RegisterRoutes方法，建议使用新的GetRoutes方法", p.Name())
+	pkg.Warn("Using legacy RegisterRoutes method, recommend using GetRoutes", zap.String("plugin", p.Name()))
 }
 
 // Execute 执行插件功能
@@ -205,7 +206,10 @@ func (p *SampleOptimizedPlugin) handleEcho(c *gin.Context) {
 
 // 日志中间件示例
 func (p *SampleOptimizedPlugin) logMiddleware(c *gin.Context) {
-	log.Printf("%s: 收到请求: %s %s", p.Name(), c.Request.Method, c.Request.URL.Path)
+	pkg.Debug("Request received",
+		zap.String("plugin", p.Name()),
+		zap.String("method", c.Request.Method),
+		zap.String("path", c.Request.URL.Path))
 	c.Next()
 }
 

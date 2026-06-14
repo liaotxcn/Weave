@@ -18,11 +18,13 @@ package pkg
 
 import (
 	"context"
-	"log"
 	"sync"
+
+	mainpkg "weave/pkg"
 
 	"github.com/cloudwego/eino/components/prompt"
 	"github.com/cloudwego/eino/schema"
+	"go.uber.org/zap"
 )
 
 // 模板缓存，避免重复创建
@@ -93,7 +95,7 @@ func CreateMessagesFromTemplate() []*schema.Message {
 		"现在AI发展前景如何？",
 	)
 	if err != nil {
-		log.Fatalf("format template failed: %v\n", err)
+		mainpkg.Fatal("Format template failed", zap.Error(err))
 	}
 	return messages
 }

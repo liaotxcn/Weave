@@ -420,7 +420,7 @@ func initMCPConnectionPool() {
 		idleTimeout = 5 * time.Minute // 默认空闲超时时间
 	}
 
-	mcpConnectionPool = pool.NewMCPConnectionPool(maxSize, idleTimeout, logger.Logger)
+	mcpConnectionPool = pool.NewMCPConnectionPool(maxSize, idleTimeout, logger)
 	logger.Info("MCP连接池初始化完成",
 		zap.Int("max_size", maxSize),
 		zap.Duration("idle_timeout", idleTimeout))
@@ -436,7 +436,7 @@ func initToolHealthMonitor() {
 		checkInterval = 5 * time.Minute // 默认5分钟检查一次
 	}
 
-	ToolHealthMonitor = tool.NewToolHealthMonitor(checkInterval, logger.Logger)
+	ToolHealthMonitor = tool.NewToolHealthMonitor(checkInterval, logger)
 	// 确保全局监控器被设置
 	tool.SetGlobalToolHealthMonitor(ToolHealthMonitor)
 	logger.Info("工具健康监控器初始化完成",

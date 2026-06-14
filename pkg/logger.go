@@ -9,53 +9,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Logger 全局日志实例
-type Logger struct {
-	*zap.Logger
-}
-
-// Debug 记录调试信息
-func (l *Logger) Debug(msg string, fields ...zap.Field) {
-	l.Logger.Debug(msg, fields...)
-}
-
-// Info 记录信息
-func (l *Logger) Info(msg string, fields ...zap.Field) {
-	l.Logger.Info(msg, fields...)
-}
-
-// Warn 记录警告信息
-func (l *Logger) Warn(msg string, fields ...zap.Field) {
-	l.Logger.Warn(msg, fields...)
-}
-
-// Error 记录错误信息
-func (l *Logger) Error(msg string, fields ...zap.Field) {
-	l.Logger.Error(msg, fields...)
-}
-
-// Fatal 记录致命错误并退出
-func (l *Logger) Fatal(msg string, fields ...zap.Field) {
-	l.Logger.Fatal(msg, fields...)
-}
-
-// With 添加字段到日志
-func (l *Logger) With(fields ...zap.Field) *zap.Logger {
-	return l.Logger.With(fields...)
-}
-
-// Sync 刷新日志缓冲区
-func (l *Logger) Sync() error {
-	return l.Logger.Sync()
-}
-
-// 全局变量
 var (
-	globalLogger *Logger
+	globalLogger *zap.Logger
 	once         sync.Once
 )
 
-// 日志级别
 const (
 	DebugLevel = "debug"
 	InfoLevel  = "info"
@@ -64,7 +22,6 @@ const (
 	FatalLevel = "fatal"
 )
 
-// Options 日志配置选项
 type Options struct {
 	Level       string
 	OutputPath  string
@@ -72,7 +29,6 @@ type Options struct {
 	Development bool
 }
 
-// DefaultOptions 返回默认配置
 func DefaultOptions() Options {
 	return Options{
 		Level:       InfoLevel,
@@ -82,18 +38,15 @@ func DefaultOptions() Options {
 	}
 }
 
-// InitLogger 初始化日志系统
 func InitLogger(options Options) error {
 	var err error
 	once.Do(func() {
-		globalLogger, err = newLogger(options)
+		globalLogger, err = buildLogger(options)
 	})
 	return err
 }
 
-// newLogger 创建新的日志实例
-func newLogger(options Options) (*Logger, error) {
-	// 设置日志级别
+func buildLogger(options Options) (*zap.Logger, error) {
 	level := zap.InfoLevel
 	switch options.Level {
 	case DebugLevel:
@@ -106,36 +59,20 @@ func newLogger(options Options) (*Logger, error) {
 		level = zap.FatalLevel
 	}
 
-	// 创建编码器配置
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.TimeKey = "time"
-	encoderConfig.LevelKey = "level"
-	encoderConfig.NameKey = "logger"
-	encoderConfig.CallerKey = "caller"
-	encoderConfig.MessageKey = "message"
-	encoderConfig.StacktraceKey = "stacktrace"
-	encoderConfig.LineEnding = zapcore.DefaultLineEnding
-	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	encoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(t.Format("2006-01-02T15:04:05.000Z0700"))
 	}
-	encoderConfig.EncodeDuration = zapcore.SecondsDurationEncoder
+	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
 
-	// 创建编码器
 	encoder := zapcore.NewJSONEncoder(encoderConfig)
 	if options.Development {
 		encoder = zapcore.NewConsoleEncoder(encoderConfig)
 	}
 
-	// 创建写入器
-	var writers []zapcore.WriteSyncer
-
-	// 标准输出
-	stdoutWriter := zapcore.Lock(os.Stdout)
-	writers = append(writers, stdoutWriter)
-
-	// 错误输出
+	writers := []zapcore.WriteSyncer{zapcore.Lock(os.Stdout)}
 	if options.ErrorPath != "" && options.ErrorPath != "stderr" {
 		errWriter, _, err := zap.Open(options.ErrorPath)
 		if err != nil {
@@ -144,65 +81,22 @@ func newLogger(options Options) (*Logger, error) {
 		writers = append(writers, errWriter)
 	}
 
-	// 创建核心
-	core := zapcore.NewCore(
-		encoder,
-		zapcore.NewMultiWriteSyncer(writers...),
-		level,
-	)
-
-	// 创建日志器
-	zapLogger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
-
-	return &Logger{zapLogger}, nil
+	core := zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(writers...), level)
+	return zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel)), nil
 }
 
-// GetLogger 获取全局日志实例
-func GetLogger() *Logger {
+func GetLogger() *zap.Logger {
 	if globalLogger == nil {
-		// 如果没有初始化，使用默认配置
-		options := DefaultOptions()
-		InitLogger(options)
+		InitLogger(DefaultOptions())
 	}
 	return globalLogger
 }
 
-// Debug 记录调试信息
-func Debug(msg string, fields ...zap.Field) {
-	GetLogger().Debug(msg, fields...)
-}
-
-// Info 记录信息
-func Info(msg string, fields ...zap.Field) {
-	GetLogger().Info(msg, fields...)
-}
-
-// Warn 记录警告信息
-func Warn(msg string, fields ...zap.Field) {
-	GetLogger().Warn(msg, fields...)
-}
-
-// Error 记录错误信息
-func Error(msg string, fields ...zap.Field) {
-	GetLogger().Error(msg, fields...)
-}
-
-// Fatal 记录致命错误并退出
-func Fatal(msg string, fields ...zap.Field) {
-	GetLogger().Fatal(msg, fields...)
-}
-
-// With 添加字段到日志
-func With(fields ...zap.Field) *Logger {
-	return &Logger{GetLogger().With(fields...)}
-}
-
-// WithError 添加错误字段到日志
-func WithError(err error) *Logger {
-	return &Logger{GetLogger().With(zap.Error(err))}
-}
-
-// Sync 刷新日志缓冲区
-func Sync() error {
-	return GetLogger().Sync()
-}
+func Debug(msg string, fields ...zap.Field) { GetLogger().Debug(msg, fields...) }
+func Info(msg string, fields ...zap.Field)  { GetLogger().Info(msg, fields...) }
+func Warn(msg string, fields ...zap.Field)  { GetLogger().Warn(msg, fields...) }
+func Error(msg string, fields ...zap.Field) { GetLogger().Error(msg, fields...) }
+func Fatal(msg string, fields ...zap.Field) { GetLogger().Fatal(msg, fields...) }
+func Sync() error                           { return GetLogger().Sync() }
+func With(fields ...zap.Field) *zap.Logger  { return GetLogger().With(fields...) }
+func WithError(err error) *zap.Logger       { return GetLogger().With(zap.Error(err)) }

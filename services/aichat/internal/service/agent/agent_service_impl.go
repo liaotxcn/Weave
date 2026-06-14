@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
@@ -59,7 +58,7 @@ func (s *agentServiceImpl) CreateAgent(ctx context.Context) (*react.Agent, error
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
-		log.Printf("未找到 .env 文件或读取失败: %v，将使用环境变量或默认值", err)
+		s.logger.Warn(".env file not found, using environment variables or defaults", zap.Error(err))
 	}
 
 	// 创建agent

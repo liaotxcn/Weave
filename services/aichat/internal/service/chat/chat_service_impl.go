@@ -28,7 +28,7 @@ type chatServiceImpl struct {
 	chatCache           cache.Cache
 	embedder            embedding.Embedder
 	chatTemplate        prompt.ChatTemplate
-	logger              *pkg.Logger
+	logger              *zap.Logger
 	filter              *chat.SensitiveFilter
 	modelType           string
 	rateLimiter         *security.ImageRateLimiter

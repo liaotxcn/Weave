@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"weave/middleware"
-	"weave/pkg"
 	"weave/pkg/metrics"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // Route 定义路由结构
@@ -75,7 +75,7 @@ type PluginManager struct {
 	router    *gin.Engine           // 路由引擎引用
 	mutex     *sync.RWMutex         // 读写锁，保证线程安全
 	watcher   PluginWatcher         // 插件文件监控器
-	logger    *pkg.Logger           // 日志记录器
+	logger    *zap.Logger           // 日志记录器
 	pluginDir string                // 插件目录路径
 }
 
@@ -703,7 +703,7 @@ func (pm *PluginManager) GetDependencyGraph() map[string]map[string]bool {
 }
 
 // SetLogger 设置日志记录器
-func (pm *PluginManager) SetLogger(logger *pkg.Logger) {
+func (pm *PluginManager) SetLogger(logger *zap.Logger) {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()
 	pm.logger = logger

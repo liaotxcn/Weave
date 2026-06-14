@@ -18,9 +18,11 @@ package stream
 
 import (
 	"io"
-	"log"
+
+	"weave/pkg"
 
 	"github.com/cloudwego/eino/schema"
+	"go.uber.org/zap"
 )
 
 func ReportStream(sr *schema.StreamReader[*schema.Message]) {
@@ -33,9 +35,9 @@ func ReportStream(sr *schema.StreamReader[*schema.Message]) {
 			return
 		}
 		if err != nil {
-			log.Fatalf("recv failed: %v", err)
+			pkg.Fatal("Stream receive failed", zap.Error(err))
 		}
-		log.Printf("message[%d]: %+v\n", i, message)
+		pkg.Debug("Stream message", zap.Int("index", i), zap.Any("message", message))
 		i++
 	}
 }

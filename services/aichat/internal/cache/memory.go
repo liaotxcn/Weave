@@ -19,12 +19,15 @@ package cache
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 	"runtime"
 	"sort"
 	"sync"
 	"time"
+
+	"weave/pkg"
+
+	"go.uber.org/zap"
 )
 
 // InMemoryCache 内存缓存实现结构体
@@ -294,7 +297,9 @@ func (mc *InMemoryCache) checkMemoryUsage() {
 
 	// 如果内存使用超过限制，清理最旧的对话
 	if usedMemoryMB > float64(mc.maxMemoryMB) {
-		log.Printf("memory usage %.2fMB exceeds limit %dMB, starting cleanup", usedMemoryMB, mc.maxMemoryMB)
+		pkg.Warn("Memory exceeds limit, starting cleanup",
+			zap.Float64("used_mb", usedMemoryMB),
+			zap.Int("limit_mb", mc.maxMemoryMB))
 		mc.cleanupOldestConversations()
 	}
 }
@@ -339,7 +344,7 @@ func (mc *InMemoryCache) cleanupOldestConversations() {
 			}
 			delete(mc.userConversations, userID)
 		}
-		log.Printf("deleted oldest conversation for user %s to free up memory", userID)
+		pkg.Info("Deleted oldest conversation to free memory", zap.String("user_id", userID))
 	}
 }
 
@@ -360,6 +365,6 @@ func (mc *InMemoryCache) cleanupExpired() {
 	}
 
 	if expiredCount > 0 {
-		log.Printf("cleaned up %d expired conversations", expiredCount)
+		pkg.Info("Cleaned up expired conversations", zap.Int("count", expiredCount))
 	}
 }

@@ -41,7 +41,7 @@ type APIServer struct {
 	chatService         chat.ChatService
 	router              *gin.Engine
 	addr                string
-	logger              *pkg.Logger
+	logger              *zap.Logger
 	sessionControlCache *SessionControlCache
 }
 
@@ -478,7 +478,7 @@ func (s *APIServer) handleHealthCheck(c *gin.Context) {
 // handleAgentHealthCheck 处理Agent健康检查请求
 func (s *APIServer) handleAgentHealthCheck(c *gin.Context) {
 	logger := pkg.GetLogger()
-	agentService := agent.NewAgentService(logger.Logger)
+	agentService := agent.NewAgentService(logger)
 
 	// 获取健康状态
 	status := agentService.GetHealthStatus()

@@ -2,12 +2,13 @@ package templates
 
 import (
 	"fmt"
-	"log"
 	"time"
 
+	"weave/pkg"
 	"weave/plugins/core"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // 插件版本号，用于测试热重载功能
@@ -57,13 +58,13 @@ func (p *ComprehensivePlugin) SetPluginManager(manager *core.PluginManager) {
 // Init 初始化插件
 func (p *ComprehensivePlugin) Init() error {
 	p.startTime = time.Now()
-	log.Printf("%s: 插件已初始化，版本: %s", p.Name(), pluginVersion)
+	pkg.Info("Plugin initialized", zap.String("plugin", p.Name()), zap.String("version", pluginVersion))
 
 	// 检查并访问依赖的插件
 	if helloPlugin, exists := p.pluginManager.GetPlugin("hello"); exists {
-		log.Printf("%s: 成功访问依赖的插件: %s", p.Name(), helloPlugin.Name())
+		pkg.Info("Dependency plugin available", zap.String("plugin", p.Name()), zap.String("dependency", helloPlugin.Name()))
 	} else {
-		log.Printf("%s: 警告: 依赖的插件 'hello' 不可用，但仍继续运行", p.Name())
+		pkg.Warn("Dependency plugin unavailable, continuing anyway", zap.String("plugin", p.Name()), zap.String("dependency", "hello"))
 	}
 
 	return nil
@@ -71,19 +72,19 @@ func (p *ComprehensivePlugin) Init() error {
 
 // Shutdown 关闭插件
 func (p *ComprehensivePlugin) Shutdown() error {
-	log.Printf("%s: 插件已关闭", p.Name())
+	pkg.Info("Plugin shutdown", zap.String("plugin", p.Name()))
 	return nil
 }
 
 // OnEnable 插件启用时调用（热重载相关）
 func (p *ComprehensivePlugin) OnEnable() error {
-	log.Printf("%s: 插件已启用，正在检查依赖...", p.Name())
+	pkg.Info("Plugin enabled, checking dependencies", zap.String("plugin", p.Name()))
 	// 在启用时检查依赖是否可用
 	for _, depName := range p.GetDependencies() {
 		if _, exists := p.pluginManager.GetPlugin(depName); exists {
-			log.Printf("%s: 依赖插件 '%s' 可用", p.Name(), depName)
+			pkg.Info("Dependency available", zap.String("plugin", p.Name()), zap.String("dependency", depName))
 		} else {
-			log.Printf("%s: 警告: 依赖插件 '%s' 不可用", p.Name(), depName)
+			pkg.Warn("Dependency unavailable", zap.String("plugin", p.Name()), zap.String("dependency", depName))
 		}
 	}
 	return nil
@@ -91,7 +92,7 @@ func (p *ComprehensivePlugin) OnEnable() error {
 
 // OnDisable 插件禁用时调用（热重载相关）
 func (p *ComprehensivePlugin) OnDisable() error {
-	log.Printf("%s: 插件已禁用", p.Name())
+	pkg.Info("Plugin disabled", zap.String("plugin", p.Name()))
 	return nil
 }
 
@@ -164,7 +165,7 @@ func (p *ComprehensivePlugin) GetDefaultMiddlewares() []gin.HandlerFunc {
 func (p *ComprehensivePlugin) RegisterRoutes(router *gin.Engine) {
 	// 这个方法在使用新的GetRoutes时不会被调用
 	// 保留只是为了兼容性
-	log.Printf("%s: 注意：使用了旧的RegisterRoutes方法，建议使用新的GetRoutes方法", p.Name())
+	pkg.Warn("Using legacy RegisterRoutes method, recommend using GetRoutes", zap.String("plugin", p.Name()))
 }
 
 // Execute 执行插件功能
@@ -331,7 +332,10 @@ func (p *ComprehensivePlugin) handleEcho(c *gin.Context) {
 
 // 日志中间件示例
 func (p *ComprehensivePlugin) logMiddleware(c *gin.Context) {
-	log.Printf("%s: 收到请求: %s %s", p.Name(), c.Request.Method, c.Request.URL.Path)
+	pkg.Debug("Request received",
+		zap.String("plugin", p.Name()),
+		zap.String("method", c.Request.Method),
+		zap.String("path", c.Request.URL.Path))
 	c.Next()
 }
 

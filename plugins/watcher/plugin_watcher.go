@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"weave/config"
-	"weave/pkg"
 	"weave/pkg/metrics"
 	"weave/plugins/loader"
 
@@ -37,7 +36,7 @@ type PluginWatcher struct {
 	pluginDir    string
 	manager      PluginManager
 	loader       *loader.PluginLoader
-	logger       *pkg.Logger
+	logger       *zap.Logger
 	mu           sync.RWMutex
 	watchedFiles map[string]time.Time
 	scanInterval time.Duration
@@ -47,7 +46,7 @@ type PluginWatcher struct {
 }
 
 // NewPluginWatcher 创建插件监控器
-func NewPluginWatcher(pluginDir string, manager PluginManager, logger *pkg.Logger) (*PluginWatcher, error) {
+func NewPluginWatcher(pluginDir string, manager PluginManager, logger *zap.Logger) (*PluginWatcher, error) {
 	// 创建fsnotify监控器
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {

@@ -1,10 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,55 +26,46 @@ import (
 	"go.uber.org/zap"
 )
 
-// loadEnvFile 从.env文件加载环境变量
 func loadEnvFile(filePath string) {
-	// ioutil.ReadFile 读取整个文件，减少文件操作次数
-	content, err := ioutil.ReadFile(filePath)
+	f, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("Warning: .env file not found at %s", filePath)
+			pkg.Warn(".env file not found", zap.String("path", filePath))
 		} else {
-			log.Printf("Warning: Failed to read .env file: %v", err)
+			pkg.Warn("Failed to read .env file", zap.Error(err))
 		}
 		return
 	}
+	defer f.Close()
 
-	// 按行分割内容
-	lines := strings.Split(string(content), "\n")
+	scanner := bufio.NewScanner(f)
 	successCount := 0
 
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		// 跳过注释和空行
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
 		if line == "" || line[0] == '#' {
 			continue
 		}
 
-		// 解析key=value格式
 		if idx := strings.Index(line, "="); idx > 0 {
 			key := strings.TrimSpace(line[:idx])
 			value := strings.TrimSpace(line[idx+1:])
-
-			// 移除引号
-			if len(value) >= 2 {
-				switch {
-				case value[0] == '"' && value[len(value)-1] == '"':
-					value = value[1 : len(value)-1]
-				case value[0] == '\'' && value[len(value)-1] == '\'':
-					value = value[1 : len(value)-1]
-				}
+			if len(value) >= 2 && (value[0] == '"' || value[0] == '\'') && value[0] == value[len(value)-1] {
+				value = value[1 : len(value)-1]
 			}
 
-			// 设置环境变量
 			if err := os.Setenv(key, value); err != nil {
-				log.Printf("Warning: Failed to set %s: %v", key, err)
+				pkg.Warn("Failed to set environment variable", zap.String("key", key), zap.Error(err))
 			} else {
 				successCount++
 			}
 		}
 	}
 
-	log.Printf(".env file loaded successfully, set %d environment variables", successCount)
+	if err := scanner.Err(); err != nil {
+		pkg.Warn("Error reading .env file", zap.Error(err))
+	}
+	pkg.Info(".env file loaded", zap.Int("variables", successCount))
 }
 
 func main() {
@@ -110,8 +100,6 @@ func main() {
 	}
 	pkg.Info("Configuration validation passed successfully")
 
-	// 监控指标将在路由设置中初始化
-
 	// 初始化数据库（优化连接参数）
 	if err := pkg.InitDatabase(); err != nil {
 		pkg.Fatal("Failed to initialize database", zap.Error(err))
@@ -121,20 +109,20 @@ func main() {
 	// 数据库迁移（异步）
 	go func() {
 		if !config.Config.AutoMigrate {
-			log.Println("Starting SQL migrations...")
+			pkg.Info("Starting SQL migrations...")
 			mm := migration.NewMigrationManager()
 			if err := mm.Init(); err != nil {
-				log.Printf("Warning: Failed to initialize migration manager: %v", err)
+				pkg.Warn("Failed to initialize migration manager", zap.Error(err))
 			} else {
 				if err := mm.Up(); err != nil {
-					log.Printf("Warning: Migration errors: %v", err)
+					pkg.Warn("Migration errors", zap.Error(err))
 				} else {
 					pkg.Info("SQL migrations completed successfully")
 				}
 			}
 		} else {
 			// 仅当启用自动迁移时才使用GORM自动迁移
-			log.Println("Starting GORM auto-migration...")
+			pkg.Info("Starting GORM auto-migration...")
 			if err := models.MigrateTables(pkg.DB); err != nil {
 				pkg.Warn("Failed to migrate database tables", zap.Error(err))
 			} else {
@@ -150,14 +138,8 @@ func main() {
 	errHandler := middleware.NewErrorHandler()
 	router.Use(errHandler.HandlerFunc())
 
-	// 监控指标和中间件已在路由设置中配置
-
 	// 注册插件
 	registerPlugins(router)
-
-	// Prometheus指标导出路由已在路由设置中注册
-
-	// 监控系统已在路由设置中初始化
 
 	// 初始化插件系统
 	if err := plugins.InitPluginSystem(); err != nil {

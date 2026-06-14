@@ -7,7 +7,6 @@ import (
 	"plugin"
 	"sync"
 
-	"weave/pkg"
 	"weave/plugins/core"
 
 	"go.uber.org/zap"
@@ -17,11 +16,11 @@ import (
 type PluginLoader struct {
 	loadedPlugins map[string]*plugin.Plugin
 	mutex         sync.RWMutex
-	logger        *pkg.Logger
+	logger        *zap.Logger
 }
 
 // NewPluginLoader 创建插件加载器实例
-func NewPluginLoader(logger *pkg.Logger) *PluginLoader {
+func NewPluginLoader(logger *zap.Logger) *PluginLoader {
 	return &PluginLoader{
 		loadedPlugins: make(map[string]*plugin.Plugin),
 		mutex:         sync.RWMutex{},
