@@ -56,9 +56,9 @@ func TestGetHealth_OK(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Fatalf("expected status 'ok', got %#v", body["status"])
 	}
-	db := body["database"].(map[string]interface{})
-	if healthy, ok := db["healthy"].(bool); !ok || !healthy {
-		t.Fatalf("expected database healthy=true, got %#v", db)
+	dbInfo := body["database"].(map[string]interface{})
+	if healthy, ok := dbInfo["healthy"].(bool); !ok || !healthy {
+		t.Fatalf("expected database healthy=true, got %#v", dbInfo)
 	}
 	pluginsInfo := body["plugins"].(map[string]interface{})
 	if cnt, ok := pluginsInfo["pluginCount"].(float64); !ok || int(cnt) != 0 {
