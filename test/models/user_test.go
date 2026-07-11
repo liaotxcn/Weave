@@ -2,7 +2,6 @@ package models
 
 import (
 	"errors"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -12,25 +11,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
-// 初始化测试数据库（使用临时文件SQLite以确保持久化）
+// 初始化测试数据库（使用内存SQLite）
 func setupTestDB(t *testing.T) {
-	// 始终为每个测试创建独立的SQLite数据库，避免共享全局连接造成干扰
-	// 如果之前已有连接，先关闭释放资源
 	if pkg.DB != nil {
 		_ = pkg.CloseDatabase()
 		pkg.DB = nil
 	}
 
-	// 为当前测试创建临时数据库文件
-	dbPath := filepath.Join(t.TempDir(), "weave_test.db")
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{SingularTable: true},
+	})
 	if err != nil {
 		t.Fatalf("failed to open sqlite test db: %v", err)
 	}
 	pkg.DB = db
-	// 单连接以简化测试环境
 	sqlDB, err := pkg.DB.DB()
 	if err == nil {
 		sqlDB.SetMaxOpenConns(1)
@@ -43,14 +40,7 @@ func setupTestDB(t *testing.T) {
 
 // 清理测试数据
 func cleanupTestDB(t *testing.T) {
-	// 删除测试数据但保留表结构（忽略可能的错误，确保清理不中断）
 	if pkg.DB != nil {
-		pkg.DB.Exec("DELETE FROM users")
-		pkg.DB.Exec("DELETE FROM tools")
-		pkg.DB.Exec("DELETE FROM tool_histories")
-		pkg.DB.Exec("DELETE FROM notes")
-		pkg.DB.Exec("DELETE FROM login_histories")
-		// 关闭数据库以释放文件句柄，避免TempDir清理失败
 		_ = pkg.CloseDatabase()
 		pkg.DB = nil
 	}
