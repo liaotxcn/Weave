@@ -340,22 +340,35 @@ func TestWatcherReloadOnChangeAndUnregisterOnDelete(t *testing.T) {
 	if err := os.WriteFile(path, []byte("package main\n// change"), 0644); err != nil {
 		t.Fatalf("rewrite file error: %v", err)
 	}
-	// Allow processing from scan and fsnotify
-	time.Sleep(2000 * time.Millisecond)
-	// Expect reload called
-	if len(sm.reloaded) == 0 || sm.reloaded[0] != "reloadable" {
-		t.Fatalf("expected reloadable to be reloaded, got %#v", sm.reloaded)
-	}
+		// Allow processing from scan and fsnotify
+		reloadOK := false
+		for i := 0; i < 20; i++ {
+			time.Sleep(300 * time.Millisecond)
+			if len(sm.reloaded) > 0 && sm.reloaded[0] == "reloadable" {
+				reloadOK = true
+				break
+			}
+		}
+		if !reloadOK {
+			t.Fatalf("expected reloadable to be reloaded, got %#v", sm.reloaded)
+		}
 
-	// Delete file to trigger unregister
-	if err := os.Remove(path); err != nil {
-		t.Fatalf("remove file error: %v", err)
-	}
-	// Give watcher time to process delete event
-	time.Sleep(3000 * time.Millisecond)
-	if len(sm.unregistered) == 0 || sm.unregistered[0] != "reloadable" {
-		t.Fatalf("expected reloadable to be unregistered, got %#v", sm.unregistered)
-	}
+		// Delete file to trigger unregister
+		if err := os.Remove(path); err != nil {
+			t.Fatalf("remove file error: %v", err)
+		}
+		// Give watcher time to process delete event
+		unregOK := false
+		for i := 0; i < 20; i++ {
+			time.Sleep(300 * time.Millisecond)
+			if len(sm.unregistered) > 0 && sm.unregistered[0] == "reloadable" {
+				unregOK = true
+				break
+			}
+		}
+		if !unregOK {
+			t.Fatalf("expected reloadable to be unregistered, got %#v", sm.unregistered)
+		}
 }
 
 func TestWatcherSkipLoadWithoutSO(t *testing.T) {
