@@ -125,17 +125,17 @@ func NewRetryer(config RetryConfig) *Retryer {
 // Do 执行带重试的操作
 func (r *Retryer) Do(ctx context.Context, fn func() error) error {
 	var lastErr error
-	
+
 	for attempt := 0; attempt <= r.config.MaxRetries; attempt++ {
 		if attempt > 0 {
 			// 计算延迟时间
 			delay := r.calculateDelay(attempt)
-			
+
 			// 执行重试回调
 			if r.config.OnRetry != nil {
 				r.config.OnRetry(attempt, lastErr)
 			}
-			
+
 			// 等待延迟时间或上下文取消
 			select {
 			case <-ctx.Done():
@@ -144,26 +144,26 @@ func (r *Retryer) Do(ctx context.Context, fn func() error) error {
 				// 继续重试
 			}
 		}
-		
+
 		// 执行操作
 		err := fn()
 		if err == nil {
 			return nil
 		}
-		
+
 		lastErr = err
-		
+
 		// 检查是否可重试
 		if r.config.RetryableFunc != nil && !r.config.RetryableFunc(err) {
 			break
 		}
-		
+
 		// 检查上下文是否取消
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 	}
-	
+
 	return lastErr
 }
 
@@ -171,39 +171,39 @@ func (r *Retryer) Do(ctx context.Context, fn func() error) error {
 func DoWithResult[T any](retryer *Retryer, ctx context.Context, fn func() (T, error)) (T, error) {
 	var result T
 	var lastErr error
-	
+
 	for attempt := 0; attempt <= retryer.config.MaxRetries; attempt++ {
 		if attempt > 0 {
 			delay := retryer.calculateDelay(attempt)
-			
+
 			if retryer.config.OnRetry != nil {
 				retryer.config.OnRetry(attempt, lastErr)
 			}
-			
+
 			select {
 			case <-ctx.Done():
 				return result, ctx.Err()
 			case <-time.After(delay):
 			}
 		}
-		
+
 		res, err := fn()
 		if err == nil {
 			return res, nil
 		}
-		
+
 		result = res
 		lastErr = err
-		
+
 		if retryer.config.RetryableFunc != nil && !retryer.config.RetryableFunc(err) {
 			break
 		}
-		
+
 		if ctx.Err() != nil {
 			return result, ctx.Err()
 		}
 	}
-	
+
 	return result, lastErr
 }
 
@@ -211,35 +211,35 @@ func DoWithResult[T any](retryer *Retryer, ctx context.Context, fn func() (T, er
 func (r *Retryer) calculateDelay(attempt int) time.Duration {
 	// 指数退避
 	delay := float64(r.config.InitialDelay) * math.Pow(r.config.Multiplier, float64(attempt-1))
-	
+
 	// 添加随机抖动（避免雷群效应）
 	if r.config.RandomizationFactor > 0 {
 		// 生成 [-randomizationFactor, +randomizationFactor] 范围的随机数
 		randomFactor := r.config.RandomizationFactor * (2*rand.Float64() - 1)
 		delay = delay * (1 + randomFactor)
 	}
-	
+
 	// 限制最大延迟时间
 	if delay > float64(r.config.MaxDelay) {
 		delay = float64(r.config.MaxDelay)
 	}
-	
+
 	return time.Duration(delay)
 }
 
 // calculateDelay 计算延迟时间的辅助函数
 func calculateDelay(attempt int, config RetryConfig) time.Duration {
 	delay := float64(config.InitialDelay) * math.Pow(config.Multiplier, float64(attempt-1))
-	
+
 	if config.RandomizationFactor > 0 {
 		randomFactor := config.RandomizationFactor * (2*rand.Float64() - 1)
 		delay = delay * (1 + randomFactor)
 	}
-	
+
 	if delay > float64(config.MaxDelay) {
 		delay = float64(config.MaxDelay)
 	}
-	
+
 	return time.Duration(delay)
 }
 
@@ -270,15 +270,15 @@ func (h *HTTPRetryer) Do(ctx context.Context, req *http.Request) (*http.Response
 			}
 			req.Body.Close()
 		}
-		
+
 		// 执行请求
 		resp, err := h.client.Do(req.WithContext(ctx))
-		
+
 		// 恢复请求体以供下次重试使用
 		if len(bodyCopy) > 0 {
 			req.Body = io.NopCloser(bytes.NewReader(bodyCopy))
 		}
-		
+
 		// 检查HTTP状态码
 		if resp != nil && (resp.StatusCode >= 500 || resp.StatusCode == 429) {
 			return resp, &HTTPError{
@@ -286,59 +286,22 @@ func (h *HTTPRetryer) Do(ctx context.Context, req *http.Request) (*http.Response
 				Message:    http.StatusText(resp.StatusCode),
 			}
 		}
-		
+
 		return resp, err
 	})
 }
 
 // RetryMiddleware 重试中间件
 func RetryMiddleware(config RetryConfig) gin.HandlerFunc {
-	retryer := NewRetryer(config)
-	
 	return func(c *gin.Context) {
-		// 只对特定路径应用重试
+		// API 路径记录重试信息
 		if !shouldRetry(c.Request.URL.Path) {
 			c.Next()
 			return
 		}
-		
-		// 执行重试逻辑
-		err := retryer.Do(c.Request.Context(), func() error {
-			// 创建新的上下文用于重试
-			cCopy := c.Copy()
-			
-			// 执行请求处理
-			cCopy.Next()
-			
-			// 检查是否有错误
-			if len(cCopy.Errors) > 0 {
-				return cCopy.Errors.Last().Err
-			}
-			
-			// 检查响应状态码
-			if cCopy.Writer.Status() >= 500 || cCopy.Writer.Status() == 429 {
-				return &HTTPError{
-					StatusCode: cCopy.Writer.Status(),
-					Message:    http.StatusText(cCopy.Writer.Status()),
-				}
-			}
-			
-			return nil
-		})
-		
-		if err != nil {
-			pkg.Error("Request failed after retries",
-				zap.String("method", c.Request.Method),
-				zap.String("path", c.Request.URL.Path),
-				zap.Error(err))
-			
-			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"error": "Service temporarily unavailable after retries",
-			})
-			c.Abort()
-			return
-		}
-		
+
+		// 注入重试配置到上下文，供服务层使用
+		c.Set("retry_config", config)
 		c.Next()
 	}
 }
@@ -352,13 +315,13 @@ func shouldRetry(path string) bool {
 		"/auth/login",
 		"/auth/register",
 	}
-	
+
 	for _, noRetryPath := range noRetryPaths {
 		if path == noRetryPath {
 			return false
 		}
 	}
-	
+
 	// 对API路径进行重试
 	return strings.HasPrefix(path, "/api/v1/")
 }
