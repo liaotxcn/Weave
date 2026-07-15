@@ -19,8 +19,7 @@ func SetupRouter(userCtrl *controllers.UserController,
 	auditCtrl *controllers.AuditController,
 	toolCtrl *controllers.ToolController,
 	healthCtrl *controllers.HealthController,
-	pluginCtrl *controllers.PluginController,
-	lbCtrl *controllers.LoadBalancerController) *gin.Engine {
+	pluginCtrl *controllers.PluginController) *gin.Engine {
 
 	router := gin.New()
 
@@ -195,24 +194,6 @@ func SetupRouter(userCtrl *controllers.UserController,
 				plugins.GET("/dependency-graph", pluginCtrl.GetDependencyGraph)
 			}
 
-			// 负载均衡管理路由
-			loadbalancer := api.Group("/loadbalancer")
-			{
-				// 为负载均衡服务添加重试和超时保护
-				loadbalancer.Use(middleware.RetryMiddleware(middleware.DefaultRetryConfig()))
-				loadbalancer.Use(middleware.TimeoutMiddleware(middleware.DefaultTimeoutConfig()))
-
-				// 获取负载均衡状态
-				loadbalancer.GET("/status", lbCtrl.GetLoadBalancerStatus)
-				// 获取特定实例健康状态
-				loadbalancer.GET("/instance/:instanceId/health", lbCtrl.GetInstanceHealth)
-				// 更新实例权重
-				loadbalancer.PUT("/instance/:instanceId/weight", lbCtrl.UpdateInstanceWeight)
-				// 排干实例（停止接收新请求）
-				loadbalancer.POST("/instance/:instanceId/drain", lbCtrl.DrainInstance)
-				// 启用实例
-				loadbalancer.POST("/instance/:instanceId/enable", lbCtrl.EnableInstance)
-			}
 		}
 	}
 

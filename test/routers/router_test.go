@@ -30,8 +30,7 @@ func newControllersForTest(db *gorm.DB) (*controllers.UserController,
 	*controllers.AuditController,
 	*controllers.ToolController,
 	*controllers.HealthController,
-	*controllers.PluginController,
-	*controllers.LoadBalancerController) {
+	*controllers.PluginController) {
 
 	userSvc := user.NewUserService(db, user.EmailConfig{})
 	userCtrl := controllers.NewUserController(userSvc)
@@ -40,9 +39,8 @@ func newControllersForTest(db *gorm.DB) (*controllers.UserController,
 	toolCtrl := controllers.NewToolController(tool.NewToolService(db))
 	healthCtrl := controllers.NewHealthController(health.NewHealthService(db))
 	pluginCtrl := controllers.NewPluginController()
-	lbCtrl := controllers.NewLoadBalancerController()
 
-	return userCtrl, teamCtrl, auditCtrl, toolCtrl, healthCtrl, pluginCtrl, lbCtrl
+	return userCtrl, teamCtrl, auditCtrl, toolCtrl, healthCtrl, pluginCtrl
 }
 
 func TestRootRouteOK(t *testing.T) {

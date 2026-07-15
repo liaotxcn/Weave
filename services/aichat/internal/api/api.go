@@ -320,7 +320,11 @@ func (s *APIServer) handleChatStream(c *gin.Context) {
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
-	c.Header("Access-Control-Allow-Origin", "*")
+	origin := c.Request.Header.Get("Origin")
+	if origin != "" {
+		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Vary", "Origin")
+	}
 
 	// 创建上下文
 	ctx, cancel := context.WithCancel(c.Request.Context())

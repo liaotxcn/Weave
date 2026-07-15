@@ -157,10 +157,8 @@ func main() {
 	toolCtrl := controllers.NewToolController(toolSvc)
 	healthCtrl := controllers.NewHealthController(healthSvc)
 	pluginCtrl := controllers.NewPluginController()
-	lbCtrl := controllers.NewLoadBalancerController()
-
 	// 初始化路由
-	router := routers.SetupRouter(userCtrl, teamCtrl, auditCtrl, toolCtrl, healthCtrl, pluginCtrl, lbCtrl)
+	router := routers.SetupRouter(userCtrl, teamCtrl, auditCtrl, toolCtrl, healthCtrl, pluginCtrl)
 
 	// 添加错误处理中间件
 	errHandler := middleware.NewErrorHandler()
